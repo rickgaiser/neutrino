@@ -18,13 +18,8 @@ struct CDVDMAN_SETTINGS_TYPE cdvdman_settings = {
 extern struct irx_export_table _exp_cdvdman;
 extern struct irx_export_table _exp_cdvdstm;
 extern struct irx_export_table _exp_smsutils;
-extern struct irx_export_table _exp_oplutils;
-#ifdef __USE_DEV9
-extern struct irx_export_table _exp_dev9;
-#endif
 
 // internal functions prototypes
-static void oplShutdown(int poff);
 static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 out_size);
 static unsigned int event_alarm_cb(void *args);
 static void cdvdman_signal_read_end(void);
@@ -61,67 +56,13 @@ unsigned char sync_flag;
 unsigned char cdvdman_cdinited = 0;
 static unsigned int ReadPos = 0; /* Current buffer offset in 2048-byte sectors. */
 
-#ifdef __USE_DEV9
-static int POFFThreadID;
-#endif
-
-typedef void (*oplShutdownCb_t)(void);
-static oplShutdownCb_t vmcShutdownCb = NULL;
-
-void oplRegisterShutdownCallback(oplShutdownCb_t cb)
-{
-    vmcShutdownCb = cb;
-}
-
-static void oplShutdown(int poff)
-{
-    u32 stat;
-
-    DeviceLock();
-    if (vmcShutdownCb != NULL)
-        vmcShutdownCb();
-    DeviceUnmount();
-    if (poff) {
-        DeviceStop();
-#ifdef __USE_DEV9
-        dev9Shutdown();
-#endif
-        sceCdPowerOff(&stat);
-    }
-}
-
 //-------------------------------------------------------------------------
-#ifdef __USE_DEV9
-static void cdvdman_poff_thread(void *arg)
-{
-    SleepThread();
-
-    oplShutdown(1);
-}
-#endif
-
 void cdvdman_init(void)
 {
-#ifdef __USE_DEV9
-    iop_thread_t ThreadData;
-#endif
-
     if (!cdvdman_cdinited) {
         cdvdman_stat.err = SCECdErNO;
 
         cdvdman_fs_init();
-
-#ifdef __USE_DEV9
-        if (cdvdman_settings.common.flags & IOPCORE_ENABLE_POFF) {
-            ThreadData.attr = TH_C;
-            ThreadData.option = 0xABCD0001;
-            ThreadData.priority = 1;
-            ThreadData.stacksize = 0x1000;
-            ThreadData.thread = &cdvdman_poff_thread;
-            StartThread(POFFThreadID = CreateThread(&ThreadData), NULL);
-        }
-#endif
-
         cdvdman_cdinited = 1;
     }
 }
@@ -208,37 +149,7 @@ static int cdvdman_read(u32 lsn, u32 sectors, void *buf)
     cdvdman_stat.status = SCECdStatRead;
 
     buf = (void *)PHYSADDR(buf);
-#ifdef HDD_DRIVER // As of now, only the ATA interface requires this. We do this here to share cdvdman_buf.
-    if ((u32)(buf)&3) {
-        // For transfers to unaligned buffers, a double-copy is required to avoid stalling the device's DMA channel.
-        WaitSema(cdvdman_searchfilesema);
-
-        u32 nsectors, nbytes;
-        u32 rpos = lsn;
-
-        while (sectors > 0) {
-            nsectors = sectors;
-            if (nsectors > CDVDMAN_BUF_SECTORS)
-                nsectors = CDVDMAN_BUF_SECTORS;
-
-            cdvdman_read_sectors(rpos, nsectors, cdvdman_buf);
-
-            rpos += nsectors;
-            sectors -= nsectors;
-            nbytes = nsectors * 2048;
-
-            memcpy(buf, cdvdman_buf, nbytes);
-
-            buf = (void *)((u8 *)buf + nbytes);
-        }
-
-        SignalSema(cdvdman_searchfilesema);
-    } else {
-#endif
-        cdvdman_read_sectors(lsn, sectors, buf);
-#ifdef HDD_DRIVER
-    }
-#endif
+    cdvdman_read_sectors(lsn, sectors, buf);
 
     ReadPos = 0; /* Reset the buffer offset indicator. */
 
@@ -414,10 +325,6 @@ int sceCdSC(int code, int *param)
             break;
         case CDSC_SET_ERROR:
             result = cdvdman_stat.err = *param;
-            break;
-        case CDSC_OPL_SHUTDOWN:
-            oplShutdown(*param);
-            result = 1;
             break;
         default:
             result = 1; // dummy result
@@ -614,14 +521,6 @@ static int intrh_cdrom(void *common)
             CDVDreg_PWOFF = CDL_DATA_END; // Acknowldge power-off request.
         }
         iSetEventFlag(cdvdman_stat.intr_ef, 0x14); // Notify FILEIO and CDVDFSV of the power-off event.
-
-// Call power-off callback here. OPL doesn't handle one, so do nothing.
-#ifdef __USE_DEV9
-        if (cdvdman_settings.common.flags & IOPCORE_ENABLE_POFF) {
-            // If IGR is disabled, switch off the console.
-            iWakeupThread(POFFThreadID);
-        }
-#endif
     } else
         CDVDreg_PWOFF = CDL_DATA_COMPLETE; // Acknowledge interrupt
 
@@ -645,16 +544,9 @@ int _start(int argc, char **argv)
     // register exports
     RegisterLibraryEntries(&_exp_cdvdman);
     RegisterLibraryEntries(&_exp_cdvdstm);
-
     RegisterLibraryEntries(&_exp_smsutils);
-#ifdef __USE_DEV9
-    RegisterLibraryEntries(&_exp_dev9);
-    dev9d_init();
-#endif
 
     DeviceInit();
-
-    RegisterLibraryEntries(&_exp_oplutils);
 
     // Setup the callback timer.
     USec2SysClock((cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS) ? 5000 : 0, &gCallbackSysClock);

@@ -159,25 +159,3 @@ int DeviceReadSectors(u32 lsn, void *buffer, unsigned int sectors)
 
     return rv;
 }
-
-//
-// oplutils exported function, used by MCEMU
-//
-
-void bdm_readSector(unsigned int lba, unsigned short int nsectors, unsigned char *buffer)
-{
-    DPRINTF("%s\n", __func__);
-
-    WaitSema(bdm_io_sema);
-    g_bd->read(g_bd, lba, buffer, nsectors);
-    SignalSema(bdm_io_sema);
-}
-
-void bdm_writeSector(unsigned int lba, unsigned short int nsectors, const unsigned char *buffer)
-{
-    DPRINTF("%s\n", __func__);
-
-    WaitSema(bdm_io_sema);
-    g_bd->write(g_bd, lba, buffer, nsectors);
-    SignalSema(bdm_io_sema);
-}

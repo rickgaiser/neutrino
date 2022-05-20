@@ -45,13 +45,13 @@ static void set_args_v(const char *arg)
     EnableDebug = 1;
 }
 
-static void set_args_kernel(const char *arg)
+static void set_args_kernel(char *arg)
 {
     eeloadCopy = (void *)_strtoui(_strtok(arg, " "));
     initUserMemory = (void *)_strtoui(_strtok(NULL, " "));
 }
 
-static void set_args_mod(const char *arg)
+static void set_args_mod(char *arg)
 {
     ModStorageStart = (void *)_strtoui(_strtok(arg, " "));
     ModStorageEnd = (void *)_strtoui(_strtok(NULL, " "));
