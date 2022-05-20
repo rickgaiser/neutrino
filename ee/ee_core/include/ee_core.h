@@ -82,17 +82,8 @@ enum GAME_MODE {
 
 extern char ExitPath[32];
 extern int HDDSpindown;
-extern int EnableGSMOp;
-extern int EnableCheatOp;
-#ifdef PADEMU
-extern int EnablePadEmuOp;
-extern int PadEmuSettings;
-extern int PadMacroSettings;
-#endif
 
 extern int EnableDebug;
 #define GS_BGCOLOUR *((volatile unsigned long int *)0x120000E0)
-
-extern int *gCheatList; // Store hooks/codes addr+val pairs
 
 #endif

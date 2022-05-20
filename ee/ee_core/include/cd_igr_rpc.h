@@ -1,1 +1,0 @@
-int oplIGRShutdown(int poff);

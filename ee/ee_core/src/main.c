@@ -11,8 +11,6 @@
 #include "modmgr.h"
 #include "util.h"
 #include "syshook.h"
-#include "gsm_api.h"
-#include "cheat_api.h"
 
 void *ModStorageStart, *ModStorageEnd;
 void *eeloadCopy, *initUserMemory;
@@ -31,15 +29,7 @@ char GameID[16];
 int GameMode;
 char ExitPath[32];
 int HDDSpindown;
-int EnableGSMOp;
-int EnableCheatOp;
-#ifdef PADEMU
-int EnablePadEmuOp;
-int PadEmuSettings;
-int PadMacroSettings;
-#endif
 int EnableDebug;
-int *gCheatList; // Store hooks/codes addr+val pairs
 
 static int eecoreInit(int argc, char **argv)
 {
@@ -90,21 +80,6 @@ static int eecoreInit(int argc, char **argv)
     g_ps2_ETHOpMode = _strtoui(_strtok(NULL, " "));
     DPRINTF("IP=%s NM=%s GW=%s mode: %d\n", g_ps2_ip, g_ps2_netmask, g_ps2_gateway, g_ps2_ETHOpMode);
 
-    EnableCheatOp = (gCheatList = (void *)_strtoui(_strtok(NULL, " "))) != NULL;
-    DPRINTF("PS2RD Cheat Engine = %s\n", EnableCheatOp == 0 ? "Disabled" : "Enabled");
-
-    EnableGSMOp = _strtoi(_strtok(NULL, " "));
-    DPRINTF("GSM = %s\n", EnableGSMOp == 0 ? "Disabled" : "Enabled");
-
-#ifdef PADEMU
-    EnablePadEmuOp = _strtoi(_strtok(NULL, " "));
-    DPRINTF("PADEMU = %s\n", EnablePadEmuOp == 0 ? "Disabled" : "Enabled");
-
-    PadEmuSettings = _strtoi(_strtok(NULL, " "));
-
-    PadMacroSettings = _strtoi(_strtok(NULL, " "));
-#endif
-
     i++;
 
     eeloadCopy = (void *)_strtoui(_strtok(argv[i], " "));
@@ -124,32 +99,6 @@ static int eecoreInit(int argc, char **argv)
     DPRINTF("Compat Mask = 0x%02x\n", g_compat_mask);
 
     i++;
-
-    if (EnableCheatOp) {
-        EnableCheats();
-    }
-
-    if (EnableGSMOp) {
-        s16 interlace, mode, ffmd;
-        u32 dx_offset, dy_offset;
-        u64 display, syncv, smode2;
-        int k576P_fix, kGsDxDyOffsetSupported, FIELD_fix;
-
-        interlace = _strtoi(_strtok(argv[i], " "));
-        mode = _strtoi(_strtok(NULL, " "));
-        ffmd = _strtoi(_strtok(NULL, " "));
-        display = _strtoul(_strtok(NULL, " "));
-        syncv = _strtoul(_strtok(NULL, " "));
-        smode2 = _strtoui(_strtok(NULL, " "));
-        dx_offset = _strtoui(_strtok(NULL, " "));
-        dy_offset = _strtoui(_strtok(NULL, " "));
-        k576P_fix = _strtoui(_strtok(NULL, " "));
-        kGsDxDyOffsetSupported = _strtoui(_strtok(NULL, " "));
-        FIELD_fix = _strtoui(_strtok(NULL, " "));
-
-        UpdateGSMParams(interlace, mode, ffmd, display, syncv, smode2, dx_offset, dy_offset, k576P_fix, kGsDxDyOffsetSupported, FIELD_fix);
-        EnableGSM();
-    }
     i++;
 
     set_ipconfig();

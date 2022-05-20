@@ -137,23 +137,6 @@ int New_Reset_Iop(const char *arg, int arglen)
             GS_BGCOLOUR = 0x00FFFF; // Yellow
     }
 
-    if (iop_reboot_count >= 2) {
-#ifdef PADEMU
-        PadEmuSettings |= (LoadOPLModule(OPL_MODULE_ID_MCEMU, 0, 0, NULL) > 0) << 24;
-#else
-        LoadOPLModule(OPL_MODULE_ID_MCEMU, 0, 0, NULL);
-#endif
-    }
-
-#ifdef PADEMU
-    if (iop_reboot_count >= 2 && EnablePadEmuOp) {
-        char args_for_pademu[8];
-        memcpy(args_for_pademu, &PadEmuSettings, 4);
-        memcpy(args_for_pademu + 4, &PadMacroSettings, 4);
-        LoadOPLModule(OPL_MODULE_ID_PADEMU, 0, sizeof(args_for_pademu), args_for_pademu);
-    }
-#endif
-
     DPRINTF("Exiting services...\n");
     SifExitIopHeap();
     LoadFileExit();

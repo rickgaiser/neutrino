@@ -13,7 +13,6 @@
 #include "modmgr.h"
 #include "util.h"
 #include "patches.h"
-#include "padhook.h"
 #include "syshook.h"
 
 #include <syscallnr.h>
@@ -43,12 +42,6 @@ void (*Old_Exit)(s32 exit_code);
 /*----------------------------------------------------------------------------------------*/
 u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
 {
-    // Hook padOpen function to install In Game Reset
-    if (!(g_compat_mask & COMPAT_MODE_6) && padOpen_hooked == 0) {
-        Install_IGR();
-        padOpen_hooked = Install_PadOpen_Hook(0x00100000, 0x01ff0000, PADOPEN_HOOK);
-    }
-
     struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
 
     disable_padOpen_hook = 1;
@@ -156,7 +149,6 @@ static void unpatchInitUserMemory(void)
 void sysExit(s32 exit_code)
 {
     Remove_Kernel_Hooks();
-    IGR_Exit(exit_code);
 }
 
 /*----------------------------------------------------------------------------------------*/
@@ -170,15 +162,6 @@ void Install_Kernel_Hooks(void)
 
     Old_SifSetReg = GetSyscallHandler(__NR_SifSetReg);
     SetSyscall(__NR_SifSetReg, &Hook_SifSetReg);
-
-    // If IGR is enabled hook ExecPS2 & CreateThread syscalls
-    if (!(g_compat_mask & COMPAT_MODE_6)) {
-        Old_CreateThread = GetSyscallHandler(__NR_CreateThread);
-        SetSyscall(__NR_CreateThread, &Hook_CreateThread);
-
-        Old_ExecPS2 = GetSyscallHandler(__NR__ExecPS2);
-        SetSyscall(__NR__ExecPS2, &Hook_ExecPS2);
-    }
 
     Old_Exit = GetSyscallHandler(__NR__Exit);
     SetSyscall(__NR__Exit, &Hook_Exit);
@@ -202,12 +185,6 @@ void Remove_Kernel_Hooks(void)
 
     ee_kmode_exit();
     EI();
-
-    // If IGR is enabled unhook ExecPS2 & CreateThread syscalls
-    if (!(g_compat_mask & COMPAT_MODE_6)) {
-        SetSyscall(__NR_CreateThread, Old_CreateThread);
-        SetSyscall(__NR__ExecPS2, Old_ExecPS2);
-    }
 
     FlushCache(0);
     FlushCache(2);

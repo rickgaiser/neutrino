@@ -57,19 +57,11 @@
 .extern g_compat_mask
 .extern EnableDebug
 
-/* padhook.c */
-.extern Install_PadOpen_Hook
-.extern Reset_Padhook
-.extern Install_IGR
-
 .globl  g_argbuf
 .globl  Hook_SifSetDma
 .globl  Hook_SifSetReg
-.globl  Hook_ExecPS2
-.globl  Hook_CreateThread
 .globl  Hook_Exit
 .globl  CleanExecPS2
-.globl  iResetEE
 
 /*
  * _SifSetDma: function designed to use our own stack during IOP reboot trap
@@ -239,123 +231,6 @@ Hook_SifSetReg:
 
 .end    Hook_SifSetReg
 
-/*
- * Hook_ExecPS2:
- */
-.ent    Hook_ExecPS2
-Hook_ExecPS2:
-
-    /* not needed to preserve sX/ra registers values as ExecPS2 won't return */
-
-    /* check entry point is >= 0x00100000 */
-    lui     $v0, 0x0010
-    sltu    $v0, $a0, $v0
-    bne     $v0, $zero, 1f
-    daddu   $s0, $a0, $zero        # entrypoint
-
-    daddu   $s1, $a1, $zero        # gp
-    daddu   $s2, $a2, $zero        # argc
-
-    /* check compat mode 6 is disabled */
-    lw      $v0, g_compat_mask
-    andi    $v0, $v0, COMPAT_MODE_6
-    bne     $v0, $zero, 1f
-    daddu   $s3, $a3, $zero        # argv
-
-    /* save original stack pointer */
-    daddu   $s4, $sp, $zero
-
-    /* change the stack pointer */
-    la      $sp, _end
-
-    /* call Reset_Padhook to indicate that ExecPS2 will be run. */
-    jal     Reset_Padhook
-    nop
-
-    /* call Install_PadOpen_Hook */
-    lui     $a0, 0x0010
-    lui     $a1, 0x01ff
-    jal     Install_PadOpen_Hook
-    addiu   $a2, $zero, PADOPEN_HOOK
-    la      $v1, padOpen_hooked
-    sw      $v0, 0x0000($v1)
-
-    /* Restore arguments */
-    daddu   $a0, $s0, $zero        # entrypoint
-    daddu   $a1, $s1, $zero        # gp
-    daddu   $a2, $s2, $zero        # argc
-
-    jal InitRegsExecPS2
-    daddu   $a3, $s3, $zero        #a rgv
-1:
-    /* call ExecPS2 */
-    lw      $v0, Old_ExecPS2
-    jr      $v0
-    nop
-
-.end    Hook_ExecPS2
-
-/*
- * Hook_CreateThread:
- */
-.ent    Hook_CreateThread
-Hook_CreateThread:
-    /* check disable_padOpen_hook != 0 */
-    la      $v1, disable_padOpen_hook
-    lw      $v0, 0x0000($v1)
-    bne     $v0, $zero, 2f
-    nop
-
-    /* check padOpen_hooked == 0 */
-    la      $v1, padOpen_hooked
-    lw      $v0, 0x0000($v1)
-    bne     $v0, $zero, 2f
-
-    /* check thread_param->initial_priority == 0 */
-    lw      $v0, 0x0014($a0)
-    beq     $v0, $zero, 1f
-
-    /* check thread_param->initial_priority < 5 */
-    slti    $v0, $v0, 5
-    beq     $v0, $zero, 2f
-
-    /* check thread_param->current_priority == 0 */
-    lw      $v0, 0x0018($a0)
-    bne     $v0, $zero, 2f
-1:
-    /* save original stack pointer */
-    daddu   $a1, $sp, $zero
-
-    /* change the stack pointer */
-    la      $sp, _end
-
-    /* preserves ra, a1 (sp) and a0 registers values */
-    addiu   $sp, $sp, -0x20
-    sd      $ra, 0x0000($sp)
-    sd      $a1, 0x0008($sp)
-    sd      $a0, 0x0010($sp)
-
-    /* call Install_PadOpen_Hook */
-    lui     $a0, 0x0010
-    lui     $a1, 0x01ff
-    jal     Install_PadOpen_Hook
-    addiu   $a2, $zero, PADOPEN_HOOK
-    la      $v1, padOpen_hooked
-    sw      $v0, 0x0000($v1)
-
-    /* restore a0, sp and ra registers */
-    ld      $a0, 0x0010($sp)
-    ld      $ra, 0x0000($sp)
-    ld      $sp, 0x0008($sp)
-
-2:
-    /* call CreateThread */
-    lw      $v0, Old_CreateThread
-    jr      $v0
-    nop
-
-.end    Hook_CreateThread
-
 .ent    Hook_Exit
 Hook_Exit:
     la      $v1, sysExit
@@ -451,13 +326,5 @@ InitRegsExecPS2:
     jr      $ra
     ctc1    $zero, $f31
 .end InitRegsExecPS2
-
-.ent iResetEE
-iResetEE:
-    li      $v1, -1
-    syscall
-    jr      $ra
-    nop
-.end iResetEE
 
 .set pop
