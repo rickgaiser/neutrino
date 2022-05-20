@@ -38,25 +38,6 @@ extern int set_reg_hook;
 extern int set_reg_disabled;
 extern int iop_reboot_count;
 
-extern int padOpen_hooked;
-
-enum ETH_OP_MODES {
-    ETH_OP_MODE_AUTO = 0,
-    ETH_OP_MODE_100M_FDX,
-    ETH_OP_MODE_100M_HDX,
-    ETH_OP_MODE_10M_FDX,
-    ETH_OP_MODE_10M_HDX,
-
-    ETH_OP_MODE_COUNT
-};
-
-#define IPCONFIG_MAX_LEN 64
-extern char g_ipconfig[IPCONFIG_MAX_LEN];
-extern int g_ipconfig_len;
-extern char g_ps2_ip[16];
-extern char g_ps2_netmask[16];
-extern char g_ps2_gateway[16];
-extern unsigned char g_ps2_ETHOpMode;
 extern u32 g_compat_mask;
 
 #define COMPAT_MODE_1 0x01
@@ -79,9 +60,6 @@ enum GAME_MODE {
     ETH_MODE,
     HDD_MODE,
 };
-
-extern char ExitPath[32];
-extern int HDDSpindown;
 
 extern int EnableDebug;
 #define GS_BGCOLOUR *((volatile unsigned long int *)0x120000E0)

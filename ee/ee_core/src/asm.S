@@ -16,8 +16,6 @@
 #define COMPAT_MODE_3     0x04 // Unhook Syscalls
 #define COMPAT_MODE_6     0x20 // Disable IGR
 
-#define PADOPEN_HOOK  0
-
 .set push
 .set noreorder
 .set noat
@@ -47,8 +45,6 @@
 .extern New_SifSetDma
 .extern Old_SifSetDma
 .extern Old_SifSetReg
-.extern padOpen_hooked
-.extern disable_padOpen_hook
 .extern Old_ExecPS2
 .extern Old_CreateThread
 .extern sysExit
