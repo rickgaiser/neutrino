@@ -1,0 +1,16 @@
+intrman_IMPORTS_start
+I_RegisterIntrHandler
+I_ReleaseIntrHandler
+I_CpuSuspendIntr
+I_CpuResumeIntr
+I_EnableIntr
+I_DisableIntr
+intrman_IMPORTS_end
+
+loadcore_IMPORTS_start
+I_RegisterLibraryEntries
+loadcore_IMPORTS_end
+
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end

@@ -1,0 +1,13 @@
+DECLARE_EXPORT_TABLE(dev9_dma, 1, 0)
+	DECLARE_EXPORT(_start)
+	DECLARE_EXPORT(_retonly)
+	DECLARE_EXPORT(_exit)
+	DECLARE_EXPORT(_retonly)
+
+	/* 4 */
+	DECLARE_EXPORT(dev9_dma_transfer)
+	DECLARE_EXPORT(dev9_dma_client_init)
+END_EXPORT_TABLE
+
+void _retonly() {}
+int _exit(void) {return 0;}
