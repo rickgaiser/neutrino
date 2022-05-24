@@ -483,6 +483,7 @@ int main(int argc, char *argv[])
 
     // For debugging (udptty) and also udpbd
     irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
+    //irxptr += load_file_mod("dev9_dma.irx", irxptr, irxptr_tab++);
     irxtable->count++;
     irxptr += load_file_mod("netman.irx", irxptr, irxptr_tab++);
     irxtable->count++;

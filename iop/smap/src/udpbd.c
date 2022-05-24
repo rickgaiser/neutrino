@@ -330,7 +330,7 @@ void udpbd_rx(u16 pointer)
                 g_udpbd.sectorCount = hdr.par2;
                 bdm_connected = 1;
 #ifndef NO_BDM
-                iSetEventFlag(ev_worker, 1);
+                SetEventFlag(ev_worker, 1);
 #endif
             }
             break;
@@ -344,7 +344,7 @@ void udpbd_rx(u16 pointer)
                     // Error, wakeup caller
                     g_read_size = 0;
                     g_errno     = 2;
-                    iSetEventFlag(g_read_done, 2);
+                    SetEventFlag(g_read_done, 2);
                     break;
                 }
                 g_read_cmdpkt++;
@@ -356,7 +356,7 @@ void udpbd_rx(u16 pointer)
                     // Error, wakeup caller
                     g_read_size = 0;
                     g_errno     = 3;
-                    iSetEventFlag(g_read_done, 2);
+                    SetEventFlag(g_read_done, 2);
                     break;
                 }
 
@@ -367,7 +367,7 @@ void udpbd_rx(u16 pointer)
                 if (g_read_size == 0)
                 {
                     // Done, wakeup caller
-                    iSetEventFlag(g_read_done, 1);
+                    SetEventFlag(g_read_done, 1);
                     break;
                 }
             }

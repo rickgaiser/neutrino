@@ -449,7 +449,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
     smap_regbase = SmapDrivPrivData->smap_regbase;
     while (1) {
         if ((result = WaitEventFlag(SmapDrivPrivData->Dev9IntrEventFlag, SMAP_EVENT_START | SMAP_EVENT_STOP | SMAP_EVENT_INTR | SMAP_EVENT_XMIT | SMAP_EVENT_LINK_CHECK, WEF_OR | WEF_CLEAR, &EFBits)) != 0) {
-            //DEBUG_PRINTF("smap: WaitEventFlag -> %d\n", result);
+            DEBUG_PRINTF("smap: WaitEventFlag -> %d\n", result);
             break;
         }
 
@@ -505,10 +505,10 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
                         SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_EMAC3;
                         SMAP_EMAC3_SET32(SMAP_R_EMAC3_INTR_STAT, SMAP_E3_INTR_TX_ERR_0 | SMAP_E3_INTR_SQE_ERR_0 | SMAP_E3_INTR_DEAD_0);
                     }
-                    //if (IntrReg & SMAP_INTR_RXEND) {
-                    //    SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXEND;
-                    //    ResetCounterFlag = HandleRxIntr(SmapDrivPrivData);
-                    //}
+                    if (IntrReg & SMAP_INTR_RXEND) {
+                        SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXEND;
+                        ResetCounterFlag = HandleRxIntr(SmapDrivPrivData);
+                    }
                     if (IntrReg & SMAP_INTR_RXDNV) {
                         SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXDNV;
                         SmapDrivPrivData->RuntimeStats.RxFrameOverrunCount++;
@@ -550,9 +550,6 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
 
 static int Dev9IntrCb(int flag)
 {
-    unsigned int IntrReg;
-    USE_SPD_REGS;
-    USE_SMAP_REGS;
 #if USE_GP_REGISTER
     void *OldGP;
 
@@ -560,15 +557,6 @@ static int Dev9IntrCb(int flag)
 #endif
 
     dev9IntrDisable(DEV9_SMAP_ALL_INTR_MASK);
-
-    // Handle RX interrupt as fast as possible
-    if ((IntrReg = SPD_REG16(SPD_R_INTR_STAT) & DEV9_SMAP_INTR_MASK) != 0) {
-        if (IntrReg & SMAP_INTR_RXEND) {
-            SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXEND;
-            HandleRxIntr(&SmapDriverData);
-        }
-    }
-
     iSetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_INTR);
 
 #if USE_GP_REGISTER
