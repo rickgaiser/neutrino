@@ -31,6 +31,7 @@ static void *cbrpc_S596(int fno, void *buf, int size);
 static void *cbrpc_shutdown(int fno, void *buf, int size);
 
 u8 *cdvdfsv_buf;
+static int ef;
 
 static SifRpcDataQueue_t rpc0_DQ;
 static SifRpcDataQueue_t rpc1_DQ;
@@ -54,8 +55,14 @@ extern struct irx_export_table _exp_cdvdfsv;
 int _start(int argc, char *argv[])
 {
     iop_thread_t thread_param;
+    iop_event_t event;
 
     RegisterLibraryEntries(&_exp_cdvdfsv);
+
+    event.attr = EA_SINGLE;
+    event.option = 0;
+    event.bits = 0;
+    ef = CreateEventFlag(&event);
 
     thread_param.attr = TH_C;
     thread_param.option = 0;
@@ -235,10 +242,12 @@ static void *cbrpc_shutdown(int fno, void *buf, int size)
 }
 
 //--------------------------------------------------------------
+static void sysmemSendEE_complete() { iSetEventFlag(ef, 1); }
 void sysmemSendEE(void *buf, void *EE_addr, int size)
 {
     SifDmaTransfer_t dmat;
     int oldstate, id;
+    u32 bits;
 
     dmat.dest = (void *)EE_addr;
     dmat.size = size;
@@ -247,12 +256,11 @@ void sysmemSendEE(void *buf, void *EE_addr, int size)
 
     do {
         CpuSuspendIntr(&oldstate);
-        id = sceSifSetDma(&dmat, 1);
+        id = sceSifSetDmaIntr(&dmat, 1, sysmemSendEE_complete, NULL);
         CpuResumeIntr(oldstate);
     } while (!id);
 
-    while (sceSifDmaStat(id) >= 0)
-        ;
+    WaitEventFlag(ef, 1, WEF_OR | WEF_CLEAR, &bits);
 }
 
 //-------------------------------------------------------------------------

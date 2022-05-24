@@ -32,7 +32,8 @@ int sceCdGetDiskType(void)
 //-------------------------------------------------------------------------
 int sceCdGetError(void)
 {
-    DPRINTF("sceCdGetError %d\n", cdvdman_stat.err);
+    if (cdvdman_stat.err != 0)
+        DPRINTF("sceCdGetError %d\n", cdvdman_stat.err);
 
     return cdvdman_stat.err;
 }
@@ -96,7 +97,7 @@ int sceCdBreak(void)
 {
     DPRINTF("sceCdBreak\n");
 
-    if (sync_flag)
+    if (sync_flag_locked)
         return 0;
 
     cdvdman_stat.status = SCECdStatPause;

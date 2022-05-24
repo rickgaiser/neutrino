@@ -54,8 +54,7 @@ I_sceSifRpcLoop
 sifcmd_IMPORTS_end
 
 sifman_IMPORTS_start
-I_sceSifSetDma
-I_sceSifDmaStat
+I_sceSifSetDmaIntr
 sifman_IMPORTS_end
 
 smsutils_IMPORTS_start
@@ -73,6 +72,8 @@ I_ChangeThreadPriority
 thbase_IMPORTS_end
 
 thevent_IMPORTS_start
+I_CreateEventFlag
 I_ClearEventFlag
 I_WaitEventFlag
+I_iSetEventFlag
 thevent_IMPORTS_end

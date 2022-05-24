@@ -1,0 +1,8 @@
+*.o
+*.elf
+*.irx
+*.IRX
+*.map
+*.img
+
+.vscode/

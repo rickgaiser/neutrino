@@ -9,18 +9,18 @@
 //-------------------------------------------------------------------------
 int sceCdSync(int mode)
 {
-    DPRINTF("sceCdSync %d sync flag = %d\n", mode, sync_flag);
+    DPRINTF("sceCdSync %d locked = %d\n", mode, sync_flag_locked);
 
-    if (!sync_flag)
-        return 0;
+    if (!sync_flag_locked)
+        return 0; // Completed
 
     if ((mode == 1) || (mode == 17))
-        return 1;
+        return 1; // Not completed
 
-    while (sync_flag)
+    while (sync_flag_locked)
         WaitEventFlag(cdvdman_stat.intr_ef, 1, WEF_AND, NULL);
 
-    return 0;
+    return 0; // Completed
 }
 
 //-------------------------------------------------------------------------
@@ -48,7 +48,7 @@ int sceCdReadCdda(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 //-------------------------------------------------------------------------
 int sceCdGetToc(u8 *toc)
 {
-    if (sync_flag)
+    if (sync_flag_locked)
         return 0;
 
     cdvdman_stat.err = SCECdErREAD;
@@ -61,7 +61,7 @@ int sceCdSeek(u32 lsn)
 {
     DPRINTF("sceCdSeek %d\n", (int)lsn);
 
-    if (sync_flag)
+    if (sync_flag_locked)
         return 0;
 
     cdvdman_stat.err = SCECdErNO;
@@ -87,7 +87,7 @@ int sceCdStandby(void)
 //-------------------------------------------------------------------------
 int sceCdStop(void)
 {
-    if (sync_flag)
+    if (sync_flag_locked)
         return 0;
 
     cdvdman_stat.err = SCECdErNO;
@@ -103,7 +103,7 @@ int sceCdPause(void)
 {
     DPRINTF("sceCdPause\n");
 
-    if (sync_flag)
+    if (sync_flag_locked)
         return 0;
 
     cdvdman_stat.err = SCECdErNO;
@@ -117,16 +117,16 @@ int sceCdPause(void)
 //-------------------------------------------------------------------------
 int sceCdDiskReady(int mode)
 {
-    DPRINTF("sceCdDiskReady %d\n", mode);
+    DPRINTF("sceCdDiskReady %d locked = %d\n", mode, sync_flag_locked);
     cdvdman_stat.err = SCECdErNO;
 
     if (cdvdman_cdinited) {
         if (mode == 0) {
-            while (sync_flag)
+            while (sync_flag_locked)
                 WaitEventFlag(cdvdman_stat.intr_ef, 1, WEF_AND, NULL);
         }
 
-        if (!sync_flag)
+        if (!sync_flag_locked)
             return DeviceReady();
     }
 

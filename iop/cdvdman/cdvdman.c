@@ -52,7 +52,7 @@ u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
 #define CDVDMAN_MODULE_VERSION 0x225
 static int cdvdman_debug_print_flag = 0;
 
-unsigned char sync_flag;
+unsigned char sync_flag_locked;
 unsigned char cdvdman_cdinited = 0;
 static unsigned int ReadPos = 0; /* Current buffer offset in 2048-byte sectors. */
 
@@ -85,7 +85,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     unsigned int SectorsToRead, remaining;
     void *ptr;
 
-    DPRINTF("cdvdman_read lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
+    //DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
     cdvdman_stat.err = SCECdErNO;
     for (ptr = buf, remaining = sectors; remaining > 0;) {
@@ -169,7 +169,7 @@ u32 sceCdGetReadPos(void)
 // Must be called from a thread context, with interrupts disabled.
 static int cdvdman_common_lock(int IntrContext)
 {
-    if (sync_flag)
+    if (sync_flag_locked)
         return 0;
 
     if (IntrContext)
@@ -177,7 +177,7 @@ static int cdvdman_common_lock(int IntrContext)
     else
         ClearEventFlag(cdvdman_stat.intr_ef, ~1);
 
-    sync_flag = 1;
+    sync_flag_locked = 1;
 
     return 1;
 }
@@ -192,7 +192,7 @@ int cdvdman_AsyncRead(u32 lsn, u32 sectors, void *buf)
 
     if (!cdvdman_common_lock(IsIntrContext)) {
         CpuResumeIntr(OldState);
-        DPRINTF("cdvdman_AsyncRead: exiting (sync_flag)...\n");
+        DPRINTF("cdvdman_AsyncRead: exiting (sync_flag_locked)...\n");
         return 0;
     }
 
@@ -220,7 +220,7 @@ int cdvdman_SyncRead(u32 lsn, u32 sectors, void *buf)
 
     if (!cdvdman_common_lock(IsIntrContext)) {
         CpuResumeIntr(OldState);
-        DPRINTF("cdvdman_SyncRead: exiting (sync_flag)...\n");
+        DPRINTF("cdvdman_SyncRead: exiting (sync_flag_locked)...\n");
         return 0;
     }
 
@@ -229,7 +229,7 @@ int cdvdman_SyncRead(u32 lsn, u32 sectors, void *buf)
     cdvdman_read(lsn, sectors, buf);
 
     cdvdman_cb_event(SCECdFuncRead);
-    sync_flag = 0;
+    sync_flag_locked = 0;
     SetEventFlag(cdvdman_stat.intr_ef, 9);
 
     return 1;
@@ -444,13 +444,13 @@ static unsigned int event_alarm_cb(void *args)
    within the interrupt handler, before the user callback is run. */
 static void cdvdman_signal_read_end(void)
 {
-    sync_flag = 0;
+    sync_flag_locked = 0;
     SetEventFlag(cdvdman_stat.intr_ef, 9);
 }
 
 static void cdvdman_signal_read_end_intr(void)
 {
-    sync_flag = 0;
+    sync_flag_locked = 0;
     iSetEventFlag(cdvdman_stat.intr_ef, 9);
 }
 
