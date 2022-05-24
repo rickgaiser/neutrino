@@ -26,6 +26,7 @@ copy:
 	cp ../../iop/cdvdfsv/cdvdfsv.irx     modules
 	cp ../../iop/cdvdman/bdm_cdvdman.irx modules
 	cp ../../iop/smap/irx/smap.irx       modules
+	cp ../../iop/dev9/irx/ps2dev9.irx    modules
 	cp ../../iop/dev9_dma/bin/dev9_dma.irx modules
 	cp ../../iop/eesync/eesync.irx       modules
 	cp ../../iop/imgdrv/imgdrv.irx       modules
@@ -41,7 +42,6 @@ copy:
 	cp $(PS2SDK)/iop/irx/usbd.irx modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd.irx modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd.irx modules
-	cp $(PS2SDK)/iop/irx/ps2dev9.irx modules
 	cp $(PS2SDK)/iop/irx/netman.irx modules
 	cp $(PS2SDK)/iop/irx/ps2ip-nm.irx modules
 	cp $(PS2SDK)/iop/irx/udptty.irx modules

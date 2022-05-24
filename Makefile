@@ -1,6 +1,7 @@
 all:
 	$(MAKE) -C iop/cdvdfsv   all
 	$(MAKE) -C iop/cdvdman USE_BDM=1 IOPCORE_DEBUG=0 all
+	$(MAKE) -C iop/dev9      all
 	$(MAKE) -C iop/dev9_dma  all
 	$(MAKE) -C iop/smap      all
 	$(MAKE) -C iop/eesync    all
@@ -17,6 +18,7 @@ format:
 clean:
 	$(MAKE) -C iop/cdvdfsv   clean
 	$(MAKE) -C iop/cdvdman USE_BDM=1 IOPCORE_DEBUG=1 clean
+	$(MAKE) -C iop/dev9      clean
 	$(MAKE) -C iop/dev9_dma  clean
 	$(MAKE) -C iop/smap      clean
 	$(MAKE) -C iop/eesync    clean
