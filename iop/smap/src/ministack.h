@@ -10,10 +10,20 @@
                              ((b & 0xff) << 8) | ((a & 0xff)))
 #define IP_PORT(port) (((port & 0xff00) >> 8) | ((port & 0xff) << 8))
 
+static inline u32 htonl(u32 n)
+{
+    return ((n & 0x000000ff) << 24) |
+           ((n & 0x0000ff00) << 8) |
+           ((n & 0x00ff0000) >> 8) |
+           ((n & 0xff000000) >> 24);
+}
+#define ntohl htonl
+
 static inline u16 htons(u16 n)
 {
     return ((n & 0xff) << 8) | ((n & 0xff00) >> 8);
 }
+#define ntohs htons
 
 typedef struct
 {

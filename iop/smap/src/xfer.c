@@ -120,6 +120,131 @@ static inline void CopyToFIFO(volatile u8 *smap_regbase, const void *buffer, uns
     }
 }
 
+typedef struct
+{
+    u16 htype;
+    u16 ptype;
+    u8  hlen;
+    u8  plen;
+    u16 oper;
+    u8  sender_mac[6];
+    u32 sender_ip;
+    u8  target_mac[6];
+    u32 target_ip;
+    u16 padding;
+} __attribute__((packed)) arp_header_t;
+
+typedef struct
+{
+    eth_header_t eth; // 14 bytes
+    arp_header_t arp;
+} __attribute__((packed, aligned(4))) arp_packet_t;
+static arp_packet_t reply;
+
+static inline int handle_rx_arp(u16 pointer)
+{
+    USE_SMAP_REGS;
+    arp_packet_t req;
+    u32 *parp = (u32*)&req;
+
+    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + 12;
+    parp[ 3] = SMAP_REG32(SMAP_R_RXFIFO_DATA); //  2
+    parp[ 4] = SMAP_REG32(SMAP_R_RXFIFO_DATA); //  6
+    parp[ 5] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 10
+    parp[ 6] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 14
+    parp[ 7] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 18
+    parp[ 8] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 22
+    parp[ 9] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 26
+    parp[10] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 30
+
+    if (ntohs(req.arp.oper) == 1 && req.arp.target_ip == IP_ADDR(192,168,1,10)) {
+        reply.eth.addr_dst[0] = req.arp.sender_mac[0];
+        reply.eth.addr_dst[1] = req.arp.sender_mac[1];
+        reply.eth.addr_dst[2] = req.arp.sender_mac[2];
+        reply.eth.addr_dst[3] = req.arp.sender_mac[3];
+        reply.eth.addr_dst[4] = req.arp.sender_mac[4];
+        reply.eth.addr_dst[5] = req.arp.sender_mac[5];
+        SMAPGetMACAddress(reply.eth.addr_src);
+        reply.eth.type = htons(0x0806);
+        reply.arp.htype = htons(1); // ethernet
+        reply.arp.ptype = htons(0x0800); // ipv4
+        reply.arp.hlen = 6;
+        reply.arp.plen = 4;
+        reply.arp.oper = htons(2); // reply
+        SMAPGetMACAddress(reply.arp.sender_mac);
+        reply.arp.sender_ip     = req.arp.target_ip;
+        reply.arp.target_mac[0] = req.arp.sender_mac[0];
+        reply.arp.target_mac[1] = req.arp.sender_mac[1];
+        reply.arp.target_mac[2] = req.arp.sender_mac[2];
+        reply.arp.target_mac[3] = req.arp.sender_mac[3];
+        reply.arp.target_mac[4] = req.arp.sender_mac[4];
+        reply.arp.target_mac[5] = req.arp.sender_mac[5];
+        reply.arp.target_ip     = req.arp.sender_ip;
+
+        smap_transmit(&reply, 0x2A);
+    }
+
+
+    return -1;
+}
+
+static inline int handle_rx_udp(u16 pointer)
+{
+    USE_SMAP_REGS;
+    u16 dport;
+
+    // Check port
+    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + 0x24;
+    dport = SMAP_REG16(SMAP_R_RXFIFO_DATA);
+
+    switch (dport) {
+        case 0xbdbd:
+            udpbd_rx(pointer);
+            return 0;
+        default:
+            printf("ministack: udp: dport 0x%X\n", dport);
+            return -1;
+    }
+}
+
+static inline int handle_rx_ipv4(u16 pointer)
+{
+    USE_SMAP_REGS;
+    u8 protocol;
+
+    // Check ethernet type
+    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + 0x14;
+    protocol = SMAP_REG32(SMAP_R_RXFIFO_DATA) >> 24;
+
+    switch (protocol) {
+        case 0x11: // UDP
+            return handle_rx_udp(pointer);
+        default:
+            printf("ministack: ipv4: protocol 0x%X\n", protocol);
+            return -1;
+    }
+}
+
+static inline int handle_rx_eth(u16 pointer)
+{
+    USE_SMAP_REGS;
+    u16 eth_type;
+
+    // Check ethernet type
+    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + 12;
+    eth_type = ntohs(SMAP_REG16(SMAP_R_RXFIFO_DATA));
+
+    switch (eth_type) {
+        case 0x0806: // ARP
+            return handle_rx_arp(pointer);
+        case 0x0800: // IPv4
+            return handle_rx_ipv4(pointer);
+        default:
+            printf("ministack: eth: type 0x%X\n", eth_type);
+            return -1;
+    }
+}
+
 int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
 {
     USE_SMAP_RX_BD;
@@ -162,29 +287,11 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
                 // Original did this whenever a frame is dropped.
                 SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
             } else {
-#ifndef NO_BDM
-                // Filter out UDPBD packages:
-                // - skip 14 bytes of ethernet
-                // - skip 20 bytes of IP
-                // - skip  8 bytes of UDP
-                // - skip  2 bytes align
-                SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + 44;
-                if (SMAP_REG32(SMAP_R_RXFIFO_DATA) == UDPBD_HEADER_MAGIC) {
-                    udpbd_rx(pointer);
-                } else {
-#endif
-//                    if ((pbuf = NetManNetProtStackAllocRxPacket(LengthRounded, &payload)) != NULL) {
-//                        CopyFromFIFO(SmapDrivPrivData->smap_regbase, payload, length, pointer);
-//                        NetManNetProtStackEnQRxPacket(pbuf);
-//                        NumPacketsReceived++;
-//                    } else {
-                        SmapDrivPrivData->RuntimeStats.RxAllocFail++;
-                        // Original did this whenever a frame is dropped.
-                        SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
-//                    }
-#ifndef NO_BDM
+                if (handle_rx_eth(pointer) < 0) {
+                    //SmapDrivPrivData->RuntimeStats.RxAllocFail++;
+                    // Original did this whenever a frame is dropped.
+                    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
                 }
-#endif
             }
 
             SMAP_REG8(SMAP_R_RXFIFO_FRAME_DEC) = 0;
@@ -205,6 +312,7 @@ static void *g_buf = NULL;
 static size_t g_bufsize = 0;
 int smap_transmit(void *buf, size_t size)
 {
+    int rv = -1;
     //u32 EFBits;
 
     WaitSema(tx_sema);
@@ -212,11 +320,12 @@ int smap_transmit(void *buf, size_t size)
         g_buf = buf;
         g_bufsize = size;
         SMAPXmit();
+        rv = 0;
     }
     //WaitEventFlag(tx_done_ev, 1, WEF_OR | WEF_CLEAR, &EFBits);
     SignalSema(tx_sema);
 
-    return 0;
+    return rv;
 }
 
 static int smap_tx_get(void **data, int *netman)
