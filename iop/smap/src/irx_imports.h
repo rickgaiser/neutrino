@@ -9,7 +9,6 @@
 #include <intrman.h>
 #include <ioman.h>
 #include <loadcore.h>
-#include <netman.h>
 #include <stdio.h>
 #include <sysclib.h>
 #include <thbase.h>

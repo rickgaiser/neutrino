@@ -48,17 +48,6 @@ I_RegisterLibraryEntries
 I_ReleaseLibraryEntries
 loadcore_IMPORTS_end
 
-netman_IMPORTS_start
-I_NetManNetProtStackAllocPacket
-I_NetManNetProtStackFreePacket
-I_NetManNetProtStackEnQPacket
-I_NetManRegisterNetIF
-I_NetManUnregisterNetIF
-I_NetManToggleNetIFLinkState
-I_NetManTxPacketNext
-I_NetManTxPacketDeQ
-netman_IMPORTS_end
-
 thevent_IMPORTS_start
 I_CreateEventFlag
 I_WaitEventFlag

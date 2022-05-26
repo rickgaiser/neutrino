@@ -14,8 +14,6 @@
 #include <thsemap.h>
 #include <irx.h>
 
-#include <netman.h>
-
 #include <smapregs.h>
 #include <speedregs.h>
 
@@ -123,21 +121,6 @@ static u16 _smap_read_phy(volatile u8 *emac3_regbase, unsigned int address)
         printf("smap: %s: > %d ms\n", "_smap_read_phy", i);
 
     return result;
-}
-
-static int DisplayHelpMessage(void)
-{
-    DisplayBanner();
-
-    printf("Usage: smap [<option>] [thpri=<prio>] [thstack=<stack>] [<conf>]\n"
-           "  <option>:\n"
-           "    -verbose       display verbose messages\n"
-           "    -auto          auto nego enable            [default]\n"
-           "    -no_auto       fixed mode\n"
-           "    -strap         use pin-strap config\n"
-           "    -no_strap      do not use pin-strap config [default]\n");
-
-    return 2;
 }
 
 static inline void RestartAutoNegotiation(volatile u8 *emac3_regbase, u16 bmsr)
@@ -386,30 +369,14 @@ static unsigned int LinkCheckTimerCB(struct SmapDriverData *SmapDrivPrivData)
 
 static int HandleTxIntr(struct SmapDriverData *SmapDrivPrivData)
 {
-    int result, i;
+    int result;
     USE_SMAP_TX_BD;
     u16 ctrl_stat;
 
     result = 0;
     while (SmapDrivPrivData->NumPacketsInTx > 0) {
         ctrl_stat = tx_bd[SmapDrivPrivData->TxDNVBDIndex % SMAP_BD_MAX_ENTRY].ctrl_stat;
-        if (!(ctrl_stat & SMAP_BD_TX_READY)) {
-            if (ctrl_stat & (SMAP_BD_TX_UNDERRUN | SMAP_BD_TX_LCOLL | SMAP_BD_TX_ECOLL | SMAP_BD_TX_EDEFER | SMAP_BD_TX_LOSSCR)) {
-                for (i = 0; i < 16; i++)
-                    if ((ctrl_stat >> i) & 1)
-                        SmapDrivPrivData->RuntimeStats.TxErrorCount++;
-
-                SmapDrivPrivData->RuntimeStats.TxDroppedFrameCount++;
-                if (ctrl_stat & SMAP_BD_TX_LOSSCR)
-                    SmapDrivPrivData->RuntimeStats.TxFrameLOSSCRCount++;
-                if (ctrl_stat & SMAP_BD_TX_EDEFER)
-                    SmapDrivPrivData->RuntimeStats.TxFrameEDEFERCount++;
-                if (ctrl_stat & (SMAP_BD_TX_SCOLL | SMAP_BD_TX_MCOLL | SMAP_BD_TX_LCOLL | SMAP_BD_TX_ECOLL))
-                    SmapDrivPrivData->RuntimeStats.TxFrameCollisionCount++;
-                if (ctrl_stat & SMAP_BD_TX_UNDERRUN)
-                    SmapDrivPrivData->RuntimeStats.TxFrameUnderrunCount++;
-            }
-        } else
+        if (ctrl_stat & SMAP_BD_TX_READY)
             break;
 
         result++;
@@ -427,12 +394,7 @@ static void CheckLinkStatus(struct SmapDriverData *SmapDrivPrivData)
     if (!(_smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMSR) & SMAP_PHY_BMSR_LINK)) {
         // Link lost
         SmapDrivPrivData->LinkStatus = 0;
-        NetManToggleNetIFLinkState(SmapDrivPrivData->NetIFID, NETMAN_NETIF_ETH_LINK_STATE_DOWN);
         InitPHY(SmapDrivPrivData);
-
-        // Link established
-        if (SmapDrivPrivData->LinkStatus)
-            NetManToggleNetIFLinkState(SmapDrivPrivData->NetIFID, NETMAN_NETIF_ETH_LINK_STATE_UP);
     }
 }
 
@@ -448,22 +410,11 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
     emac3_regbase = SmapDrivPrivData->emac3_regbase;
     smap_regbase = SmapDrivPrivData->smap_regbase;
     while (1) {
-        if ((result = WaitEventFlag(SmapDrivPrivData->Dev9IntrEventFlag, SMAP_EVENT_START | SMAP_EVENT_STOP | SMAP_EVENT_INTR | SMAP_EVENT_XMIT | SMAP_EVENT_LINK_CHECK, WEF_OR | WEF_CLEAR, &EFBits)) != 0) {
+        if ((result = WaitEventFlag(SmapDrivPrivData->Dev9IntrEventFlag, SMAP_EVENT_START | SMAP_EVENT_INTR | SMAP_EVENT_XMIT | SMAP_EVENT_LINK_CHECK, WEF_OR | WEF_CLEAR, &EFBits)) != 0) {
             DEBUG_PRINTF("smap: WaitEventFlag -> %d\n", result);
             break;
         }
 
-        if (EFBits & SMAP_EVENT_STOP) {
-            if (SmapDrivPrivData->SmapIsInitialized) {
-                dev9IntrDisable(DEV9_SMAP_INTR_MASK2);
-                SMAP_EMAC3_SET32(SMAP_R_EMAC3_MODE0, 0);
-                SmapDrivPrivData->NetDevStopFlag = 0;
-                SmapDrivPrivData->LinkStatus = 0;
-                SmapDrivPrivData->SmapIsInitialized = 0;
-                SmapDrivPrivData->SmapDriverStarted = 0;
-                NetManToggleNetIFLinkState(SmapDrivPrivData->NetIFID, NETMAN_NETIF_ETH_LINK_STATE_DOWN);
-            }
-        }
         if (EFBits & SMAP_EVENT_START) {
             if (!SmapDrivPrivData->SmapIsInitialized) {
                 SmapDrivPrivData->SmapDriverStarted = 1;
@@ -478,8 +429,6 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
                 SMAP_EMAC3_SET32(SMAP_R_EMAC3_MODE0, SMAP_E3_TXMAC_ENABLE | SMAP_E3_RXMAC_ENABLE);
                 DelayThread(10000);
                 SmapDrivPrivData->SmapIsInitialized = 1;
-
-                NetManToggleNetIFLinkState(SmapDrivPrivData->NetIFID, NETMAN_NETIF_ETH_LINK_STATE_UP);
 
                 udpbd_init();
                 ttyMount();
@@ -511,7 +460,6 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
                     }
                     if (IntrReg & SMAP_INTR_RXDNV) {
                         SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXDNV;
-                        SmapDrivPrivData->RuntimeStats.RxFrameOverrunCount++;
                     }
                     if (IntrReg & SMAP_INTR_TXDNV) {
                         SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_TXDNV;
@@ -550,53 +498,9 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
 
 static int Dev9IntrCb(int flag)
 {
-#if USE_GP_REGISTER
-    void *OldGP;
-
-    OldGP = SetModuleGP();
-#endif
-
     dev9IntrDisable(DEV9_SMAP_ALL_INTR_MASK);
     iSetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_INTR);
-
-#if USE_GP_REGISTER
-    SetGP(OldGP);
-#endif
-
     return 0;
-}
-
-int SMAPStart(void)
-{
-#if USE_GP_REGISTER
-    void *OldGP;
-
-    OldGP = SetModuleGP();
-#endif
-
-    SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_START);
-
-#if USE_GP_REGISTER
-    SetGP(OldGP);
-#endif
-
-    return 0;
-}
-
-void SMAPStop(void)
-{
-#if USE_GP_REGISTER
-    void *OldGP;
-
-    OldGP = SetModuleGP();
-#endif
-
-    SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_STOP);
-    SmapDriverData.NetDevStopFlag = 1;
-
-#if USE_GP_REGISTER
-    SetGP(OldGP);
-#endif
 }
 
 static void ClearPacketQueue(struct SmapDriverData *SmapDrivPrivData)
@@ -610,19 +514,12 @@ static void ClearPacketQueue(struct SmapDriverData *SmapDrivPrivData)
     CpuResumeIntr(OldState);
 
     if (pkt != NULL) {
-        while (NetManTxPacketNext(&pkt) > 0)
-            NetManTxPacketDeQ();
+        ;// todo
     }
 }
 
 void SMAPXmit(void)
 {
-#if USE_GP_REGISTER
-    void *OldGP;
-
-    OldGP = SetModuleGP();
-#endif
-
     if (SmapDriverData.LinkStatus) {
         if (QueryIntrContext())
             iSetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_XMIT);
@@ -632,156 +529,6 @@ void SMAPXmit(void)
         // No link. Clear the packet queue.
         ClearPacketQueue(&SmapDriverData);
     }
-
-#if USE_GP_REGISTER
-    SetGP(OldGP);
-#endif
-}
-
-static int SMAPGetLinkMode(void)
-{
-    u16 value;
-    int result;
-
-    result = -1;
-    if (SmapDriverData.SmapIsInitialized && SmapDriverData.LinkStatus) {
-        value = SmapDriverData.LinkMode;
-        if (value & 0x08)
-            result = NETMAN_NETIF_ETH_LINK_MODE_100M_FDX; /* 100Base-TX FDX */
-        if (value & 0x04)
-            result = NETMAN_NETIF_ETH_LINK_MODE_100M_HDX; /* 100Base-TX HDX */
-        if (value & 0x02)
-            result = NETMAN_NETIF_ETH_LINK_MODE_10M_FDX; /* 10Base-TX FDX */
-        if (value & 0x01)
-            result = NETMAN_NETIF_ETH_LINK_MODE_10M_HDX; /* 10Base-TX HDX */
-        if (!(value & 0x40))
-            result |= NETMAN_NETIF_ETH_LINK_DISABLE_PAUSE;
-    }
-
-    return result;
-}
-
-static int SMAPSetLinkMode(int mode)
-{
-    int result, baseMode;
-
-    if (SmapDriverData.SmapIsInitialized) {
-        baseMode = mode & (~NETMAN_NETIF_ETH_LINK_DISABLE_PAUSE);
-
-        if (baseMode != NETMAN_NETIF_ETH_LINK_MODE_AUTO) {
-            EnableAutoNegotiation = 0;
-
-            switch (baseMode) {
-                case NETMAN_NETIF_ETH_LINK_MODE_10M_HDX:
-                    SmapConfiguration = 0x020;
-                    result = 0;
-                    break;
-                case NETMAN_NETIF_ETH_LINK_MODE_10M_FDX:
-                    SmapConfiguration = 0x040;
-                    result = 0;
-                    break;
-                case NETMAN_NETIF_ETH_LINK_MODE_100M_HDX:
-                    SmapConfiguration = 0x080;
-                    result = 0;
-                    break;
-                case NETMAN_NETIF_ETH_LINK_MODE_100M_FDX:
-                    SmapConfiguration = 0x0100;
-                    result = 0;
-                    break;
-                default:
-                    result = -1;
-            }
-        } else {
-            SmapConfiguration = 0x1E0;
-            EnableAutoNegotiation = 1;
-            result = 0;
-        }
-
-        if (result == 0) {
-            if (!(mode & NETMAN_NETIF_ETH_LINK_DISABLE_PAUSE))
-                SmapConfiguration |= 0x400; // Enable flow control.
-
-            SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_STOP | SMAP_EVENT_START);
-            SmapDriverData.NetDevStopFlag = 1;
-        }
-    } else
-        result = -ENXIO;
-
-    return result;
-}
-
-static inline int SMAPGetLinkStatus(void)
-{
-    return ((SmapDriverData.SmapIsInitialized && SmapDriverData.LinkStatus) ? NETMAN_NETIF_ETH_LINK_STATE_UP : NETMAN_NETIF_ETH_LINK_STATE_DOWN);
-}
-
-int SMAPIoctl(unsigned int command, void *args, unsigned int args_len, void *output, unsigned int length)
-{
-    int result;
-#if USE_GP_REGISTER
-    void *OldGP;
-
-    OldGP = SetModuleGP();
-#endif
-
-    switch (command) {
-        case NETMAN_NETIF_IOCTL_ETH_GET_MAC:
-            result = SMAPGetMACAddress(output);
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_LINK_MODE:
-            result = SMAPGetLinkMode();
-            break;
-        case NETMAN_NETIF_IOCTL_GET_LINK_STATUS:
-            result = SMAPGetLinkStatus();
-            break;
-        case NETMAN_NETIF_IOCTL_GET_TX_DROPPED_COUNT:
-            result = SmapDriverData.RuntimeStats.TxDroppedFrameCount;
-            break;
-        case NETMAN_NETIF_IOCTL_GET_RX_DROPPED_COUNT:
-            result = SmapDriverData.RuntimeStats.RxDroppedFrameCount + SmapDriverData.RuntimeStats.RxAllocFail + SmapDriverData.RuntimeStats.RxErrorCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_RX_EOVERRUN_CNT:
-            result = SmapDriverData.RuntimeStats.RxFrameOverrunCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_RX_EBADLEN_CNT:
-            result = SmapDriverData.RuntimeStats.RxFrameBadLengthCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_RX_EBADFCS_CNT:
-            result = SmapDriverData.RuntimeStats.RxFrameBadFCSCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_RX_EBADALIGN_CNT:
-            result = SmapDriverData.RuntimeStats.RxFrameBadAlignmentCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_TX_ELOSSCR_CNT:
-            result = SmapDriverData.RuntimeStats.TxFrameLOSSCRCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_TX_EEDEFER_CNT:
-            result = SmapDriverData.RuntimeStats.TxFrameEDEFERCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_TX_ECOLL_CNT:
-            result = SmapDriverData.RuntimeStats.TxFrameCollisionCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_TX_EUNDERRUN_CNT:
-            result = SmapDriverData.RuntimeStats.TxFrameUnderrunCount;
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_SET_LINK_MODE:
-            result = SMAPSetLinkMode(*(int *)args);
-            break;
-        case NETMAN_NETIF_IOCTL_ETH_GET_STATUS:
-            ((struct NetManEthStatus *)output)->LinkMode = SMAPGetLinkMode();
-            ((struct NetManEthStatus *)output)->LinkStatus = SMAPGetLinkStatus();
-            ((struct NetManEthStatus *)output)->stats = SmapDriverData.RuntimeStats;
-            result = 0;
-            break;
-        default:
-            result = -1;
-    }
-
-#if USE_GP_REGISTER
-    SetGP(OldGP);
-#endif
-
-    return result;
 }
 
 static inline int SetupNetDev(void)
@@ -789,15 +536,6 @@ static inline int SetupNetDev(void)
     int result;
     iop_event_t EventFlagData;
     iop_thread_t ThreadData;
-    static struct NetManNetIF device = {
-        "SMAP",
-        0,
-        0,
-        &SMAPStart,
-        &SMAPStop,
-        &SMAPXmit,
-        &SMAPIoctl,
-    };
 
     EventFlagData.attr = 0;
     EventFlagData.option = 0;
@@ -826,66 +564,14 @@ static inline int SetupNetDev(void)
         return result;
     }
 
-    if ((SmapDriverData.NetIFID = NetManRegisterNetIF(&device)) < 0) {
-        printf("smap: NetManRegisterNetIF -> %d\n", result);
-        TerminateThread(SmapDriverData.IntrHandlerThreadID);
-        DeleteThread(SmapDriverData.IntrHandlerThreadID);
-        DeleteEventFlag(SmapDriverData.Dev9IntrEventFlag);
-        return -6;
-    }
+    SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_START);
 
     return 0;
-}
-
-static int ParseSmapConfiguration(const char *cmd, unsigned int *configuration)
-{
-    const char *CmdStart, *DigitStart;
-    unsigned int result, base, character, value;
-
-    DigitStart = CmdStart = cmd;
-    base = 10;
-
-    if (CmdStart[0] == '0') {
-        if (CmdStart[1] != '\0') {
-            if (CmdStart[1] == 'x') {
-                DigitStart += 2;
-                base = 16;
-            } else {
-                DigitStart++;
-            }
-        }
-    }
-    if (DigitStart[0] == '\0') {
-        goto fail_end;
-    }
-
-    result = 0;
-    character = DigitStart[0];
-    do {
-        if (character - '0' < 10) {
-            value = character - '0';
-        } else if (character - 'a' < 6) {
-            value = character - 'a' - 0x57;
-        } else
-            goto fail_end;
-
-        if (value >= base)
-            goto fail_end;
-
-        result = result * base + value;
-    } while ((character = *(++DigitStart)) != '\0');
-    *configuration = result;
-
-    return 0;
-fail_end:
-    printf("smap: %s: %s - invalid digit\n", "scan_number", CmdStart);
-    return -1;
 }
 
 int smap_init(int argc, char *argv[])
 {
     int result, i;
-    const char *CmdString;
     u16 eeprom_data[4], checksum16;
     u32 mac_address;
     USE_SPD_REGS;
@@ -895,65 +581,6 @@ int smap_init(int argc, char *argv[])
     USE_SMAP_RX_BD;
 
     checksum16 = 0;
-    argc--;
-    argv++;
-    while (argc > 0) {
-        if (strcmp("-help", *argv) == 0) {
-            return DisplayHelpMessage();
-        } else if (strcmp("-version", *argv) == 0) {
-            return DisplayBanner();
-        } else if (strcmp("-verbose", *argv) == 0) {
-            EnableVerboseOutput = 1;
-        } else if (strcmp("-auto", *argv) == 0) {
-            EnableAutoNegotiation = 1;
-        } else if (strcmp("-no_auto", *argv) == 0) {
-            EnableAutoNegotiation = 0;
-        } else if (strcmp("-strap", *argv) == 0) {
-            EnablePinStrapConfig = 1;
-        } else if (strcmp("-no_strap", *argv) == 0) {
-            EnablePinStrapConfig = 0;
-        } else if (strncmp("thpri=", *argv, 6) == 0) {
-            CmdString = &(*argv)[6];
-            if (isdigit(CmdString[0])) {
-                ThreadPriority = strtoul(&(*argv)[6], NULL, 10);
-                if (ThreadPriority - 9 >= 0x73) {
-                    return DisplayHelpMessage();
-                }
-
-                if ((*argv)[6] != '\0') {
-                    while (isdigit(*CmdString)) {
-                        CmdString++;
-                    }
-                    if (*CmdString != '\0')
-                        return DisplayHelpMessage();
-                }
-            } else
-                return DisplayHelpMessage();
-        } else if (strncmp("thstack=", *argv, 8) == 0) {
-            CmdString = &(*argv)[8];
-            if (isdigit(CmdString[0])) {
-                ThreadStackSize = strtoul(&(*argv)[8], NULL, 10);
-                if ((*argv)[8] != '\0') {
-                    while (isdigit(*CmdString)) {
-                        CmdString++;
-                    }
-                }
-
-                if (strcmp(CmdString, "KB") == 0)
-                    ThreadStackSize <<= 10;
-            } else
-                return DisplayHelpMessage();
-        } else {
-            if (ParseSmapConfiguration(*argv, &SmapConfiguration) != 0)
-                return DisplayHelpMessage();
-        }
-
-        argc--;
-        argv++;
-    }
-
-    if (argc != 0)
-        return DisplayHelpMessage();
 
     SmapDriverData.smap_regbase = smap_regbase;
     SmapDriverData.emac3_regbase = emac3_regbase;

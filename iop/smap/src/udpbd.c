@@ -34,77 +34,6 @@ static unsigned int _udpbd_read_timeout(void *arg)
     return 0;
 }
 
-extern struct SmapDriverData SmapDriverData;
-static void debug_smap()
-{
-    USE_SMAP_EMAC3_REGS;
-    USE_SMAP_REGS;
-    USE_SMAP_RX_BD;
-    int i;
-    char bdidx;
-
-    M_DEBUG("SMAP_R_RXFIFO_CTRL:       0x%x\n", SMAP_REG8(SMAP_R_RXFIFO_CTRL));
-    DelayThread(1000);
-    M_DEBUG("SMAP_R_RXFIFO_RD_PTR:     0x%x\n", SMAP_REG16(SMAP_R_RXFIFO_RD_PTR));
-    DelayThread(1000);
-    //M_DEBUG("SMAP_R_RXFIFO_SIZE:       %d\n", SMAP_REG16(SMAP_R_RXFIFO_SIZE));
-    M_DEBUG("SMAP_R_RXFIFO_FRAME_CNT:  %d\n", SMAP_REG8(SMAP_R_RXFIFO_FRAME_CNT));
-    DelayThread(1000);
-    //M_DEBUG("SMAP_R_RXFIFO_FRAME_DEC:  %d\n", SMAP_REG8(SMAP_R_RXFIFO_FRAME_DEC));
-    M_DEBUG("SMAP_R_EMAC3_RxMODE:      0x%x\n", (unsigned int)SMAP_EMAC3_GET32(SMAP_R_EMAC3_RxMODE));
-    DelayThread(1000);
-    M_DEBUG("SMAP_R_EMAC3_INTR_STAT:   0x%x\n", (unsigned int)SMAP_EMAC3_GET32(SMAP_R_EMAC3_INTR_STAT));
-    DelayThread(1000);
-    M_DEBUG("SMAP_R_EMAC3_INTR_ENABLE: 0x%x\n", (unsigned int)SMAP_EMAC3_GET32(SMAP_R_EMAC3_INTR_ENABLE));
-    DelayThread(1000);
-
-    bdidx = SmapDriverData.RxBDIndex % SMAP_BD_MAX_ENTRY;
-    for (i = 0; i < SMAP_BD_MAX_ENTRY; i++)
-    {
-        if (rx_bd[i].ctrl_stat != SMAP_BD_RX_EMPTY ||
-            rx_bd[i].reserved != 0 ||
-            rx_bd[i].length != 0 ||
-            rx_bd[i].pointer != 0 ||
-            i == bdidx)
-        {
-            if (i == bdidx)
-                M_DEBUG(" - rx_bd[%d]: 0x%x / 0x%x / %d / 0x%x <--\n", i, rx_bd[i].ctrl_stat, rx_bd[i].reserved, rx_bd[i].length, rx_bd[i].pointer);
-            else
-                M_DEBUG(" - rx_bd[%d]: 0x%x / 0x%x / %d / 0x%x\n", i, rx_bd[i].ctrl_stat, rx_bd[i].reserved, rx_bd[i].length, rx_bd[i].pointer);
-            DelayThread(1000);
-        }
-    }
-
-    M_DEBUG("RxDroppedFrameCount:      %d\n", (int)SmapDriverData.RuntimeStats.RxDroppedFrameCount);
-    DelayThread(1000);
-    M_DEBUG("RxErrorCount:             %d\n", (int)SmapDriverData.RuntimeStats.RxErrorCount);
-    DelayThread(1000);
-    M_DEBUG("RxFrameOverrunCount:      %d\n", SmapDriverData.RuntimeStats.RxFrameOverrunCount);
-    DelayThread(1000);
-    M_DEBUG("RxFrameBadLengthCount:    %d\n", SmapDriverData.RuntimeStats.RxFrameBadLengthCount);
-    DelayThread(1000);
-    M_DEBUG("RxFrameBadFCSCount:       %d\n", SmapDriverData.RuntimeStats.RxFrameBadFCSCount);
-    DelayThread(1000);
-    M_DEBUG("RxFrameBadAlignmentCount: %d\n", SmapDriverData.RuntimeStats.RxFrameBadAlignmentCount);
-    DelayThread(1000);
-    
-    //M_DEBUG("TxDroppedFrameCount:      %d\n", (int)SmapDriverData.RuntimeStats.TxDroppedFrameCount);
-    //DelayThread(1000);
-    //M_DEBUG("TxErrorCount:             %d\n", (int)SmapDriverData.RuntimeStats.TxErrorCount);
-    //DelayThread(1000);
-    //M_DEBUG("TxFrameLOSSCRCount:       %d\n", SmapDriverData.RuntimeStats.TxFrameLOSSCRCount);
-    //DelayThread(1000);
-    //M_DEBUG("TxFrameEDEFERCount:       %d\n", SmapDriverData.RuntimeStats.TxFrameEDEFERCount);
-    //DelayThread(1000);
-    //M_DEBUG("TxFrameCollisionCount:    %d\n", SmapDriverData.RuntimeStats.TxFrameCollisionCount);
-    //DelayThread(1000);
-    //M_DEBUG("TxFrameUnderrunCount:     %d\n", SmapDriverData.RuntimeStats.TxFrameUnderrunCount);
-    //DelayThread(1000);
-    
-    M_DEBUG("RxAllocFail:              %d\n", SmapDriverData.RuntimeStats.RxAllocFail);
-    DelayThread(1000);
-}
-
 //
 // Block device interface
 //
@@ -171,25 +100,6 @@ static int _udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 co
     }
 
     g_errno = 0;
-    /*
-    debug_smap();
-
-    USE_SMAP_EMAC3_REGS;
-    USE_SMAP_REGS;
-
-    SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_EMAC3;
-    SMAP_EMAC3_SET32(SMAP_R_EMAC3_INTR_STAT, SMAP_E3_INTR_TX_ERR_0 | SMAP_E3_INTR_SQE_ERR_0 | SMAP_E3_INTR_DEAD_0);
-    SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXEND;
-    SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXDNV;
-    SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_TXDNV;
-
-    SMAP_EMAC3_SET32(SMAP_R_EMAC3_MODE0, SMAP_E3_TXMAC_ENABLE);
-    SMAP_EMAC3_SET32(SMAP_R_EMAC3_MODE0, SMAP_E3_TXMAC_ENABLE | SMAP_E3_RXMAC_ENABLE);
-
-    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = 0;
-
-    DelayThread(10000);
-*/
     return -EIO;
 }
 
@@ -211,8 +121,7 @@ static int udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 cou
         {
             if (_udpbd_read(bd, sector, buffer, count_block) == count_block)
                 break;
-            debug_smap();
-            DelayThread(10000);
+            DelayThread(1000);
         }
 
         if (retries == UDPBD_MAX_RETRIES)
@@ -343,7 +252,6 @@ void udpbd_rx(u16 pointer)
                 // Validate packet order
                 if (hdr.cmdpkt != (g_read_cmdpkt & 0xff))
                 {
-                    SmapDriverData.RuntimeStats.RxFrameOverrunCount++;
                     // Error, wakeup caller
                     g_read_size = 0;
                     g_errno     = 2;
@@ -355,7 +263,6 @@ void udpbd_rx(u16 pointer)
                 // Validate packet data size
                 if ((hdr.par1 > UDPBD_MAX_DATA) || (hdr.par1 & 127))
                 {
-                    SmapDriverData.RuntimeStats.RxFrameBadLengthCount++;
                     // Error, wakeup caller
                     g_read_size = 0;
                     g_errno     = 3;
@@ -373,10 +280,6 @@ void udpbd_rx(u16 pointer)
                     SetEventFlag(g_read_done, 1);
                     break;
                 }
-            }
-            else
-            {
-                SmapDriverData.RuntimeStats.RxFrameBadFCSCount++;
             }
             break;
         case UDPBD_CMD_WRITE:

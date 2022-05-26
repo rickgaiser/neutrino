@@ -15,8 +15,6 @@
 #include <smapregs.h>
 #include <speedregs.h>
 
-#include <netman.h>
-
 #include "main.h"
 
 #include "xfer.h"
@@ -248,7 +246,7 @@ static inline int handle_rx_eth(u16 pointer)
 int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
 {
     USE_SMAP_RX_BD;
-    int NumPacketsReceived, i;
+    int NumPacketsReceived;
     volatile smap_bd_t *PktBdPtr;
     volatile u8 *smap_regbase;
     //void *pbuf, *payload;
@@ -269,26 +267,10 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
             pointer = PktBdPtr->pointer;
 
             if (ctrl_stat & (SMAP_BD_RX_INRANGE | SMAP_BD_RX_OUTRANGE | SMAP_BD_RX_FRMTOOLONG | SMAP_BD_RX_BADFCS | SMAP_BD_RX_ALIGNERR | SMAP_BD_RX_SHORTEVNT | SMAP_BD_RX_RUNTFRM | SMAP_BD_RX_OVERRUN)) {
-                for (i = 0; i < 16; i++)
-                    if ((ctrl_stat >> i) & 1)
-                        SmapDrivPrivData->RuntimeStats.RxErrorCount++;
-
-                SmapDrivPrivData->RuntimeStats.RxDroppedFrameCount++;
-
-                if (ctrl_stat & SMAP_BD_RX_OVERRUN)
-                    SmapDrivPrivData->RuntimeStats.RxFrameOverrunCount++;
-                if (ctrl_stat & (SMAP_BD_RX_INRANGE | SMAP_BD_RX_OUTRANGE | SMAP_BD_RX_FRMTOOLONG | SMAP_BD_RX_SHORTEVNT | SMAP_BD_RX_RUNTFRM))
-                    SmapDrivPrivData->RuntimeStats.RxFrameBadLengthCount++;
-                if (ctrl_stat & SMAP_BD_RX_BADFCS)
-                    SmapDrivPrivData->RuntimeStats.RxFrameBadFCSCount++;
-                if (ctrl_stat & SMAP_BD_RX_ALIGNERR)
-                    SmapDrivPrivData->RuntimeStats.RxFrameBadAlignmentCount++;
-
                 // Original did this whenever a frame is dropped.
                 SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
             } else {
                 if (handle_rx_eth(pointer) < 0) {
-                    //SmapDrivPrivData->RuntimeStats.RxAllocFail++;
                     // Original did this whenever a frame is dropped.
                     SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
                 }
@@ -328,15 +310,11 @@ int smap_transmit(void *buf, size_t size)
     return rv;
 }
 
-static int smap_tx_get(void **data, int *netman)
+static int smap_tx_get(void **data)
 {
     if (g_buf != NULL) {
         *data = g_buf;
-        *netman = 0;
         return g_bufsize;
-//    } else {
-//        *netman = 1;
-//        return NetManTxPacketNext(data);
     }
     return 0;
 }
@@ -358,11 +336,10 @@ int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData)
     volatile smap_bd_t *BD_ptr;
     u16 BD_data_ptr;
     unsigned int SizeRounded;
-    int nm;
 
     result = 0;
     while (1) {
-        if ((length = smap_tx_get(&data, &nm)) < 1) {
+        if ((length = smap_tx_get(&data)) < 1) {
             return result;
         }
         SmapDrivPrivData->packetToSend = data;
@@ -396,7 +373,5 @@ int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData)
 
         SmapDrivPrivData->packetToSend = NULL;
         smap_tx_done();
-        //if (nm)
-        //    NetManTxPacketDeQ();
     }
 }
