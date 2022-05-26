@@ -1,15 +1,12 @@
-#ifndef NO_BDM
 bdm_IMPORTS_start
 I_bdm_connect_bd
 I_bdm_disconnect_bd
 bdm_IMPORTS_end
-#endif
 
 thbase_IMPORTS_start
 I_CreateThread
 I_StartThread
 I_DelayThread
-I_TerminateThread
 I_DeleteThread
 I_SetAlarm
 I_CancelAlarm
@@ -22,11 +19,7 @@ stdio_IMPORTS_end
 
 sysclib_IMPORTS_start
 I_memcpy
-I_strcmp
-I_strtoul
-I_strncmp
 I_bzero
-I_look_ctype_table
 sysclib_IMPORTS_end
 
 intrman_IMPORTS_start

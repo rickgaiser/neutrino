@@ -56,19 +56,12 @@
 
 struct SmapDriverData SmapDriverData;
 
-static const char VersionString[] = "Version 2.26.0";
 static unsigned int ThreadPriority = 0x01;
 static unsigned int ThreadStackSize = 0x1000;
 static unsigned int EnableVerboseOutput = 0;
 static unsigned int EnableAutoNegotiation = 1;
 static unsigned int EnablePinStrapConfig = 0;
 static unsigned int SmapConfiguration = 0x5E0;
-
-int DisplayBanner(void)
-{
-    printf("SMAP (%s)\n", VersionString);
-    return MODULE_NO_RESIDENT_END;
-}
 
 static void _smap_write_phy(volatile u8 *emac3_regbase, unsigned int address, u16 value)
 {

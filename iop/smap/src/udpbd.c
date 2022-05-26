@@ -16,7 +16,7 @@
 #define UDPBD_MAX_RETRIES         4
 static struct block_device g_udpbd;
 static udpbd_pkt_t g_pkt;
-static u8 g_cmdid        = 0;
+static uint8_t g_cmdid   = 0;
 static int g_read_done   = 0;
 static int ev_worker     = 0;
 static int g_read_cmdpkt = 0;
@@ -37,9 +37,9 @@ static unsigned int _udpbd_read_timeout(void *arg)
 //
 // Block device interface
 //
-static int _udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 count)
+static int _udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, uint16_t count)
 {
-    u32 EFBits;
+    uint32_t EFBits;
     iop_sys_clock_t clock;
 
     //M_DEBUG("%s: sector=%d, count=%d\n", __func__, sector, count);
@@ -103,10 +103,10 @@ static int _udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 co
     return -EIO;
 }
 
-static int udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 count)
+static int udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, uint16_t count)
 {
     int retries;
-    u16 count_left = count;
+    uint16_t count_left = count;
 
     //M_DEBUG("%s: sector=%d, count=%d\n", __func__, sector, count);
 
@@ -115,7 +115,7 @@ static int udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 cou
 
     while (count_left > 0)
     {
-        u16 count_block = count_left > UDPBD_MAX_SECTOR_READ ? UDPBD_MAX_SECTOR_READ : count_left;
+        uint16_t count_block = count_left > UDPBD_MAX_SECTOR_READ ? UDPBD_MAX_SECTOR_READ : count_left;
 
         for (retries = 0; retries < UDPBD_MAX_RETRIES; retries++)
         {
@@ -127,9 +127,7 @@ static int udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 cou
         if (retries == UDPBD_MAX_RETRIES)
         {
             M_DEBUG("%s: too many errors, disconnecting\n", __func__);
-#ifndef NO_BDM
             bdm_disconnect_bd(&g_udpbd);
-#endif
             bdm_connected = 0;
             return -EIO;
         }
@@ -142,7 +140,7 @@ static int udpbd_read(struct block_device *bd, u32 sector, void *buffer, u16 cou
     return count;
 }
 
-static int udpbd_write(struct block_device *bd, u32 sector, const void *buffer, u16 count)
+static int udpbd_write(struct block_device *bd, uint32_t sector, const void *buffer, uint16_t count)
 {
     M_DEBUG("%s\n", __func__);
 
@@ -163,7 +161,7 @@ static int udpbd_stop(struct block_device *bd)
 
 static void udpbd_worker()
 {
-    u32 EFBits;
+    uint32_t EFBits;
 
     while(1) {
         WaitEventFlag(ev_worker, 1, WEF_OR | WEF_CLEAR, &EFBits);
@@ -222,7 +220,7 @@ int udpbd_init(void)
     return 0;
 }
 
-void udpbd_rx(u16 pointer)
+void udpbd_rx(uint16_t pointer)
 {
     USE_SMAP_REGS;
     udpbd_header_t hdr;
@@ -241,9 +239,7 @@ void udpbd_rx(u16 pointer)
                 g_udpbd.sectorSize  = hdr.par1;
                 g_udpbd.sectorCount = hdr.par2;
                 bdm_connected = 1;
-#ifndef NO_BDM
                 SetEventFlag(ev_worker, 1);
-#endif
             }
             break;
         case UDPBD_CMD_READ:
@@ -271,7 +267,7 @@ void udpbd_rx(u16 pointer)
                 }
 
                 // Directly DMA the packet data into the user buffer
-                dev9DmaTransfer(1, (u8 *)g_buffer + ((g_read_cmdpkt - 2) * UDPBD_MAX_DATA), (hdr.par1 >> 7) << 16 | 0x20, DMAC_TO_MEM);
+                dev9DmaTransfer(1, (uint8_t *)g_buffer + ((g_read_cmdpkt - 2) * UDPBD_MAX_DATA), (hdr.par1 >> 7) << 16 | 0x20, DMAC_TO_MEM);
 
                 g_read_size -= hdr.par1;
                 if (g_read_size == 0)
