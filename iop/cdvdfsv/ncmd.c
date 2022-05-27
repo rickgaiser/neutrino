@@ -109,6 +109,8 @@ static inline void cdvd_readee(void *buf)
     cdvdfsv_readee_t readee;
     RpcCdvd_t *r = (RpcCdvd_t *)buf;
 
+    printf("%s %d %d @0x%X -> 0x%X / 0x%X)\n", __FUNCTION__, r->lsn, r->sectors, r->buf, r->eeaddr1, r->eeaddr2);
+
     if (r->sectors == 0) {
         *(int *)buf = 0;
         return;
@@ -237,6 +239,8 @@ static inline void cdvdSt_read(void *buf)
     int r, rpos, remaining;
     void *ee_addr;
 
+    printf("%s\n", __FUNCTION__);
+
     for (rpos = 0, ee_addr = St->buf, remaining = St->sectors; remaining > 0; ee_addr += r * 2048, rpos += r, remaining -= r) {
         if ((r = sceCdStRead(remaining, (void *)((u32)ee_addr | 0x80000000), 0, &err)) < 1)
             break;
@@ -249,6 +253,8 @@ static inline void cdvdSt_read(void *buf)
 static inline void cdvd_Stsubcmdcall(void *buf)
 { // call a Stream Sub function (below) depending on stream cmd sent
     RpcCdvdStream_t *St = (RpcCdvdStream_t *)buf;
+
+    printf("%s\n", __FUNCTION__);
 
     switch (St->cmd) {
         case CDVD_ST_CMD_START:
@@ -289,6 +295,8 @@ static inline void cdvd_readiopm(void *buf)
     int r, fsverror;
     u32 readpos;
 
+    printf("%s\n", __FUNCTION__);
+
     r = sceCdRead(((RpcCdvd_t *)buf)->lsn, ((RpcCdvd_t *)buf)->sectors, ((RpcCdvd_t *)buf)->buf, NULL);
     while (sceCdSync(1)) {
         readpos = sceCdGetReadPos();
@@ -311,6 +319,8 @@ static inline void cdvd_readchain(void *buf)
     u32 nsectors, tsectors, lsn, addr, readpos;
 
     RpcCdvdchain_t *ch = (RpcCdvdchain_t *)buf;
+
+    printf("%s\n", __FUNCTION__);
 
     for (i = 0, readpos = 0; i < 64; i++, ch++) {
 
@@ -367,6 +377,8 @@ static inline void rpcNCmd_cdreadDiskID(void *buf)
 {
     u8 *p = (u8 *)buf;
 
+    printf("%s\n", __FUNCTION__);
+
     memset(p, 0, 10);
     *(int *)buf = sceCdReadDiskID((unsigned int *)&p[4]);
 }
@@ -374,6 +386,8 @@ static inline void rpcNCmd_cdreadDiskID(void *buf)
 //-------------------------------------------------------------------------
 static inline void rpcNCmd_cdgetdisktype(void *buf)
 {
+    printf("%s\n", __FUNCTION__);
+
     u8 *p = (u8 *)buf;
     *(int *)&p[4] = sceCdGetDiskType();
     *(int *)&p[0] = 1;
@@ -383,6 +397,8 @@ static inline void rpcNCmd_cdgetdisktype(void *buf)
 static void *cbrpc_cdvdNcmds(int fno, void *buf, int size)
 { // CD NCMD RPC callback
     int sc_param;
+
+    //printf("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
 
     sceCdSC(CDSC_IO_SEMA, &fno);
 

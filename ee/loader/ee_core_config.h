@@ -3,7 +3,6 @@
 
 
 #include <tamtypes.h>
-#include <netman.h>
 #include <tcpip.h>
 
 #include "ee_core.h"
@@ -23,7 +22,6 @@ struct SEECoreConfig
     u32 _irxptr;
     u32 _compatFlags;
     u32 _HDDSpindown;
-    enum NETMAN_NETIF_ETH_LINK_MODE _ethLinkMode;
     ip4_addr_t _ethAddr;
     ip4_addr_t _ethMask;
     ip4_addr_t _ethGateway;

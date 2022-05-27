@@ -85,7 +85,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     unsigned int SectorsToRead, remaining;
     void *ptr;
 
-    //DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
+    DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
     cdvdman_stat.err = SCECdErNO;
     for (ptr = buf, remaining = sectors; remaining > 0;) {

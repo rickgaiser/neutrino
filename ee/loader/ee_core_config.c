@@ -11,7 +11,6 @@ void eecc_init(struct SEECoreConfig *eecc)
     eecc_setCompatFlags(eecc, 0);
     eecc_setFileName(eecc, "");
     eecc_setExitPath(eecc, "Browser");
-    eecc->_ethLinkMode = NETMAN_NETIF_ETH_LINK_MODE_AUTO;
     IP4_ADDR(&eecc->_ethAddr, 192, 168, 1, 10);
     IP4_ADDR(&eecc->_ethMask, 255, 255, 255, 0);
     IP4_ADDR(&eecc->_ethGateway, 192, 168, 1, 1);

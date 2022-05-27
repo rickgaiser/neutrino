@@ -1,6 +1,6 @@
 all:
 	$(MAKE) -C iop/cdvdfsv   all
-	$(MAKE) -C iop/cdvdman USE_BDM=1 IOPCORE_DEBUG=0 all
+	$(MAKE) -C iop/cdvdman USE_BDM=1 IOPCORE_DEBUG=1 all
 	$(MAKE) -C iop/dev9      all
 	$(MAKE) -C iop/dev9_dma  all
 	$(MAKE) -C iop/smap      all

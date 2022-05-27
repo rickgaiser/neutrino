@@ -341,14 +341,11 @@ static void RnC3_UYA_patches(void *address)
             For retail units, there are 2 libcdvd modules. Therefore the pointer should be left-shifted by 2.    */
 
     word1 = JAL((unsigned int)&RnC3_AlwaysAllocMem);
-    switch (GameMode) {
-        default:
 #ifdef _DTL_T10000
-            word2 = 0x00021903; // sra $v1, $v0, 4    For DTL-T10000.
+    word2 = 0x00021903; // sra $v1, $v0, 4    For DTL-T10000.
 #else
-            word2 = 0x00021880; // sll $v1, $v0, 2    For retail sets.
+    word2 = 0x00021880; // sll $v1, $v0, 2    For retail sets.
 #endif
-    }
 
     memcpy(address, &word1, 4);
     memcpy((u8 *)address + 8, &word2, 4);

@@ -8,6 +8,7 @@
 #include <loadcore.h>
 #include <sifcmd.h>
 #include <sifman.h>
+#include <stdio.h>
 #include "smsutils.h"
 #include <thbase.h>
 #include <thevent.h>

@@ -105,6 +105,8 @@ int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
     int OldState;
     iop_event_t event;
 
+    DPRINTF("%s\n", __FUNCTION__);
+
     cdvdman_stat.err = SCECdErNO;
 
     event.attr = EA_SINGLE;
@@ -132,6 +134,8 @@ int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
 static int AllocBank(void **pointer)
 {
     int result;
+
+    DPRINTF("%s\n", __FUNCTION__);
 
     if (cdvdman_stat.StreamingData.StBufmax - cdvdman_stat.StreamingData.StStreamed >= cdvdman_stat.StreamingData.StBanksize) {
         *pointer = cdvdman_stat.StreamingData.StIOP_bufaddr + cdvdman_stat.StreamingData.StWritePtr * 2048;

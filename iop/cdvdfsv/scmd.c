@@ -64,6 +64,8 @@ static inline void rpcSCmd_cdreadclock(void *buf)
 
     cdvdreadclock_res_t *r = (cdvdreadclock_res_t *)buf;
 
+    printf("%s\n", __FUNCTION__);
+
     r->result = sceCdReadClock(&r->rtc);
 }
 
@@ -72,6 +74,8 @@ static inline void rpcSCmd_cdtrayreq(void *buf)
 { // CD Tray Req RPC SCMD
 
     cdvdSCmd_res_t *r = (cdvdSCmd_res_t *)buf;
+
+    printf("%s\n", __FUNCTION__);
 
     r->result = sceCdTrayReq(*((int *)buf), &r->param1);
 }
@@ -82,6 +86,8 @@ static inline void rpcSCmd_cdapplySCmd(void *buf)
 
     cdapplySCmd_t *SCmd = (cdapplySCmd_t *)buf;
 
+    printf("%s\n", __FUNCTION__);
+
     sceCdApplySCmd(SCmd->cmd, SCmd->in, SCmd->in_size, buf);
 }
 
@@ -90,6 +96,8 @@ static inline void rpcSCmd_cdreadGUID(void *buf)
 { // CD Read GUID RPC SCMD
 
     cdvdSCmd_res_t *r = (cdvdSCmd_res_t *)buf;
+
+    printf("%s\n", __FUNCTION__);
 
     r->result = sceCdReadGUID((u64 *)&r->param1);
 }
@@ -100,6 +108,8 @@ static inline void rpcSCmd_cdsettimeout(void *buf)
 
     cdvdSCmd_res_t *r = (cdvdSCmd_res_t *)buf;
 
+    printf("%s\n", __FUNCTION__);
+
     r->result = sceCdSetTimeout(*(int *)buf, r->param1);
 }
 
@@ -108,6 +118,8 @@ static inline void rpcSCmd_cdreadModelID(void *buf)
 { // CD Read Disk ID RPC SCMD
 
     cdvdSCmd_res_t *r = (cdvdSCmd_res_t *)buf;
+
+    printf("%s\n", __FUNCTION__);
 
     r->result = sceCdReadModelID(&r->param1);
 }
@@ -118,12 +130,16 @@ static inline void rpcSCmd_cdreaddvddualinfo(void *buf)
 
     cdvdSCmd_res_t *r = (cdvdSCmd_res_t *)buf;
 
+    printf("%s\n", __FUNCTION__);
+
     r->result = sceCdReadDvdDualInfo((int *)&r->param1, &r->param2);
 }
 
 //-------------------------------------------------------------------------
 static void *cbrpc_cdvdScmds(int fno, void *buf, int size)
 { // CD SCMD RPC callback
+
+    //printf("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
 
     switch (fno) {
         case CD_SCMD_READCLOCK:

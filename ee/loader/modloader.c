@@ -89,10 +89,7 @@ struct SModule mod[] = {
     {"",        "mx4sio_bd.irx"      , NULL, 0, false, SMF_D_MX4SIO , 0},
     {"",        "usbmass_bd.irx"     , NULL, 0, false, SMF_D_USB    , 0},
     {"",        "ps2dev9.irx"        , NULL, 0, false, SMF_D_UDPBD  , 0},
-    {"",        "netman.irx"         , NULL, 0, false, SMF_D_UDPBD  , 0},
     {"",        "smap.irx"           , NULL, 0, false, SMF_D_UDPBD  , 0},
-    {"",        "ps2ip-nm.irx"       , NULL, 0, false, 0            , 0},
-    {"",        "udptty.irx"         , NULL, 0, false, 0            , 0},
     {NULL, NULL, 0, 0}
 };
 // clang-format on
@@ -387,6 +384,8 @@ int main(int argc, char *argv[])
     fileXioUmount("iso:");
 #else
     // SCUS_971.13.ICO.iso
+    sConfigName = "SCUS_971.13";
+    iLBA = 32768;
     
     // SCUS_973.28.Gran Turismo 4.iso
     //sConfigName = "SCUS_973.28";
@@ -397,12 +396,20 @@ int main(int argc, char *argv[])
     //iLBA = 8816816;
     
     // SLES_539.74.Dragon Quest 8.iso
+    //sConfigName = "SLES_539.74";
+    //iLBA = ???;
     
-    // SLES_549.45.DragonBall\ Z\ Budokai\ Tenkaichi\ 3.iso
-    sConfigName = "SLES_549.45";
-    iLBA = 10089840;
+    // SLES_549.45.DragonBall Z Budokai Tenkaichi 3.iso
+    //sConfigName = "SLES_549.45";
+    //iLBA = 10089840;
     
     // SLES_551.87.Wall-E.zso
+    //sConfigName = "SLES_551.87";
+    //iLBA = ???;
+
+    // SCUS_974.81.God of War II.iso
+    //sConfigName = "SCUS_974.81";
+    //iLBA = 0; // ISO as BD
 #endif
 
     memset((void *)0x00084000, 0, 0x00100000 - 0x00084000);
@@ -485,16 +492,8 @@ int main(int argc, char *argv[])
     irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
     //irxptr += load_file_mod("dev9_dma.irx", irxptr, irxptr_tab++);
     irxtable->count++;
-    irxptr += load_file_mod("netman.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
     irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
     irxtable->count++;
-#if 0
-    irxptr += load_file_mod("ps2ip-nm.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
-    irxptr += load_file_mod("udptty.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
-#endif
 
     irxptr += load_file_mod("usbd.irx", irxptr, irxptr_tab++);
     irxtable->count++;

@@ -9,7 +9,7 @@
 //-------------------------------------------------------------------------
 int sceCdSync(int mode)
 {
-    DPRINTF("sceCdSync %d locked = %d\n", mode, sync_flag_locked);
+    //DPRINTF("sceCdSync %d locked = %d\n", mode, sync_flag_locked);
 
     if (!sync_flag_locked)
         return 0; // Completed

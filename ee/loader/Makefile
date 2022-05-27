@@ -5,14 +5,14 @@ EE_LIBS = -lfileXio
 
 all: $(EE_BIN)
 
-# SCUS_971.13.ICO.iso
-# SCUS_973.28.Gran Turismo 4.iso
-# SLES_501.26.Quake III Revolution.iso
-# SLES_539.74.Dragon Quest 8.iso
-# SLES_549.45.DragonBall Z Budokai Tenkaichi 3.iso
-# SLES_551.87.Wall-E.zso
+GAME = SCUS_971.13.ICO.iso
+#GAME = SCUS_973.28.Gran Turismo 4.iso
+#GAME = SLES_501.26.Quake III Revolution.iso
+#GAME = SLES_539.74.Dragon Quest 8.iso
+#GAME = SLES_549.45.DragonBall Z Budokai Tenkaichi 3.iso
+#GAME = SLES_551.87.Wall-E.zso
 run: all copy
-	ps2client -h 192.168.1.10 execee host:$(EE_BIN) udpbd 'mass:DVD/SCUS_973.28.Gran Turismo 4.iso'
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN) udpbd mass:DVD/$(GAME)
 
 reset: clean
 	ps2client -h 192.168.1.10 reset
@@ -42,9 +42,6 @@ copy:
 	cp $(PS2SDK)/iop/irx/usbd.irx modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd.irx modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd.irx modules
-	cp $(PS2SDK)/iop/irx/netman.irx modules
-	cp $(PS2SDK)/iop/irx/ps2ip-nm.irx modules
-	cp $(PS2SDK)/iop/irx/udptty.irx modules
 
 include $(PS2SDK)/samples/Makefile.pref
 include $(PS2SDK)/samples/Makefile.eeglobal_cpp
