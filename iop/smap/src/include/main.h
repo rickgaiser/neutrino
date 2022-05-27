@@ -37,9 +37,7 @@ struct SmapDriverData
 #define SMAP_EVENT_LINK_CHECK 0x10
 
 /* Function prototypes */
-int DisplayBanner(void);
 int smap_init(int argc, char *argv[]);
-void SMAPXmit(void);
 int SMAPGetMACAddress(u8 *buffer);
 
 

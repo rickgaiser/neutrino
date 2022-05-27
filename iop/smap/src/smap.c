@@ -56,7 +56,7 @@
 
 struct SmapDriverData SmapDriverData;
 
-static unsigned int ThreadPriority = 0x01;
+static unsigned int ThreadPriority = 0x28;
 static unsigned int ThreadStackSize = 0x1000;
 static unsigned int EnableVerboseOutput = 0;
 static unsigned int EnableAutoNegotiation = 1;
@@ -424,7 +424,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
                 SmapDrivPrivData->SmapIsInitialized = 1;
 
                 udpbd_init();
-                ttyMount();
+                udptty_init();
 
                 if (!SmapDrivPrivData->EnableLinkCheckTimer) {
                     USec2SysClock(1000000, &SmapDrivPrivData->LinkCheckTimer);
@@ -494,34 +494,6 @@ static int Dev9IntrCb(int flag)
     dev9IntrDisable(DEV9_SMAP_ALL_INTR_MASK);
     iSetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_INTR);
     return 0;
-}
-
-static void ClearPacketQueue(struct SmapDriverData *SmapDrivPrivData)
-{
-    int OldState;
-    void *pkt;
-
-    CpuSuspendIntr(&OldState);
-    pkt = SmapDrivPrivData->packetToSend;
-    SmapDrivPrivData->packetToSend = NULL;
-    CpuResumeIntr(OldState);
-
-    if (pkt != NULL) {
-        ;// todo
-    }
-}
-
-void SMAPXmit(void)
-{
-    if (SmapDriverData.LinkStatus) {
-        if (QueryIntrContext())
-            iSetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_XMIT);
-        else
-            SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_XMIT);
-    } else {
-        // No link. Clear the packet queue.
-        ClearPacketQueue(&SmapDriverData);
-    }
 }
 
 static inline int SetupNetDev(void)

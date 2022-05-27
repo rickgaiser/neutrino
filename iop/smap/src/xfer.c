@@ -164,7 +164,6 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
     return NumPacketsReceived;
 }
 
-extern void SMAPXmit(void);
 static void *g_buf = NULL;
 static size_t g_bufsize = 0;
 int smap_transmit(void *buf, size_t size)
@@ -174,12 +173,14 @@ int smap_transmit(void *buf, size_t size)
 
     WaitSema(tx_sema);
     if (g_buf == NULL) {
+        // Queue transmission
         g_buf = buf;
         g_bufsize = size;
-        SMAPXmit();
+        SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_XMIT);
+        // Wait for transmission to dequed
+        //WaitEventFlag(tx_done_ev, 1, WEF_OR | WEF_CLEAR, &EFBits);
         rv = 0;
     }
-    //WaitEventFlag(tx_done_ev, 1, WEF_OR | WEF_CLEAR, &EFBits);
     SignalSema(tx_sema);
 
     return rv;
@@ -187,19 +188,18 @@ int smap_transmit(void *buf, size_t size)
 
 static int smap_tx_get(void **data)
 {
-    if (g_buf != NULL) {
-        *data = g_buf;
-        return g_bufsize;
-    }
-    return 0;
-}
+    int rv = 0;
 
-static void smap_tx_done()
-{
     if (g_buf != NULL) {
+        // Dequeue
+        *data = g_buf;
+        rv = g_bufsize;
         g_buf = NULL;
-        SetEventFlag(tx_done_ev, 1);
+        g_bufsize = 0;
+        //SetEventFlag(tx_done_ev, 1);
     }
+
+    return rv;
 }
 
 int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData)
@@ -247,6 +247,5 @@ int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData)
             return result; // Queue full
 
         SmapDrivPrivData->packetToSend = NULL;
-        smap_tx_done();
     }
 }

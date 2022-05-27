@@ -67,7 +67,7 @@ iop_device_t tty_driver = {
     "TTY via Udp",
     &tty_functarray};
 
-int ttyMount(void)
+int udptty_init()
 {
     close(0);
     close(1);
