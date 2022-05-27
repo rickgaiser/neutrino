@@ -41,22 +41,22 @@ void ip_packet_init(ip_packet_t *pkt, uint32_t ip_dest)
     pkt->ip.ttl              = 64;
     pkt->ip.proto            = IP_PROTOCOL_UDP;
     //pkt->ip_csum             = ;
-    pkt->ip.addr_src.addr[0] = (ip_addr      ) & 0xff;
-    pkt->ip.addr_src.addr[1] = (ip_addr >>  8) & 0xff;
-    pkt->ip.addr_src.addr[2] = (ip_addr >> 16) & 0xff;
-    pkt->ip.addr_src.addr[3] = (ip_addr >> 24) & 0xff;
-    pkt->ip.addr_dst.addr[0] = (ip_dest      ) & 0xff;
-    pkt->ip.addr_dst.addr[1] = (ip_dest >>  8) & 0xff;
-    pkt->ip.addr_dst.addr[2] = (ip_dest >> 16) & 0xff;
-    pkt->ip.addr_dst.addr[3] = (ip_dest >> 24) & 0xff;
+    pkt->ip.addr_src.addr[0] = (ip_addr >> 24) & 0xff;
+    pkt->ip.addr_src.addr[1] = (ip_addr >> 16) & 0xff;
+    pkt->ip.addr_src.addr[2] = (ip_addr >>  8) & 0xff;
+    pkt->ip.addr_src.addr[3] = (ip_addr      ) & 0xff;
+    pkt->ip.addr_dst.addr[0] = (ip_dest >> 24) & 0xff;
+    pkt->ip.addr_dst.addr[1] = (ip_dest >> 16) & 0xff;
+    pkt->ip.addr_dst.addr[2] = (ip_dest >>  8) & 0xff;
+    pkt->ip.addr_dst.addr[3] = (ip_dest      ) & 0xff;
 }
 
-void udp_packet_init(udp_packet_t *pkt, uint32_t ip, uint16_t port)
+void udp_packet_init(udp_packet_t *pkt, uint32_t ip_dst, uint16_t port_dst)
 {
-    ip_packet_init((ip_packet_t *)pkt, ip);
+    ip_packet_init((ip_packet_t *)pkt, ip_dst);
 
-    pkt->udp.port_src = htons(port);
-    pkt->udp.port_dst = htons(port);
+    //pkt->udp.port_src = ;
+    pkt->udp.port_dst = htons(port_dst);
     //pkt->udp.len      = ;
     //pkt->udp.csum     = ;
 }
@@ -89,8 +89,27 @@ int ip_packet_send(ip_packet_t *pkt, uint16_t size)
     return eth_packet_send((eth_packet_t *)pkt, size + sizeof(ip_header_t));
 }
 
-int udp_packet_send(udp_packet_t *pkt, uint16_t size)
+#define UDP_MAX_PORTS 4
+udp_socket_t udp_ports[UDP_MAX_PORTS];
+udp_socket_t *udp_bind(uint16_t port_src, udp_port_handler handler, void *handler_arg)
 {
+    int i;
+
+    for (i=0; i<UDP_MAX_PORTS; i++) {
+        if (udp_ports[i].port_src == 0) {
+            udp_ports[i].port_src    = port_src;
+            udp_ports[i].handler     = handler;
+            udp_ports[i].handler_arg = handler_arg;
+            return &udp_ports[i];
+        }
+    }
+
+    return NULL;
+}
+
+int udp_packet_send(udp_socket_t *socket, udp_packet_t *pkt, uint16_t size)
+{
+    pkt->udp.port_src = socket->port_src;
     pkt->udp.len  = htons(size + sizeof(udp_header_t));
     pkt->udp.csum = 0; // not needed
 
@@ -104,7 +123,12 @@ int arp_add_entry(uint32_t ip, uint8_t mac[6])
     // Update existing entry
     for (i=0; i<UDP_ARP_ENTRIES; i++) {
         if (ip == arp_table[i].ip) {
-            arp_table[i].mac = mac;
+            arp_table[i].mac[0] = mac[0];
+            arp_table[i].mac[1] = mac[1];
+            arp_table[i].mac[2] = mac[2];
+            arp_table[i].mac[3] = mac[3];
+            arp_table[i].mac[4] = mac[4];
+            arp_table[i].mac[5] = mac[5];
             return 0;
         }
     }
@@ -113,7 +137,12 @@ int arp_add_entry(uint32_t ip, uint8_t mac[6])
     for (i=0; i<UDP_ARP_ENTRIES; i++) {
         if (ip == 0) {
             arp_table[i].ip  = ip;
-            arp_table[i].mac = mac;
+            arp_table[i].mac[0] = mac[0];
+            arp_table[i].mac[1] = mac[1];
+            arp_table[i].mac[2] = mac[2];
+            arp_table[i].mac[3] = mac[3];
+            arp_table[i].mac[4] = mac[4];
+            arp_table[i].mac[5] = mac[5];
             return 0;
         }
     }
@@ -138,7 +167,7 @@ static inline int handle_rx_arp(uint16_t pointer)
     parp[ 9] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 26
     parp[10] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 30
 
-    if (ntohs(req.arp.oper) == 1 && req.arp.target_ip == ip_addr) {
+    if (ntohs(req.arp.oper) == 1 && ntohl(req.arp.target_ip) == ip_addr) {
         reply.eth.addr_dst[0] = req.arp.sender_mac[0];
         reply.eth.addr_dst[1] = req.arp.sender_mac[1];
         reply.eth.addr_dst[2] = req.arp.sender_mac[2];
@@ -167,27 +196,6 @@ static inline int handle_rx_arp(uint16_t pointer)
     return -1;
 }
 
-typedef struct {
-    u16 port;
-    udp_port_handler isr;
-    void *isr_arg;
-} udp_port_t;
-#define UDP_MAX_PORTS 4
-udp_port_t udp_ports[UDP_MAX_PORTS];
-
-void udp_bind_port(uint16_t port, udp_port_handler isr, void *isr_arg)
-{
-    int i;
-
-    for (i=0; i<UDP_MAX_PORTS; i++) {
-        if (udp_ports[i].port == 0) {
-            udp_ports[i].port     = port;
-            udp_ports[i].isr      = isr;
-            udp_ports[i].isr_arg  = isr_arg;
-        }
-    }
-}
-
 static inline int handle_rx_udp(uint16_t pointer)
 {
     USE_SMAP_REGS;
@@ -199,8 +207,8 @@ static inline int handle_rx_udp(uint16_t pointer)
     dport = SMAP_REG16(SMAP_R_RXFIFO_DATA);
 
     for (i=0; i<UDP_MAX_PORTS; i++) {
-        if (dport == udp_ports[i].port)
-            return udp_ports[i].isr(pointer, udp_ports[i].isr_arg);
+        if (dport == udp_ports[i].port_src)
+            return udp_ports[i].handler(&udp_ports[i], pointer, udp_ports[i].handler_arg);
     }
 
     printf("ministack: udp: dport 0x%X\n", dport);

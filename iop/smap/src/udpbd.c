@@ -24,6 +24,7 @@ static int bdm_connected = 0;
 static void *g_buffer;
 static unsigned int g_read_size;
 static unsigned int g_errno = 0;
+static udp_socket_t *udpbd_socket = NULL;
 
 
 static unsigned int _udpbd_read_timeout(void *arg)
@@ -57,7 +58,7 @@ static int _udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, u
     g_pkt.bd.par1   = sector;
     g_pkt.bd.par2   = 0;
 
-    if (udp_packet_send((udp_packet_t *)&g_pkt, sizeof(udpbd_header_t) + 2) < 0)
+    if (udp_packet_send(udpbd_socket, (udp_packet_t *)&g_pkt, sizeof(udpbd_header_t) + 2) < 0)
         return -1;
 
     // Set alarm in case something hangs
@@ -169,7 +170,7 @@ static void udpbd_worker()
     }
 }
 
-static int udpbd_isr(uint16_t pointer, void *arg)
+static int udpbd_isr(udp_socket_t *socket, uint16_t pointer, void *arg)
 {
     USE_SMAP_REGS;
     udpbd_header_t hdr;
@@ -269,11 +270,11 @@ int udpbd_init(void)
     g_udpbd.flush        = udpbd_flush;
     g_udpbd.stop         = udpbd_stop;
 
-    udp_bind_port(UDPBD_PORT, udpbd_isr, NULL);
-
-    udp_packet_init((udp_packet_t *)&g_pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
+    // Bind to UDP socket
+    udpbd_socket = udp_bind(UDPBD_PORT, udpbd_isr, NULL);
 
     // Broadcast request for block device information
+    udp_packet_init((udp_packet_t *)&g_pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
     g_pkt.bd.magic  = UDPBD_HEADER_MAGIC;
     g_pkt.bd.cmd    = UDPBD_CMD_INFO;
     g_pkt.bd.cmdid  = g_cmdid;
@@ -281,7 +282,7 @@ int udpbd_init(void)
     g_pkt.bd.count  = 0;
     g_pkt.bd.par1   = 0;
     g_pkt.bd.par2   = 0;
-    udp_packet_send((udp_packet_t *)&g_pkt, sizeof(udpbd_header_t) + 2);
+    udp_packet_send(udpbd_socket, (udp_packet_t *)&g_pkt, sizeof(udpbd_header_t) + 2);
 
     return 0;
 }

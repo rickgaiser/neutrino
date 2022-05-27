@@ -6,51 +6,36 @@
 
 static int tty_sema   = -1;
 static char ttyname[] = "tty";
+static udp_packet_t pkt;
 
 
-static int dummy()
-{
-    return -5;
-}
-
-static int dummy0()
-{
-    return 0;
-}
+static int dummy_m5() { return -5; }
+static int dummy_0()  { return 0; }
+static int dummy_1()  { return 1; }
 
 static int ttyInit(iop_device_t *driver)
 {
     iop_sema_t sema_info;
-
     sema_info.attr    = 0;
     sema_info.initial = 1; /* Unlocked.  */
     sema_info.max     = 1;
     if ((tty_sema = CreateSema(&sema_info)) < 0)
         return -1;
 
+    // Broadcast packet to UDPTTY port
+    udp_packet_init(&pkt, IP_ADDR(255,255,255,255), 18194);
+
     return 1;
 }
 
-static int ttyOpen(int fd, char *name, int mode)
+static int ttyWrite(iop_file_t *file, void *buf, int size)
 {
-    return 1;
-}
-
-static int ttyClose(int fd)
-{
-    return 1;
-}
-
-static int ttyWrite(iop_file_t *file, char *buf, int size)
-{
-    static udp_packet_t pkt;
+    // Dummy socket, we do not want anyone to answer
+    udp_socket_t socket = {0,NULL,NULL};
 
     WaitSema(tty_sema);
-
-    udp_packet_init(&pkt, IP_ADDR(255,255,255,255), 18194);
     memcpy(pkt.payload, buf, size);
-    udp_packet_send(&pkt, size);
-
+    udp_packet_send(&socket, &pkt, size);
     SignalSema(tty_sema);
 
     return size;
@@ -58,22 +43,22 @@ static int ttyWrite(iop_file_t *file, char *buf, int size)
 
 iop_device_ops_t tty_functarray = {
     ttyInit,
-    dummy0,
-    (void *)dummy,
-    (void *)ttyOpen,
-    (void *)ttyClose,
-    (void *)dummy,
-    (void *)ttyWrite,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy,
-    (void *)dummy};
+    (void *)dummy_0,
+    (void *)dummy_m5,
+    (void *)dummy_1, // open
+    (void *)dummy_1, // close
+    (void *)dummy_m5,
+    ttyWrite,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5,
+    (void *)dummy_m5};
 
 iop_device_t tty_driver = {
     ttyname,
