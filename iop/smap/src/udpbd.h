@@ -46,6 +46,5 @@ typedef struct
 } __attribute__((packed, aligned(4))) udpbd_pkt_t;
 
 int udpbd_init(void);
-void udpbd_rx(uint16_t pointer);
 
 #endif

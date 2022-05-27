@@ -1,8 +1,17 @@
 #include <smapregs.h>
 #include <stdio.h>
 #include "ministack.h"
-#include "udpbd.h"
 #include "xfer.h"
+
+
+static uint32_t ip_addr = IP_ADDR(192, 168, 1, 10);
+
+typedef struct {
+    uint8_t  mac[6];
+    uint32_t ip;
+} arp_entry_t;
+#define UDP_ARP_ENTRIES 8
+arp_entry_t arp_table[UDP_ARP_ENTRIES];
 
 
 void eth_packet_init(eth_packet_t *pkt, uint16_t type)
@@ -18,7 +27,7 @@ void eth_packet_init(eth_packet_t *pkt, uint16_t type)
     pkt->eth.type = htons(type);
 }
 
-void ip_packet_init(ip_packet_t *pkt)
+void ip_packet_init(ip_packet_t *pkt, uint32_t ip_dest)
 {
     eth_packet_init((eth_packet_t *)pkt, ETH_TYPE_IPV4);
 
@@ -30,21 +39,21 @@ void ip_packet_init(ip_packet_t *pkt)
     pkt->ip.flags            = 0;
     pkt->ip.frag_offset      = 0;
     pkt->ip.ttl              = 64;
-    pkt->ip.proto            = 0x11;
+    pkt->ip.proto            = IP_PROTOCOL_UDP;
     //pkt->ip_csum             = ;
-    pkt->ip.addr_src.addr[0] = 192; // FIXME: Make static IP configurable
-    pkt->ip.addr_src.addr[1] = 168; // FIXME: Make static IP configurable
-    pkt->ip.addr_src.addr[2] = 1;   // FIXME: Make static IP configurable
-    pkt->ip.addr_src.addr[3] = 10;  // FIXME: Make static IP configurable
-    pkt->ip.addr_dst.addr[0] = 255;
-    pkt->ip.addr_dst.addr[1] = 255;
-    pkt->ip.addr_dst.addr[2] = 255;
-    pkt->ip.addr_dst.addr[3] = 255;
+    pkt->ip.addr_src.addr[0] = (ip_addr      ) & 0xff;
+    pkt->ip.addr_src.addr[1] = (ip_addr >>  8) & 0xff;
+    pkt->ip.addr_src.addr[2] = (ip_addr >> 16) & 0xff;
+    pkt->ip.addr_src.addr[3] = (ip_addr >> 24) & 0xff;
+    pkt->ip.addr_dst.addr[0] = (ip_dest      ) & 0xff;
+    pkt->ip.addr_dst.addr[1] = (ip_dest >>  8) & 0xff;
+    pkt->ip.addr_dst.addr[2] = (ip_dest >> 16) & 0xff;
+    pkt->ip.addr_dst.addr[3] = (ip_dest >> 24) & 0xff;
 }
 
-void udp_packet_init(udp_packet_t *pkt, uint16_t port)
+void udp_packet_init(udp_packet_t *pkt, uint32_t ip, uint16_t port)
 {
-    ip_packet_init((ip_packet_t *)pkt);
+    ip_packet_init((ip_packet_t *)pkt, ip);
 
     pkt->udp.port_src = htons(port);
     pkt->udp.port_dst = htons(port);
@@ -88,6 +97,30 @@ int udp_packet_send(udp_packet_t *pkt, uint16_t size)
     return ip_packet_send((ip_packet_t *)pkt, size + sizeof(udp_header_t));
 }
 
+int arp_add_entry(uint32_t ip, uint8_t mac[6])
+{
+    int i;
+
+    // Update existing entry
+    for (i=0; i<UDP_ARP_ENTRIES; i++) {
+        if (ip == arp_table[i].ip) {
+            arp_table[i].mac = mac;
+            return 0;
+        }
+    }
+
+    // Add new entry
+    for (i=0; i<UDP_ARP_ENTRIES; i++) {
+        if (ip == 0) {
+            arp_table[i].ip  = ip;
+            arp_table[i].mac = mac;
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
 static inline int handle_rx_arp(uint16_t pointer)
 {
     USE_SMAP_REGS;
@@ -105,7 +138,7 @@ static inline int handle_rx_arp(uint16_t pointer)
     parp[ 9] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 26
     parp[10] = SMAP_REG32(SMAP_R_RXFIFO_DATA); // 30
 
-    if (ntohs(req.arp.oper) == 1 && req.arp.target_ip == IP_ADDR(192,168,1,10)) {
+    if (ntohs(req.arp.oper) == 1 && req.arp.target_ip == ip_addr) {
         reply.eth.addr_dst[0] = req.arp.sender_mac[0];
         reply.eth.addr_dst[1] = req.arp.sender_mac[1];
         reply.eth.addr_dst[2] = req.arp.sender_mac[2];
@@ -113,7 +146,7 @@ static inline int handle_rx_arp(uint16_t pointer)
         reply.eth.addr_dst[4] = req.arp.sender_mac[4];
         reply.eth.addr_dst[5] = req.arp.sender_mac[5];
         SMAPGetMACAddress(reply.eth.addr_src);
-        reply.eth.type = htons(0x0806);
+        reply.eth.type = htons(ETH_TYPE_ARP);
         reply.arp.htype = htons(1); // ethernet
         reply.arp.ptype = htons(ETH_TYPE_IPV4);
         reply.arp.hlen = 6;
@@ -128,31 +161,50 @@ static inline int handle_rx_arp(uint16_t pointer)
         reply.arp.target_mac[4] = req.arp.sender_mac[4];
         reply.arp.target_mac[5] = req.arp.sender_mac[5];
         reply.arp.target_ip     = req.arp.sender_ip;
-
         smap_transmit(&reply, 0x2A);
     }
 
-
     return -1;
+}
+
+typedef struct {
+    u16 port;
+    udp_port_handler isr;
+    void *isr_arg;
+} udp_port_t;
+#define UDP_MAX_PORTS 4
+udp_port_t udp_ports[UDP_MAX_PORTS];
+
+void udp_bind_port(uint16_t port, udp_port_handler isr, void *isr_arg)
+{
+    int i;
+
+    for (i=0; i<UDP_MAX_PORTS; i++) {
+        if (udp_ports[i].port == 0) {
+            udp_ports[i].port     = port;
+            udp_ports[i].isr      = isr;
+            udp_ports[i].isr_arg  = isr_arg;
+        }
+    }
 }
 
 static inline int handle_rx_udp(uint16_t pointer)
 {
     USE_SMAP_REGS;
     uint16_t dport;
+    int i;
 
     // Check port
     SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + 0x24;
     dport = SMAP_REG16(SMAP_R_RXFIFO_DATA);
 
-    switch (dport) {
-        case 0xbdbd:
-            udpbd_rx(pointer);
-            return 0;
-        default:
-            printf("ministack: udp: dport 0x%X\n", dport);
-            return -1;
+    for (i=0; i<UDP_MAX_PORTS; i++) {
+        if (dport == udp_ports[i].port)
+            return udp_ports[i].isr(pointer, udp_ports[i].isr_arg);
     }
+
+    printf("ministack: udp: dport 0x%X\n", dport);
+    return -1;
 }
 
 static inline int handle_rx_ipv4(uint16_t pointer)
@@ -191,4 +243,14 @@ int handle_rx_eth(uint16_t pointer)
             printf("ministack: eth: type 0x%X\n", eth_type);
             return -1;
     }
+}
+
+void ms_ip_set_ip(uint32_t ip)
+{
+    ip_addr = ip;
+}
+
+uint32_t ms_ip_get_ip()
+{
+    return ip_addr;
 }

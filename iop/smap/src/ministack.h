@@ -115,13 +115,22 @@ typedef struct
 void eth_packet_init(eth_packet_t *pkt, uint16_t type);
 int eth_packet_send(eth_packet_t *pkt, uint16_t size);
 
-void ip_packet_init(ip_packet_t *pkt);
+void ip_packet_init(ip_packet_t *pkt, uint32_t ip);
 int ip_packet_send(ip_packet_t *pkt, uint16_t size);
 
-void udp_packet_init(udp_packet_t *pkt, uint16_t port);
+void udp_packet_init(udp_packet_t *pkt, uint32_t ip, uint16_t port);
 int udp_packet_send(udp_packet_t *pkt, uint16_t size);
 
+typedef int (*udp_port_handler)(uint16_t pointer, void *arg);
+void udp_bind_port(uint16_t port, udp_port_handler isr, void *isr_arg);
+int arp_add_entry(uint32_t ip, uint8_t mac[6]);
+
 int handle_rx_eth(uint16_t pointer);
+
+// IP settings
+// NOTE: only local networks, so no subnet mask or gateway!
+void ms_ip_set_ip(uint32_t ip);
+uint32_t ms_ip_get_ip();
 
 
 #endif

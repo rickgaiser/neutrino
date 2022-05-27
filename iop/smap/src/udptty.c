@@ -47,7 +47,7 @@ static int ttyWrite(iop_file_t *file, char *buf, int size)
 
     WaitSema(tty_sema);
 
-    udp_packet_init(&pkt, 18194);
+    udp_packet_init(&pkt, IP_ADDR(255,255,255,255), 18194);
     memcpy(pkt.payload, buf, size);
     udp_packet_send(&pkt, size);
 

@@ -169,58 +169,7 @@ static void udpbd_worker()
     }
 }
 
-
-//
-// Public functions
-//
-int udpbd_init(void)
-{
-    iop_event_t EventFlagData;
-    iop_thread_t ThreadData;
-
-    M_DEBUG("%s\n", __func__);
-
-    EventFlagData.attr   = 0;
-    EventFlagData.option = 0;
-    EventFlagData.bits   = 0;
-    if (g_read_done <= 0)
-        g_read_done = CreateEventFlag(&EventFlagData);
-    if (ev_worker <= 0)
-        ev_worker = CreateEventFlag(&EventFlagData);
-
-    ThreadData.attr = TH_C;
-    ThreadData.thread = udpbd_worker;
-    ThreadData.option = 0;
-    ThreadData.priority = 0x20;
-    ThreadData.stacksize = 0x2000;
-    StartThread(CreateThread(&ThreadData), NULL);
-
-    g_udpbd.name         = "udp";
-    g_udpbd.devNr        = 0;
-    g_udpbd.parNr        = 0;
-    g_udpbd.sectorOffset = 0;
-    g_udpbd.priv         = NULL;
-    g_udpbd.read         = udpbd_read;
-    g_udpbd.write        = udpbd_write;
-    g_udpbd.flush        = udpbd_flush;
-    g_udpbd.stop         = udpbd_stop;
-
-    udp_packet_init((udp_packet_t *)&g_pkt, UDPBD_PORT);
-
-    // Broadcast request for block device information
-    g_pkt.bd.magic  = UDPBD_HEADER_MAGIC;
-    g_pkt.bd.cmd    = UDPBD_CMD_INFO;
-    g_pkt.bd.cmdid  = g_cmdid;
-    g_pkt.bd.cmdpkt = 0;
-    g_pkt.bd.count  = 0;
-    g_pkt.bd.par1   = 0;
-    g_pkt.bd.par2   = 0;
-    udp_packet_send((udp_packet_t *)&g_pkt, sizeof(udpbd_header_t) + 2);
-
-    return 0;
-}
-
-void udpbd_rx(uint16_t pointer)
+static int udpbd_isr(uint16_t pointer, void *arg)
 {
     USE_SMAP_REGS;
     udpbd_header_t hdr;
@@ -281,4 +230,58 @@ void udpbd_rx(uint16_t pointer)
         case UDPBD_CMD_WRITE:
             break;
     };
+
+    return 0;
+}
+
+//
+// Public functions
+//
+int udpbd_init(void)
+{
+    iop_event_t EventFlagData;
+    iop_thread_t ThreadData;
+
+    M_DEBUG("%s\n", __func__);
+
+    EventFlagData.attr   = 0;
+    EventFlagData.option = 0;
+    EventFlagData.bits   = 0;
+    if (g_read_done <= 0)
+        g_read_done = CreateEventFlag(&EventFlagData);
+    if (ev_worker <= 0)
+        ev_worker = CreateEventFlag(&EventFlagData);
+
+    ThreadData.attr = TH_C;
+    ThreadData.thread = udpbd_worker;
+    ThreadData.option = 0;
+    ThreadData.priority = 0x20;
+    ThreadData.stacksize = 0x2000;
+    StartThread(CreateThread(&ThreadData), NULL);
+
+    g_udpbd.name         = "udp";
+    g_udpbd.devNr        = 0;
+    g_udpbd.parNr        = 0;
+    g_udpbd.sectorOffset = 0;
+    g_udpbd.priv         = NULL;
+    g_udpbd.read         = udpbd_read;
+    g_udpbd.write        = udpbd_write;
+    g_udpbd.flush        = udpbd_flush;
+    g_udpbd.stop         = udpbd_stop;
+
+    udp_bind_port(UDPBD_PORT, udpbd_isr, NULL);
+
+    udp_packet_init((udp_packet_t *)&g_pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
+
+    // Broadcast request for block device information
+    g_pkt.bd.magic  = UDPBD_HEADER_MAGIC;
+    g_pkt.bd.cmd    = UDPBD_CMD_INFO;
+    g_pkt.bd.cmdid  = g_cmdid;
+    g_pkt.bd.cmdpkt = 0;
+    g_pkt.bd.count  = 0;
+    g_pkt.bd.par1   = 0;
+    g_pkt.bd.par2   = 0;
+    udp_packet_send((udp_packet_t *)&g_pkt, sizeof(udpbd_header_t) + 2);
+
+    return 0;
 }
