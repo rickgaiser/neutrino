@@ -27,7 +27,6 @@ copy:
 	cp ../../iop/cdvdman/bdm_cdvdman.irx modules
 	cp ../../iop/smap/irx/smap.irx       modules
 	cp ../../iop/dev9/irx/ps2dev9.irx    modules
-	cp ../../iop/dev9_dma/bin/dev9_dma.irx modules
 	cp ../../iop/eesync/eesync.irx       modules
 	cp ../../iop/imgdrv/imgdrv.irx       modules
 	cp ../../iop/isofs/isofs.irx         modules
