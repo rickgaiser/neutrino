@@ -1,24 +1,11 @@
-#include <errno.h>
-#include <stdio.h>
 #include <dmacman.h>
 #include <dev9.h>
-#include <intrman.h>
-#include <loadcore.h>
-#include <modload.h>
-#include <stdio.h>
-#include <sysclib.h>
-#include <thbase.h>
 #include <thevent.h>
 #include <thsemap.h>
-#include <irx.h>
-
 #include <smapregs.h>
-#include <speedregs.h>
-
-#include "main.h"
 
 #include "xfer.h"
-#include "udpbd.h"
+#include "ministack.h"
 
 extern struct SmapDriverData SmapDriverData;
 static int tx_sema = -1;
@@ -164,88 +151,58 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
     return NumPacketsReceived;
 }
 
-static void *g_buf = NULL;
-static size_t g_bufsize = 0;
-int smap_transmit(void *buf, size_t size)
+static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *data, size_t length)
 {
-    int rv = -1;
-    //u32 EFBits;
-
-    WaitSema(tx_sema);
-    if (g_buf == NULL) {
-        // Queue transmission
-        g_buf = buf;
-        g_bufsize = size;
-        SetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_XMIT);
-        // Wait for transmission to dequed
-        //WaitEventFlag(tx_done_ev, 1, WEF_OR | WEF_CLEAR, &EFBits);
-        rv = 0;
-    }
-    SignalSema(tx_sema);
-
-    return rv;
-}
-
-static int smap_tx_get(void **data)
-{
-    int rv = 0;
-
-    if (g_buf != NULL) {
-        // Dequeue
-        *data = g_buf;
-        rv = g_bufsize;
-        g_buf = NULL;
-        g_bufsize = 0;
-        //SetEventFlag(tx_done_ev, 1);
-    }
-
-    return rv;
-}
-
-int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData)
-{
-    int result, length;
-    void *data;
+    USE_SMAP_EMAC3_REGS;
     USE_SMAP_TX_BD;
     volatile u8 *smap_regbase;
     volatile smap_bd_t *BD_ptr;
     u16 BD_data_ptr;
-    unsigned int SizeRounded;
+    unsigned int SizeRounded = (length + 3) & ~3;
 
-    result = 0;
-    while (1) {
-        if ((length = smap_tx_get(&data)) < 1) {
-            return result;
-        }
-        SmapDrivPrivData->packetToSend = data;
-
-        if (SmapDrivPrivData->NumPacketsInTx < SMAP_BD_MAX_ENTRY) {
-            if (length > 0) {
-                SizeRounded = (length + 3) & ~3;
-
-                if (SmapDrivPrivData->TxBufferSpaceAvailable >= SizeRounded) {
-                    smap_regbase = SmapDrivPrivData->smap_regbase;
-
-                    BD_data_ptr = SMAP_REG16(SMAP_R_TXFIFO_WR_PTR) + SMAP_TX_BASE;
-                    BD_ptr = &tx_bd[SmapDrivPrivData->TxBDIndex % SMAP_BD_MAX_ENTRY];
-
-                    CopyToFIFO(SmapDrivPrivData->smap_regbase, data, length);
-
-                    result++;
-                    BD_ptr->length = length;
-                    BD_ptr->pointer = BD_data_ptr;
-                    SMAP_REG8(SMAP_R_TXFIFO_FRAME_INC) = 0;
-                    BD_ptr->ctrl_stat = SMAP_BD_TX_READY | SMAP_BD_TX_GENFCS | SMAP_BD_TX_GENPAD;
-                    SmapDrivPrivData->TxBDIndex++;
-                    SmapDrivPrivData->NumPacketsInTx++;
-                    SmapDrivPrivData->TxBufferSpaceAvailable -= SizeRounded;
-                } else
-                    return result; // Out of FIFO space
-            } else
-                ;//printf("smap: dropped\n");
-        } else
-            return result; // Queue full
-
-        SmapDrivPrivData->packetToSend = NULL;
+    while (SmapDrivPrivData->NumPacketsInTx > 0) {
+        u16 ctrl_stat = tx_bd[SmapDrivPrivData->TxDNVBDIndex % SMAP_BD_MAX_ENTRY].ctrl_stat;
+        if (ctrl_stat & SMAP_BD_TX_READY)
+            break;
+        SmapDrivPrivData->TxBufferSpaceAvailable += (tx_bd[SmapDrivPrivData->TxDNVBDIndex & (SMAP_BD_MAX_ENTRY - 1)].length + 3) & ~3;
+        SmapDrivPrivData->TxDNVBDIndex++;
+        SmapDrivPrivData->NumPacketsInTx--;
     }
+
+    if (SmapDrivPrivData->NumPacketsInTx >= SMAP_BD_MAX_ENTRY)
+        return -1;
+    
+    if (SmapDrivPrivData->TxBufferSpaceAvailable < SizeRounded)
+        return -2;
+
+    smap_regbase = SmapDrivPrivData->smap_regbase;
+
+    BD_data_ptr = SMAP_REG16(SMAP_R_TXFIFO_WR_PTR) + SMAP_TX_BASE;
+    BD_ptr = &tx_bd[SmapDrivPrivData->TxBDIndex % SMAP_BD_MAX_ENTRY];
+
+    CopyToFIFO(SmapDrivPrivData->smap_regbase, data, length);
+
+    BD_ptr->length = length;
+    BD_ptr->pointer = BD_data_ptr;
+    SMAP_REG8(SMAP_R_TXFIFO_FRAME_INC) = 0;
+    BD_ptr->ctrl_stat = SMAP_BD_TX_READY | SMAP_BD_TX_GENFCS | SMAP_BD_TX_GENPAD;
+    SmapDrivPrivData->TxBDIndex++;
+    SmapDrivPrivData->NumPacketsInTx++;
+    SmapDrivPrivData->TxBufferSpaceAvailable -= SizeRounded;
+
+    SMAP_EMAC3_SET32(SMAP_R_EMAC3_TxMODE0, SMAP_E3_TX_GNP_0);
+
+    return 1;
+}
+
+int smap_transmit(void *buf, size_t size)
+{
+    WaitSema(tx_sema);
+
+    // Add packet to queue (if there's room)    
+    HandleTxReqs(&SmapDriverData, buf, size);
+
+    SignalSema(tx_sema);
+
+    return 0;
 }

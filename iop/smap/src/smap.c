@@ -360,27 +360,6 @@ static unsigned int LinkCheckTimerCB(struct SmapDriverData *SmapDrivPrivData)
     return SmapDrivPrivData->LinkCheckTimer.lo;
 }
 
-static int HandleTxIntr(struct SmapDriverData *SmapDrivPrivData)
-{
-    int result;
-    USE_SMAP_TX_BD;
-    u16 ctrl_stat;
-
-    result = 0;
-    while (SmapDrivPrivData->NumPacketsInTx > 0) {
-        ctrl_stat = tx_bd[SmapDrivPrivData->TxDNVBDIndex % SMAP_BD_MAX_ENTRY].ctrl_stat;
-        if (ctrl_stat & SMAP_BD_TX_READY)
-            break;
-
-        result++;
-        SmapDrivPrivData->TxBufferSpaceAvailable += (tx_bd[SmapDrivPrivData->TxDNVBDIndex & (SMAP_BD_MAX_ENTRY - 1)].length + 3) & ~3;
-        SmapDrivPrivData->TxDNVBDIndex++;
-        SmapDrivPrivData->NumPacketsInTx--;
-    }
-
-    return result;
-}
-
 // Checks the status of the Ethernet link
 static void CheckLinkStatus(struct SmapDriverData *SmapDrivPrivData)
 {
@@ -403,7 +382,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
     emac3_regbase = SmapDrivPrivData->emac3_regbase;
     smap_regbase = SmapDrivPrivData->smap_regbase;
     while (1) {
-        if ((result = WaitEventFlag(SmapDrivPrivData->Dev9IntrEventFlag, SMAP_EVENT_START | SMAP_EVENT_INTR | SMAP_EVENT_XMIT | SMAP_EVENT_LINK_CHECK, WEF_OR | WEF_CLEAR, &EFBits)) != 0) {
+        if ((result = WaitEventFlag(SmapDrivPrivData->Dev9IntrEventFlag, SMAP_EVENT_START | SMAP_EVENT_INTR | SMAP_EVENT_LINK_CHECK, WEF_OR | WEF_CLEAR, &EFBits)) != 0) {
             DEBUG_PRINTF("smap: WaitEventFlag -> %d\n", result);
             break;
         }
@@ -454,26 +433,11 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
                     if (IntrReg & SMAP_INTR_RXDNV) {
                         SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_RXDNV;
                     }
-                    if (IntrReg & SMAP_INTR_TXDNV) {
-                        SMAP_REG16(SMAP_R_INTR_CLR) = SMAP_INTR_TXDNV;
-                        HandleTxIntr(SmapDrivPrivData);
-                        EFBits |= SMAP_EVENT_XMIT;
-                    }
                 }
             }
 
-            if (EFBits & SMAP_EVENT_XMIT)
-                HandleTxReqs(SmapDrivPrivData);
-            HandleTxIntr(SmapDrivPrivData);
-
             // TXDNV is not enabled here, but only when frames are transmitted.
             dev9IntrEnable(DEV9_SMAP_INTR_MASK2);
-
-            // If there are frames to send out, let Tx channel 0 know and enable TXDNV.
-            if (SmapDrivPrivData->NumPacketsInTx > 0) {
-                SMAP_EMAC3_SET32(SMAP_R_EMAC3_TxMODE0, SMAP_E3_TX_GNP_0);
-                dev9IntrEnable(SMAP_INTR_TXDNV);
-            }
 
             // Do the link check, only if there has not been any incoming traffic in a while.
             if (ResetCounterFlag) {

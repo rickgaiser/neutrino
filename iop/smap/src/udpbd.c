@@ -18,7 +18,6 @@ static struct block_device g_udpbd;
 static udpbd_pkt_t g_pkt;
 static uint8_t g_cmdid   = 0;
 static int g_read_done   = 0;
-static int ev_worker     = 0;
 static int g_read_cmdpkt = 0;
 static int bdm_connected = 0;
 static void *g_buffer;
@@ -160,16 +159,6 @@ static int udpbd_stop(struct block_device *bd)
     return 0;
 }
 
-static void udpbd_worker()
-{
-    uint32_t EFBits;
-
-    while(1) {
-        WaitEventFlag(ev_worker, 1, WEF_OR | WEF_CLEAR, &EFBits);
-        bdm_connect_bd(&g_udpbd);
-    }
-}
-
 static int udpbd_isr(udp_socket_t *socket, uint16_t pointer, void *arg)
 {
     USE_SMAP_REGS;
@@ -189,7 +178,7 @@ static int udpbd_isr(udp_socket_t *socket, uint16_t pointer, void *arg)
                 g_udpbd.sectorSize  = hdr.par1;
                 g_udpbd.sectorCount = hdr.par2;
                 bdm_connected = 1;
-                SetEventFlag(ev_worker, 1);
+                bdm_connect_bd(&g_udpbd);
             }
             break;
         case UDPBD_CMD_READ:
@@ -241,7 +230,6 @@ static int udpbd_isr(udp_socket_t *socket, uint16_t pointer, void *arg)
 int udpbd_init(void)
 {
     iop_event_t EventFlagData;
-    iop_thread_t ThreadData;
 
     M_DEBUG("%s\n", __func__);
 
@@ -250,15 +238,6 @@ int udpbd_init(void)
     EventFlagData.bits   = 0;
     if (g_read_done <= 0)
         g_read_done = CreateEventFlag(&EventFlagData);
-    if (ev_worker <= 0)
-        ev_worker = CreateEventFlag(&EventFlagData);
-
-    ThreadData.attr = TH_C;
-    ThreadData.thread = udpbd_worker;
-    ThreadData.option = 0;
-    ThreadData.priority = 0x20;
-    ThreadData.stacksize = 0x2000;
-    StartThread(CreateThread(&ThreadData), NULL);
 
     g_udpbd.name         = "udp";
     g_udpbd.devNr        = 0;

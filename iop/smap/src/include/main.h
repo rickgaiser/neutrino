@@ -17,7 +17,6 @@ struct SmapDriverData
     unsigned char TxBDIndex;
     unsigned char TxDNVBDIndex;
     unsigned char RxBDIndex;
-    void *packetToSend;
     int Dev9IntrEventFlag;
     int IntrHandlerThreadID;
     unsigned char SmapDriverStarted; // SMAP driver is started.
@@ -33,7 +32,6 @@ struct SmapDriverData
 /* Event flag bits */
 #define SMAP_EVENT_START      0x01
 #define SMAP_EVENT_INTR       0x04
-#define SMAP_EVENT_XMIT       0x08
 #define SMAP_EVENT_LINK_CHECK 0x10
 
 /* Function prototypes */

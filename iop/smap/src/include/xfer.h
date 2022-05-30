@@ -15,7 +15,6 @@ int smap_transmit(void *buf, size_t size);
 
 void xfer_init(void);
 int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData);
-int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData);
 
 
 #endif
