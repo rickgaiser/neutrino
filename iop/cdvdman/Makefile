@@ -13,8 +13,8 @@ endif
 
 IOP_INCS += -I../common
 
-ifeq ($(IOPCORE_DEBUG),1)
-IOP_CFLAGS += -D__IOPCORE_DEBUG
+ifeq ($(DEBUG),1)
+IOP_CFLAGS += -DDEBUG
 endif
 
 ifeq ($(USE_DEV9),1)

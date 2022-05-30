@@ -15,9 +15,11 @@ I_close
 I_lseek
 ioman_IMPORTS_end
 
+#ifdef DEBUG
 stdio_IMPORTS_start
 I_printf
 stdio_IMPORTS_end
+#endif
 
 sysclib_IMPORTS_start
 I_memset

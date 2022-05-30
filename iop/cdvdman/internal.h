@@ -26,7 +26,7 @@
 
 #include "smsutils.h"
 
-#ifdef __IOPCORE_DEBUG
+#ifdef DEBUG
 #define DPRINTF(args...)  printf(args)
 #define iDPRINTF(args...) Kprintf(args)
 #else

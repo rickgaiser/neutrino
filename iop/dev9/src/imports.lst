@@ -21,9 +21,11 @@ I_RegisterLibraryEntries
 I_QueryBootMode
 loadcore_IMPORTS_end
 
+#ifdef DEBUG
 stdio_IMPORTS_start
 I_printf
 stdio_IMPORTS_end
+#endif
 
 sysclib_IMPORTS_start
 I_strcmp

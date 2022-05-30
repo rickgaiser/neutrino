@@ -87,7 +87,7 @@ int sceCdApplySCmd(u8 cmd, const void *in, u16 in_size, void *out)
 //-------------------------------------------------------------------------
 int sceCdStatus(void)
 {
-    DPRINTF("sceCdStatus %d\n", cdvdman_stat.status);
+    //DPRINTF("sceCdStatus %d\n", cdvdman_stat.status);
 
     return cdvdman_stat.status;
 }

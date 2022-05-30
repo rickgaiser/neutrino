@@ -12,9 +12,9 @@
 
 //#define DEBUG 1 //Comment out to disable debug messages.
 #ifdef DEBUG
-#define DEBUG_PRINTF(args...) printf(args)
+#define PRINTF(args...) printf(args)
 #else
-#define DEBUG_PRINTF(args...)
+#define PRINTF(args...)
 #endif
 
 #define FULL_UDNL   1 // Comment out to build a UDNL module that updates the IOP with only its payload.
@@ -212,7 +212,7 @@ static void ScanImagesForFile(const struct ImageData *ImageDataBuffer, unsigned 
         do {
             if (ImageData->filename != NULL) {
                 if (GetFileStatFromImage(&ImageData->stat, filename, stat) != 0) {
-                    DEBUG_PRINTF("File: %s, image: %s\n", filename, ImageData->filename);
+                    PRINTF("File: %s, image: %s\n", filename, ImageData->filename);
                     return;
                 }
             }
@@ -222,7 +222,7 @@ static void ScanImagesForFile(const struct ImageData *ImageDataBuffer, unsigned 
         } while (i >= 0);
     }
 
-    printf("panic ! \'%s\' not found\n", filename);
+    PRINTF("panic ! \'%s\' not found\n", filename);
     __asm("break\n");
 }
 
@@ -413,7 +413,7 @@ static void LoadIRXModule(const void *module, struct ModuleInfo *ModuleInfo)
 
             /* 0x0000107c - Warning: beware of sign extension! The code here depends on sign extension. */
             for (i = 0, ELF_relocation = (elf_rel *)((unsigned int)module + CurrentELF_shdr->offset); i < NumRelocs; i++, ELF_relocation++) {
-                //            DEBUG_PRINTF("Reloc %d: %p\n", (unsigned char)ELF_relocation->info&0xFF, (u8 *)(ModuleInfo->text_start)+ELF_relocation->offset);    //Code for debugging only: Not originally present.
+                //            PRINTF("Reloc %d: %p\n", (unsigned char)ELF_relocation->info&0xFF, (u8 *)(ModuleInfo->text_start)+ELF_relocation->offset);    //Code for debugging only: Not originally present.
 
                 switch (ELF_relocation->info & 0xFF) {
                     case R_MIPS_NONE:
@@ -669,7 +669,7 @@ static struct RomdirFileStat *SelectModuleFromImages(const struct ImageData *Ima
                         ImageFileIndexNumber = NumFilesRemaining;
                         HighestFileVersionNum = FileVersionNum;
 
-                        DEBUG_PRINTF("SelectModule: %s, %s, 0x%x\n", filename, ImageDataPtr->filename, FileVersionNum);
+                        PRINTF("SelectModule: %s, %s, 0x%x\n", filename, ImageDataPtr->filename, FileVersionNum);
                     }
                 }
             }
@@ -697,7 +697,7 @@ static void DisplayModuleName(int id, const char *line)
     }
     filename[i] = '\0';
 
-    DEBUG_PRINTF("%d: %s\n", id, filename);
+    PRINTF("%d: %s\n", id, filename);
 }
 #endif
 
@@ -869,7 +869,7 @@ int _start(int argc, char *argv[])
             */
 
             if ((fd = open(argv[i], O_RDONLY)) < 0) {
-                printf("file \'%s\' can't open\n", argv[i]);
+                PRINTF("file \'%s\' can't open\n", argv[i]);
                 SleepThread();
                 __asm("break");
             }
@@ -896,7 +896,7 @@ int _start(int argc, char *argv[])
 
     /* 0x000002f8 */
     if ((buffer = AllocMemory(TotalSize)) == NULL) {
-        printf("pannic ! can not alloc memory\n");
+        PRINTF("pannic ! can not alloc memory\n");
         SleepThread();
         __asm("break");
     }
@@ -955,7 +955,7 @@ int _start(int argc, char *argv[])
     ParseIOPBTCONF(ImageDataBuffer, 2, &FileStat, ResetData);
 #endif
 
-    DEBUG_PRINTF("Beginning IOP bootup sequence.\n");
+    PRINTF("Beginning IOP bootup sequence.\n");
 
     CpuDisableIntr();
     dmac_set_dpcr(0);

@@ -5,8 +5,12 @@
 #include <thbase.h>
 
 
-// In the SONY original, all the calls to DEBUG_PRINTF() were to sceInetPrintf().
-#define DEBUG_PRINTF(args...) printf(args)
+// In the SONY original, all the calls to PRINTF() were to sceInetPrintf().
+#ifdef DEBUG
+#define PRINTF(args...) printf(args)
+#else
+#define PRINTF(args...)
+#endif
 
 struct SmapDriverData
 {

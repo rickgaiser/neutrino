@@ -211,7 +211,7 @@ static inline int handle_rx_udp(uint16_t pointer)
             return udp_ports[i].handler(&udp_ports[i], pointer, udp_ports[i].handler_arg);
     }
 
-    printf("ministack: udp: dport 0x%X\n", dport);
+    PRINTF("ministack: udp: dport 0x%X\n", dport);
     return -1;
 }
 
@@ -228,7 +228,7 @@ static inline int handle_rx_ipv4(uint16_t pointer)
         case IP_PROTOCOL_UDP:
             return handle_rx_udp(pointer);
         default:
-            printf("ministack: ipv4: protocol 0x%X\n", protocol);
+            PRINTF("ministack: ipv4: protocol 0x%X\n", protocol);
             return -1;
     }
 }
@@ -248,7 +248,7 @@ int handle_rx_eth(uint16_t pointer)
         case ETH_TYPE_IPV4:
             return handle_rx_ipv4(pointer);
         default:
-            printf("ministack: eth: type 0x%X\n", eth_type);
+            PRINTF("ministack: eth: type 0x%X\n", eth_type);
             return -1;
     }
 }

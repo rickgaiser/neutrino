@@ -9,9 +9,13 @@
 #include "udpbd.h"
 #include "main.h"
 
+#ifdef DEBUG
 #define M_PRINTF(format, args...) printf("UDPBD: " format, ##args)
-#define M_DEBUG                   M_PRINTF
-//#define M_DEBUG(...)
+#define M_DEBUG(format, args...)  printf("UDPBD: " format, ##args)
+#else
+#define M_PRINTF(format, args...)
+#define M_DEBUG(format, args...)
+#endif
 
 #define UDPBD_MAX_RETRIES         4
 static struct block_device g_udpbd;

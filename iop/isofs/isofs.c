@@ -8,7 +8,11 @@
 
 #include <irx.h>
 
-#define DPRINTF(args...) // printf(args)
+#ifdef DEBUG
+#define DPRINTF(args...) printf(args)
+#else
+#define DPRINTF(args...)
+#endif
 
 struct dirTocEntry
 {

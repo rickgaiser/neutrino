@@ -1,22 +1,24 @@
+DEBUG=0
+
 all:
-	$(MAKE) -C iop/cdvdfsv   all
-	$(MAKE) -C iop/cdvdman USE_BDM=1 IOPCORE_DEBUG=1 all
-	$(MAKE) -C iop/dev9      all
-	$(MAKE) -C iop/smap      all
-	$(MAKE) -C iop/eesync    all
-	$(MAKE) -C iop/imgdrv    all
-	$(MAKE) -C iop/isofs     all
-	$(MAKE) -C iop/resetspu  all
-	$(MAKE) -C iop/udnl      all
-	$(MAKE) -C ee/loader     all
-	$(MAKE) -C ee/ee_core    all
+	$(MAKE) -C iop/cdvdfsv  all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/cdvdman  all DEBUG=$(DEBUG) USE_BDM=1
+	$(MAKE) -C iop/dev9     all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/smap     all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/eesync   all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/imgdrv   all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/isofs    all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/resetspu all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/udnl     all DEBUG=$(DEBUG)
+	$(MAKE) -C ee/loader    all
+	$(MAKE) -C ee/ee_core   all
 
 format:
 	find . -type f -a \( -iname \*.h -o -iname \*.c \) | xargs clang-format -i
 
 clean:
 	$(MAKE) -C iop/cdvdfsv   clean
-	$(MAKE) -C iop/cdvdman USE_BDM=1 IOPCORE_DEBUG=1 clean
+	$(MAKE) -C iop/cdvdman   clean USE_BDM=1
 	$(MAKE) -C iop/dev9      clean
 	$(MAKE) -C iop/smap      clean
 	$(MAKE) -C iop/eesync    clean

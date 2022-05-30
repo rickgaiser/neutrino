@@ -42,9 +42,11 @@ I_CpuSuspendIntr
 I_CpuResumeIntr
 intrman_IMPORTS_end
 
+#ifdef DEBUG
 stdio_IMPORTS_start
 I_printf
 stdio_IMPORTS_end
+#endif
 
 loadcore_IMPORTS_start
 I_RegisterLibraryEntries

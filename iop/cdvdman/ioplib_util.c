@@ -12,7 +12,7 @@
 
 #include "smsutils.h"
 
-#ifdef __IOPCORE_DEBUG
+#ifdef DEBUG
 #define DPRINTF(args...) printf(args)
 #else
 #define DPRINTF(args...) \
@@ -68,7 +68,7 @@ static struct FakeModule modulefake_list[] = {
     {"DEV9.IRX", "dev9", FAKE_MODULE_ID_DEV9, 0x0208, 0},
 #endif
 #ifdef BDM_DRIVER
-    {"USBD.IRX", "USB_driver", FAKE_MODULE_ID_USBD, 0x0204, 2},
+//    {"USBD.IRX", "USB_driver", FAKE_MODULE_ID_USBD, 0x0204, 2},
 #endif
 #ifdef SMB_DRIVER
     {"SMAP.IRX", "INET_SMAP_driver", FAKE_MODULE_ID_SMAP, 0x0219, 2},

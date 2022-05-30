@@ -70,7 +70,7 @@ lbl_startlocate:
 
     // if a slash was found
     if (slash != NULL) {
-#ifdef __IOPCORE_DEBUG
+#ifdef DEBUG
         if (len >= sizeof(cdvdman_dirname)) {
             DPRINTF("cdvdman_locatefile: segment too long: (%d chars) \"%s\"\n", len, p);
             asm volatile("break\n");
@@ -81,7 +81,7 @@ lbl_startlocate:
         strncpy(cdvdman_dirname, p, len);
         cdvdman_dirname[len] = 0;
     } else {
-#ifdef __IOPCORE_DEBUG
+#ifdef DEBUG
         len = strlen(p);
 
         if (len >= sizeof(cdvdman_dirname)) {
@@ -114,9 +114,7 @@ lbl_startlocate:
                 strncpy(cdvdman_curdir, tocEntryPointer->filename, filename_len); // copy filename
                 cdvdman_curdir[filename_len] = 0;
 
-#ifdef __IOPCORE_DEBUG
                 DPRINTF("cdvdman_locatefile strcmp %s %s\n", cdvdman_dirname, cdvdman_curdir);
-#endif
 
                 r = strncmp(cdvdman_dirname, cdvdman_curdir, 12);
                 if ((!r) && (!slash)) { // we searched a file so it's found

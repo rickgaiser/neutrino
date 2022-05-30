@@ -5,6 +5,7 @@
 */
 
 #include "internal.h"
+#include "xmodload.h"
 
 #define MODNAME "cdvd_driver"
 IRX_ID(MODNAME, 1, 1);
@@ -85,7 +86,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     unsigned int SectorsToRead, remaining;
     void *ptr;
 
-    DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
+    //DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
     cdvdman_stat.err = SCECdErNO;
     for (ptr = buf, remaining = sectors; remaining > 0;) {
@@ -161,7 +162,7 @@ static int cdvdman_read(u32 lsn, u32 sectors, void *buf)
 //-------------------------------------------------------------------------
 u32 sceCdGetReadPos(void)
 {
-    DPRINTF("sceCdGetReadPos\n");
+    //DPRINTF("sceCdGetReadPos\n");
 
     return ReadPos;
 }
@@ -282,7 +283,7 @@ sceCdCBFunc sceCdCallback(sceCdCBFunc func)
     int oldstate;
     void *old_cb;
 
-    DPRINTF("sceCdCallback %p\n", func);
+    //DPRINTF("sceCdCallback %p\n", func);
 
     if (sceCdSync(1))
         return NULL;
@@ -302,7 +303,7 @@ int sceCdSC(int code, int *param)
 {
     int result;
 
-    DPRINTF("sceCdSC(0x%X, 0x%X)\n", code, *param);
+    //DPRINTF("sceCdSC(0x%X, 0x%X)\n", code, *param);
 
     switch (code) {
         case CDSC_GET_INTRFLAG:
@@ -414,7 +415,7 @@ void cdvdman_cb_event(int reason)
     if (cb_data.user_cb != NULL) {
         cb_data.reason = reason;
 
-        DPRINTF("cdvdman_cb_event reason: %d - setting cb alarm...\n", reason);
+        //DPRINTF("cdvdman_cb_event reason: %d - setting cb alarm...\n", reason);
 
         if (QueryIntrContext())
             iSetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);

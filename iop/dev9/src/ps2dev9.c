@@ -35,8 +35,11 @@
 // This is version from last SDK 3.1.0
 IRX_ID(MODNAME, 2, 8);
 
-#define M_PRINTF(format, args...) \
-    printf(MODNAME ": " format, ##args)
+#ifdef DEBUG
+#define M_PRINTF(format, args...) printf(MODNAME ": " format, ##args)
+#else
+#define M_PRINTF(format, args...)
+#endif
 
 #define VERSION "1.0"
 #define BANNER  "\nDEV9 device driver v%s - Copyright (c) 2003 Marcus R. Brown\n\n"
@@ -174,7 +177,7 @@ static iop_device_t dev9x_device =
 
 static int print_help(void)
 { // The original made a printf() call for each line.
-    printf("Usage:\n"
+    M_PRINTF("Usage:\n"
            "  %s [-sa] <attribute>]\n"
            "      -sa  You can specify attibute of sempahore for queuing thread.\n"
            "           List of possible <attribute>:\n"
@@ -193,7 +196,7 @@ int _start(int argc, char **argv)
 
     semaAttrGlobal = SA_THPRI;
 
-    printf(BANNER, VERSION);
+    M_PRINTF(BANNER, VERSION);
 
     mod_name = (pModName = strrchr(argv[0], '/')) != NULL ? pModName + 1 : argv[0];
 
@@ -831,10 +834,13 @@ static int dev9_smap_init(void)
 
 static int speed_device_init(void)
 {
+#ifdef DEBUG
     USE_SPD_REGS;
     const char *spdnames[] = {"(unknown)", "TS", "ES1", "ES2"};
-    int idx, res;
+    int idx;
     u16 spdrev;
+#endif
+    int res;
 #ifndef DEV9_SKIP_SMAP_INIT
     int i;
 #endif
@@ -879,6 +885,7 @@ static int speed_device_init(void)
     }
 #endif
 
+#ifdef DEBUG
     /* Print out the SPEED chip revision.  */
     spdrev = SPD_REG16(SPD_R_REV_1);
     idx = (spdrev & 0xffff) - 14;
@@ -886,8 +893,9 @@ static int speed_device_init(void)
         idx = 1; /* TS */
     else if (spdrev < 9 || (spdrev < 16 || spdrev > 17))
         idx = 0; /* Unknown revision */
-
     M_PRINTF("SPEED chip '%s', revision %0x\n", spdnames[idx], spdrev);
+#endif
+
     return 0;
 }
 
@@ -1001,15 +1009,19 @@ static int pcic_ssbus_mode(int mode)
 
 static int pcmcia_device_probe(void)
 {
+#ifdef DEBUG
     const char *pcic_ct_names[] = {"No", "16-bit", "CardBus"};
     int voltage;
+#endif
 
     pcic_voltage = pcic_get_voltage();
     pcic_cardtype = pcic_get_cardtype();
-    voltage = (pcic_voltage == PC_CARD_VOLTAGE_5V ? 5 : (pcic_voltage == PC_CARD_VOLTAGE_3V ? 3 : 0));
 
+#ifdef DEBUG
+    voltage = (pcic_voltage == PC_CARD_VOLTAGE_5V ? 5 : (pcic_voltage == PC_CARD_VOLTAGE_3V ? 3 : 0));
     M_PRINTF("%s PCMCIA card detected. Vcc = %dV\n",
              pcic_ct_names[pcic_cardtype], voltage);
+#endif
 
     if (pcic_voltage == PC_CARD_VOLTAGE_04h || pcic_cardtype != PC_CARD_TYPE_PCMCIA)
         return -1;
