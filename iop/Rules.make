@@ -113,6 +113,7 @@ $(IOP_OBJS): | $(IOP_OBJS_DIR)
 
 $(IOP_BIN): $(IOP_OBJS) | $(IOP_BIN_DIR)
 	$(IOP_C_COMPILE) $(IOP_OPTFLAGS) -o $(IOP_BIN) $(IOP_OBJS) $(IOP_LDFLAGS) $(IOP_LIBS)
+	iopmod-info $@ > $@.txt
 
 $(IOP_LIB): $(IOP_OBJS) | $(IOP_LIB_DIR)
 	$(IOP_AR) cru $(IOP_LIB) $(IOP_OBJS)

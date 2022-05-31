@@ -1,0 +1,33 @@
+iopmod id addr		0xffffffff
+iopmod id name		
+iopmod id version	0x0000
+iopmod entry addr	0xc84
+iopmod unknown addr	0x9350
+iopmod text size	4896
+iopmod data size	48
+iopmod bss size		32
+iopmod version		0x0000
+iopmod name		
+import library	0x0101	dmacman
+import  0	14	dmac_set_dpcr
+import  1	16	dmac_set_dpcr2
+import  2	18	dmac_set_dpcr3
+import library	0x0102	intrman
+import  0	 8	intrman_cpu_disable_irqs
+import library	0x0101	ioman
+import  0	 4
+import  1	 6
+import  2	 5
+import  3	 8
+import library	0x0101	sysclib
+import  0	14
+import  1	22
+import  2	29
+import  3	12
+import library	0x0101	sysmem
+import  0	 4
+import  1	10
+import  2	 9
+import  3	 6
+import library	0x0101	thbase
+import  0	24	thbase_sleep

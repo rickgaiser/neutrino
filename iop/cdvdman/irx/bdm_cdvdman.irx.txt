@@ -1,0 +1,221 @@
+iopmod id addr		0x4ad8
+iopmod id name		cdvd_driver
+iopmod id version	0x0101
+iopmod entry addr	0xa54
+iopmod unknown addr	0xcc50
+iopmod text size	18640
+iopmod data size	896
+iopmod bss size		20192
+iopmod version		0x0101
+iopmod name		cdvd_driver
+import library	0x0101	ioman
+import  0	20
+import  1	21
+import library	0x0102	stdio
+import  0	 4	stdio_printf
+import library	0x0101	dmacman
+import  0	17	dmac_get_dpcr2
+import  1	16	dmac_set_dpcr2
+import library	0x0102	intrman
+import  0	17	intrman_cpu_suspend_irq
+import  1	18	intrman_cpu_resume_irq
+import  2	23	intrman_in_irq
+import  3	 6	intrman_enable_irq
+import  4	 4	intrman_request_irq
+import library	0x0101	sysmem
+import  0	 8
+import  1	14
+import library	0x0101	loadcore
+import  0	 5
+import  1	 4
+import  2	 6
+import  3	 3
+import  4	12
+import library	0x0101	sysclib
+import  0	23
+import  1	27
+import  2	29
+import  3	21
+import  4	32
+import  5	34
+import  6	30
+import  7	19
+import library	0x0102	thsemap
+import  0	 4	thsemap_create_sema
+import  1	 6	thsemap_signal_sema
+import  2	 7	thsemap_isignal_sema
+import  3	 8	thsemap_wait_sema
+import  4	 5	thsemap_delete_sema
+import  5	 9	thsemap_poll_sema
+import library	0x0101	thbase
+import  0	21	thbase_check_stack
+import  1	 4	thbase_create
+import  2	 6	thbase_start
+import  3	33	thbase_delay
+import  4	35	thbase_set_alarm
+import  5	36	thbase_iset_alarm
+import  6	37	thbase_cancel_alarm
+import  7	39	thbase_us_to_sys_clock
+import  8	24	thbase_sleep
+import  9	26	thbase_iwakeup
+import library	0x0101	thevent
+import  0	 4	thevent_create_event_flag
+import  1	 8	thevent_clear_event_flag
+import  2	 9	thevent_iclear_event_flag
+import  3	 6	thevent_set_event_flag
+import  4	 7	thevent_iset_event_flag
+import  5	10	thevent_wait_event_flag
+import  6	11	thevent_poll_event_flag
+import library	0x0101	sifman
+import  0	32	sifman_set_dma_intr
+export library	0x0101	cdvdman
+export  0	0x0a54	_init_module
+export  1	0x37d0	
+export  2	0x0bfc	
+export  3	0x37d0	
+export  4	0x0380	
+export  5	0x18a0	
+export  6	0x1764	
+export  7	0x1850	
+export  8	0x1ab4	
+export  9	0x1828	
+export 10	0x2324	
+export 11	0x16f0	
+export 12	0x1aa4	
+export 13	0x1970	
+export 14	0x1ac4	
+export 15	0x18d4	
+export 16	0x0480	
+export 17	0x04c8	
+export 18	0x37e0	
+export 19	0x37e0	
+export 20	0x37e0	
+export 21	0x37e0	
+export 22	0x1c9c	
+export 23	0x37e0	
+export 24	0x1a50	
+export 25	0x37e0	
+export 26	0x37e0	
+export 27	0x37e0	
+export 28	0x1bb8	
+export 29	0x1b90	
+export 30	0x37e0	
+export 31	0x37e0	
+export 32	0x37e0	
+export 33	0x37e0	
+export 34	0x37e0	
+export 35	0x37e0	
+export 36	0x37e0	
+export 37	0x059c	
+export 38	0x1920	
+export 39	0x1bc8	
+export 40	0x1820	
+export 41	0x37e0	
+export 42	0x37e0	
+export 43	0x37e0	
+export 44	0x03a0	
+export 45	0x37e0	
+export 46	0x37e0	
+export 47	0x1684	
+export 48	0x37e0	
+export 49	0x37e0	
+export 50	0x05f8	
+export 51	0x1a50	
+export 52	0x37e0	
+export 53	0x37e0	
+export 54	0x37e0	
+export 55	0x37e0	
+export 56	0x2664	
+export 57	0x2968	
+export 58	0x2938	
+export 59	0x27d4	
+export 60	0x272c	
+export 61	0x2744	
+export 62	0x37e0	
+export 63	0x37e0	
+export 64	0x1de8	
+export 65	0x37e0	
+export 66	0x37e0	
+export 67	0x2850	
+export 68	0x28d0	
+export 69	0x37e0	
+export 70	0x37e0	
+export 71	0x37e0	
+export 72	0x37e0	
+export 73	0x37e0	
+export 74	0x1c18	
+export 75	0x37e0	
+export 76	0x37e0	
+export 77	0x2938	
+export 78	0x37e0	
+export 79	0x19f0	
+export 80	0x1d94	
+export 81	0x37e0	
+export 82	0x1da0	
+export 83	0x1c4c	
+export 84	0x232c	
+export 85	0x37e0	
+export 86	0x37e0	
+export 87	0x37e0	
+export 88	0x37e0	
+export 89	0x37e0	
+export 90	0x37e0	
+export 91	0x37e0	
+export 92	0x37e0	
+export 93	0x37e0	
+export 94	0x37e0	
+export 95	0x37e0	
+export 96	0x37e0	
+export 97	0x37e0	
+export 98	0x37e0	
+export 99	0x37e0	
+export 100	0x37e0	
+export 101	0x37e0	
+export 102	0x37e0	
+export 103	0x37e0	
+export 104	0x37e0	
+export 105	0x37e0	
+export 106	0x37e0	
+export 107	0x37e0	
+export 108	0x37e0	
+export 109	0x37e0	
+export 110	0x37e0	
+export 111	0x37e0	
+export 112	0x37e0	
+export 113	0x37e0	
+export 114	0x37e0	
+export library	0x0101	cdvdstm
+export  0	0x37d0	
+export  1	0x37d0	
+export  2	0x37d0	
+export  3	0x37d0	
+export  4	0x37d0	
+export library	0x0101	bdm
+export  0	0x37d0	
+export  1	0x37d0	
+export  2	0x37d8	
+export  3	0x37d0	
+export  4	0x3ab0	
+export  5	0x3b00	
+export library	0x0109	dev9
+export  0	0x44b4	
+export  1	0x37d0	
+export  2	0x37d8	
+export  3	0x37d0	
+export  4	0x403c	
+export  5	0x4688	
+export  6	0x37d0	
+export  7	0x4148	
+export  8	0x418c	
+export  9	0x4830	
+export 10	0x488c	
+export 11	0x489c	
+export 12	0x4054	
+export 13	0x406c	
+export library	0x0101	smsutils
+export  0	0x37d0	
+export  1	0x37d0	
+export  2	0x37d0	
+export  3	0x37d0	
+export  4	0x3300	
+export  5	0x3464	
