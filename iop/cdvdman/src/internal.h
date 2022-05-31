@@ -2,6 +2,7 @@
 #ifndef __CDVDMAN_INTERNAL__
 #define __CDVDMAN_INTERNAL__
 
+#include "dev9.h"
 #include "ioplib_util.h"
 #include "cdvdman_opl.h"
 #include "cdvd_config.h"

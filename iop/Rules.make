@@ -8,6 +8,10 @@
 
 IOP_CC_VERSION := $(shell $(IOP_CC) -dumpversion)
 
+IOP_OBJS_DIR ?= obj/
+IOP_SRC_DIR ?= src/
+IOP_INC_DIR ?= include/
+
 ifeq ($(IOP_CC_VERSION),3.2.2)
 ASFLAGS_TARGET = -march=r3000
 endif
@@ -17,13 +21,22 @@ ASFLAGS_TARGET = -march=r3000
 endif
 
 # include dir
-IOP_INCS := $(IOP_INCS) -I$(PS2SDK)/iop/include -I$(PS2SDK)/common/include -Iinclude
+IOP_INCS := $(IOP_INCS) -I$(IOP_SRC_DIR) -I$(IOP_SRC_DIR)include -I$(IOP_INC_DIR) -I$(PS2SDK)/iop/include -I$(PS2SDK)/common/include
+
+# Optimization compiler flags
+IOP_OPTFLAGS ?= -Os
+
+# Warning compiler flags
+IOP_WARNFLAGS ?= -Wall -Werror
 
 # C compiler flags
 # -fno-builtin is required to prevent the GCC built-in functions from being included,
 #   for finer-grained control over what goes into each IRX.
-IOP_CFLAGS  := -D_IOP -fno-builtin -Os -G0 -Wall -Werror $(IOP_INCS) $(IOP_CFLAGS)
-# linker flags
+IOP_CFLAGS := -D_IOP -fno-builtin -G0 $(IOP_OPTFLAGS) $(IOP_WARNFLAGS) $(IOP_INCS) $(IOP_CFLAGS)
+ifeq ($(DEBUG),1)
+IOP_CFLAGS += -DDEBUG
+endif
+# Linker flags
 IOP_LDFLAGS := -nostdlib -s $(IOP_LDFLAGS)
 
 # Additional C compiler flags for GCC >=v5.3.0
@@ -40,44 +53,66 @@ IOP_IETABLE_CFLAGS := -fno-toplevel-reorder
 endif
 endif
 
+# If gpopt is requested, use it if the GCC version is compatible
+ifneq (x$(IOP_PREFER_GPOPT),x)
+ifeq ($(IOP_CC_VERSION),3.2.2)
+IOP_CFLAGS += -DUSE_GP_REGISTER=1 -mgpopt -G$(IOP_PREFER_GPOPT)
+endif
+ifeq ($(IOP_CC_VERSION),3.2.3)
+IOP_CFLAGS += -DUSE_GP_REGISTER=1 -mgpopt -G$(IOP_PREFER_GPOPT)
+endif
+endif
+
 # Assembler flags
 IOP_ASFLAGS := $(ASFLAGS_TARGET) -EL -G0 $(IOP_ASFLAGS)
 
-BIN2C = $(PS2SDK)/bin/bin2c
-BIN2S = $(PS2SDK)/bin/bin2s
-BIN2O = $(PS2SDK)/bin/bin2o
+IOP_OBJS := $(IOP_OBJS:%=$(IOP_OBJS_DIR)%)
 
 # Externally defined variables: IOP_BIN, IOP_OBJS, IOP_LIB
-$(IOP_OBJS_DIR):
-	mkdir -p $(IOP_OBJS_DIR)
 
-$(IOP_OBJS_DIR)%.o : %.c
-	$(IOP_CC) $(IOP_CFLAGS) -c $< -o $@
+# These macros can be used to simplify certain build rules.
+IOP_C_COMPILE = $(IOP_CC) $(IOP_CFLAGS)
 
-$(IOP_OBJS_DIR)%.o : %.S
-	$(IOP_CC) $(IOP_CFLAGS) -c $< -o $@
+$(IOP_OBJS_DIR)%.o: $(IOP_SRC_DIR)%.c
+	$(IOP_C_COMPILE) -c $< -o $@
 
-$(IOP_OBJS_DIR)%.o : %.s
+$(IOP_OBJS_DIR)%.o: $(IOP_SRC_DIR)%.S
+	$(IOP_C_COMPILE) -c $< -o $@
+
+$(IOP_OBJS_DIR)%.o: $(IOP_SRC_DIR)%.s
 	$(IOP_AS) $(IOP_ASFLAGS) $< -o $@
 
-# A rule to build imports.lst.
-$(IOP_OBJS_DIR)%.o : %.lst
-	$(ECHO) "#include \"irx_imports.h\"" > $(IOP_OBJS_DIR)build-imports.c
-	cat $< >> $(IOP_OBJS_DIR)build-imports.c
-	$(IOP_CC) $(IOP_CFLAGS) -I. -c $(IOP_OBJS_DIR)build-imports.c -o $@
-	-rm -f $(IOP_OBJS_DIR)build-imports.c
+.INTERMEDIATE: $(IOP_OBJS_DIR)build-imports.c $(IOP_OBJS_DIR)build-exports.c
 
-# A rule to build exports.tab.
-$(IOP_OBJS_DIR)%.o : %.tab
-	$(ECHO) "#include \"irx.h\"" > $(IOP_OBJS_DIR)build-exports.c
-	cat $< >> $(IOP_OBJS_DIR)build-exports.c
-	$(IOP_CC) $(IOP_CFLAGS) -I. -c $(IOP_OBJS_DIR)build-exports.c -o $@
-	-rm -f $(IOP_OBJS_DIR)build-exports.c
+# Rules to build imports.lst.
+$(IOP_OBJS_DIR)build-imports.c: $(IOP_SRC_DIR)imports.lst
+	$(ECHO) "#include \"irx_imports.h\"" > $@
+	cat $< >> $@
 
-$(IOP_BIN) : $(IOP_OBJS_DIR) $(IOP_OBJS)
-	echo " -$@"
-	$(IOP_CC) $(IOP_CFLAGS) -o $(IOP_BIN) $(IOP_OBJS) $(IOP_LDFLAGS) $(IOP_LIBS)
+$(IOP_OBJS_DIR)imports.o: $(IOP_OBJS_DIR)build-imports.c
+	$(IOP_C_COMPILE) $(IOP_IETABLE_CFLAGS) -c $< -o $@
 
-$(IOP_LIB) : $(IOP_OBJS_DIR) $(IOP_OBJS)
-	echo " -$@"
+# Rules to build exports.tab.
+$(IOP_OBJS_DIR)build-exports.c: $(IOP_SRC_DIR)exports.tab
+	$(ECHO) "#include \"irx.h\"" > $@
+	cat $< >> $@
+
+$(IOP_OBJS_DIR)exports.o: $(IOP_OBJS_DIR)build-exports.c
+	$(IOP_C_COMPILE) $(IOP_IETABLE_CFLAGS) -c $< -o $@
+
+$(IOP_OBJS_DIR):
+	$(MKDIR) -p $(IOP_OBJS_DIR)
+
+$(IOP_BIN_DIR):
+	$(MKDIR) -p $(IOP_BIN_DIR)
+
+$(IOP_LIB_DIR):
+	$(MKDIR) -p $(IOP_LIB_DIR)
+
+$(IOP_OBJS): | $(IOP_OBJS_DIR)
+
+$(IOP_BIN): $(IOP_OBJS) | $(IOP_BIN_DIR)
+	$(IOP_C_COMPILE) $(IOP_OPTFLAGS) -o $(IOP_BIN) $(IOP_OBJS) $(IOP_LDFLAGS) $(IOP_LIBS)
+
+$(IOP_LIB): $(IOP_OBJS) | $(IOP_LIB_DIR)
 	$(IOP_AR) cru $(IOP_LIB) $(IOP_OBJS)

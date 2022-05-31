@@ -20,6 +20,6 @@ IOP_OBJS += dev9.o
 IOP_CFLAGS += -D__USE_DEV9
 endif
 
-include $(PS2SDK)/Defs.make
+include ../Defs.make
 include ../Rules.bin.make
-include $(PS2SDK)/samples/Makefile.iopglobal
+include ../Rules.make

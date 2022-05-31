@@ -24,24 +24,24 @@ clean:
 copy:
 	rm -rf modules
 	mkdir -p modules
-	cp ../../iop/cdvdfsv/cdvdfsv.irx     modules
-	cp ../../iop/cdvdman/bdm_cdvdman.irx modules
-	cp ../../iop/smap/irx/smap.irx       modules
-	cp ../../iop/eesync/eesync.irx       modules
-	cp ../../iop/imgdrv/imgdrv.irx       modules
-	cp ../../iop/isofs/isofs.irx         modules
-	cp ../../iop/resetspu/resetspu.irx   modules
-	cp ../../iop/udnl/udnl.irx           modules
-	cp ../../iop/IOPRP.img               modules
-	cp ../ee_core/ee_core.elf            modules
-	cp $(PS2SDK)/iop/irx/iomanX.irx modules
-	cp $(PS2SDK)/iop/irx/fileXio.irx modules
-	cp $(PS2SDK)/iop/irx/bdm.irx modules
+	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx     modules
+	cp ../../iop/cdvdman/irx/bdm_cdvdman.irx modules
+	cp ../../iop/smap/irx/smap.irx           modules
+	cp ../../iop/eesync/irx/eesync.irx       modules
+	cp ../../iop/imgdrv/irx/imgdrv.irx       modules
+	cp ../../iop/isofs/irx/isofs.irx         modules
+	cp ../../iop/resetspu/irx/resetspu.irx   modules
+	cp ../../iop/udnl/irx/udnl.irx           modules
+	cp ../../iop/IOPRP.img                   modules
+	cp ../ee_core/ee_core.elf                modules
+	cp $(PS2SDK)/iop/irx/iomanX.irx     modules
+	cp $(PS2SDK)/iop/irx/fileXio.irx    modules
+	cp $(PS2SDK)/iop/irx/bdm.irx        modules
 	cp $(PS2SDK)/iop/irx/bdmfs_vfat.irx modules
-	cp $(PS2SDK)/iop/irx/usbd.irx modules
+	cp $(PS2SDK)/iop/irx/usbd.irx       modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd.irx modules
-	cp $(PS2SDK)/iop/irx/mx4sio_bd.irx modules
-	cp $(PS2SDK)/iop/irx/ps2dev9.irx modules
+	cp $(PS2SDK)/iop/irx/mx4sio_bd.irx  modules
+	cp $(PS2SDK)/iop/irx/ps2dev9.irx    modules
 
 include $(PS2SDK)/samples/Makefile.pref
 include $(PS2SDK)/samples/Makefile.eeglobal_cpp
