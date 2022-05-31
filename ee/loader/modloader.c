@@ -383,6 +383,10 @@ int main(int argc, char *argv[])
     close(fd_config);
     fileXioUmount("iso:");
 #else
+    //
+    // 32GB uSD
+    //
+
     // SCUS_971.13.ICO.iso
     // 30-5: MLR: 260KiB free IOP RAM lowest value (ingame)
     // 30-5: OPL: CRASH!
@@ -410,8 +414,12 @@ int main(int argc, char *argv[])
     // SLES_549.45.DragonBall Z Budokai Tenkaichi 3.iso
     // 30-5: MLR: 239KiB free IOP RAM lowest value (ingame) +117KiB !
     // 30-5: OPL: 122KiB free IOP RAM lowest value (ingame)
-    //sConfigName = "SLES_549.45";
-    //iLBA = 10089840;
+    sConfigName = "SLES_549.45";
+    iLBA = 10089840;
+
+    //
+    // 128GB USB
+    //
 
     // SCES_516.07.Ratchet Clank - Going Commando.iso
     // 30-5: MLR:   5KiB free IOP RAM lowest value (direct daarna 226KiB) +116KiB !
@@ -422,8 +430,12 @@ int main(int argc, char *argv[])
     // SCES_550.19.Ratchet Clank - Size Matters.iso
     // 30-5: MLR: 186KiB free IOP RAM lowest value +119KiB !
     // 30-5: OPL:  67KiB free IOP RAM lowest value
-    sConfigName = "SCES_550.19";
-    iLBA = 15186368;
+    //sConfigName = "SCES_550.19";
+    //iLBA = 15186368;
+
+    //
+    // Direct ISO
+    //
     
     // SCUS_974.81.God of War II.iso
     //sConfigName = "SCUS_974.81";
