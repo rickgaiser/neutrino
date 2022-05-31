@@ -1,5 +1,4 @@
 #include <thsemap.h>
-#include <string.h>
 #include <ioman.h>
 #include "ministack.h"
 
@@ -25,6 +24,13 @@ static int ttyInit(iop_device_t *driver)
     // Broadcast packet to UDPTTY port
     udp_packet_init(&pkt, IP_ADDR(255,255,255,255), 18194);
 
+    // We send the header and text separately
+    // This saves IOP RAM (~1K), and also saves a memcpy
+    // But the header needs to be a mutiple of 4.
+    // So the first 2 characters we send are the header padding bytes
+    // Set to two space characters
+    pkt.align = 0x2020; // Two spaces
+
     return 1;
 }
 
@@ -34,8 +40,7 @@ static int ttyWrite(iop_file_t *file, void *buf, int size)
     udp_socket_t socket = {0,NULL,NULL};
 
     WaitSema(tty_sema);
-    memcpy(pkt.payload, buf, size);
-    udp_packet_send(&socket, &pkt, size);
+    udp_packet_send_ll(&socket, &pkt, 2, buf, size);
     SignalSema(tty_sema);
 
     return size;

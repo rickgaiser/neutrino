@@ -2,6 +2,7 @@
 #define XFER_H
 
 
+#include <stdint.h>
 #include "main.h"
 
 
@@ -11,7 +12,7 @@
  * @param size Size of the data in bytes
  * @return 0 on succes, -1 on failure
  */
-int smap_transmit(void *buf, size_t size);
+int smap_transmit(void *header, uint16_t headersize, void *data, uint16_t datasize);
 
 void xfer_init(void);
 int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData);

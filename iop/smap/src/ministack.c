@@ -75,18 +75,18 @@ static uint16_t ip_checksum(ip_header_t *ip)
     return ~((uint16_t)csum & 0xffff);
 }
 
-int eth_packet_send(eth_packet_t *pkt, uint16_t size)
+int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize)
 {
-    return smap_transmit(pkt, size + sizeof(eth_header_t));
+    return smap_transmit(pkt, sizeof(eth_header_t) + pktdatasize, data, datasize);
 }
 
-int ip_packet_send(ip_packet_t *pkt, uint16_t size)
+int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize)
 {
-    pkt->ip.len  = htons(size + sizeof(ip_header_t));
+    pkt->ip.len  = htons(sizeof(ip_header_t) + pktdatasize + datasize);
     pkt->ip.csum = 0;
     pkt->ip.csum = ip_checksum(&pkt->ip);
 
-    return eth_packet_send((eth_packet_t *)pkt, size + sizeof(ip_header_t));
+    return eth_packet_send_ll((eth_packet_t *)pkt, sizeof(ip_header_t) + pktdatasize, data, datasize);
 }
 
 #define UDP_MAX_PORTS 4
@@ -107,13 +107,13 @@ udp_socket_t *udp_bind(uint16_t port_src, udp_port_handler handler, void *handle
     return NULL;
 }
 
-int udp_packet_send(udp_socket_t *socket, udp_packet_t *pkt, uint16_t size)
+int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize)
 {
     pkt->udp.port_src = socket->port_src;
-    pkt->udp.len  = htons(size + sizeof(udp_header_t));
+    pkt->udp.len  = htons(sizeof(udp_header_t) + pktdatasize + datasize);
     pkt->udp.csum = 0; // not needed
 
-    return ip_packet_send((ip_packet_t *)pkt, size + sizeof(udp_header_t));
+    return ip_packet_send_ll((ip_packet_t *)pkt, sizeof(udp_header_t) + pktdatasize, data, datasize);
 }
 
 int arp_add_entry(uint32_t ip, uint8_t mac[6])
@@ -190,7 +190,7 @@ static inline int handle_rx_arp(uint16_t pointer)
         reply.arp.target_mac[4] = req.arp.sender_mac[4];
         reply.arp.target_mac[5] = req.arp.sender_mac[5];
         reply.arp.target_ip     = req.arp.sender_ip;
-        smap_transmit(&reply, 0x2A);
+        smap_transmit(&reply, 0x2A, NULL, 0);
     }
 
     return -1;

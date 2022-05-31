@@ -81,14 +81,16 @@ typedef struct
 typedef struct
 {
     eth_header_t eth; // 14 bytes
-    char payload[ETH_MAX_PAYLOAD];
+    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
+    //char payload[ETH_MAX_PAYLOAD];
 } __attribute__((packed, aligned(4))) eth_packet_t;
 
 typedef struct
 {
     eth_header_t eth; // 14 bytes
     ip_header_t ip;   // 20 bytes
-    char payload[IP_MAX_PAYLOAD];
+    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
+    //char payload[IP_MAX_PAYLOAD];
 } __attribute__((packed, aligned(4))) ip_packet_t;
 
 typedef struct
@@ -102,7 +104,8 @@ typedef struct
     eth_header_t eth; // 14 bytes
     ip_header_t ip;   // 20 bytes
     udp_header_t udp; //  8 bytes
-    char payload[UDP_MAX_PAYLOAD];
+    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
+    //char payload[UDP_MAX_PAYLOAD];
 } __attribute__((packed, aligned(4))) udp_packet_t;
 
 #define ETH_TYPE_IPV4 0x0800
@@ -118,12 +121,25 @@ typedef struct
 void eth_packet_init(eth_packet_t *pkt, uint16_t type);
 
 /**
+ * Send ethernet packet low level
+ * @param pkt Ethernet packet
+ * @param pktdatasize Size of the payload in bytes
+ * @param data Separate payload
+ * @param datasize Size separate payload in bytes
+ * @return 0 on succes, -1 on failure
+ */
+int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize);
+
+/**
  * Send ethernet packet
  * @param pkt Ethernet packet
  * @param size Size of the payload in bytes
  * @return 0 on succes, -1 on failure
  */
-int eth_packet_send(eth_packet_t *pkt, uint16_t size);
+static inline int eth_packet_send(eth_packet_t *pkt, uint16_t size)
+{
+    return eth_packet_send_ll(pkt, size, NULL, 0);
+}
 
 /**
  * Initialize IP packet
@@ -133,12 +149,25 @@ int eth_packet_send(eth_packet_t *pkt, uint16_t size);
 void ip_packet_init(ip_packet_t *pkt, uint32_t ip_dst);
 
 /**
- * Send IP packet
+ * Send IP packet low level
  * @param pkt IP packet
+ * @param pktdatasize Size of the payload in bytes
+ * @param data Separate payload
+ * @param datasize Size separate payload in bytes
+ * @return 0 on succes, -1 on failure
+ */
+int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize);
+
+/**
+ * Send IP packet
+ * @param header IP packet
  * @param size Size of the payload in bytes
  * @return 0 on succes, -1 on failure
  */
-int ip_packet_send(ip_packet_t *pkt, uint16_t size);
+static inline int ip_packet_send(ip_packet_t *header, uint16_t size)
+{
+    return ip_packet_send_ll(header, size, NULL, 0);
+}
 
 struct udp_socket;
 typedef int (*udp_port_handler)(struct udp_socket *socket, uint16_t pointer, void *arg);
@@ -167,13 +196,27 @@ udp_socket_t *udp_bind(uint16_t port_src, udp_port_handler handler, void *handle
 void udp_packet_init(udp_packet_t *pkt, uint32_t ip_dst, uint16_t port_dst);
 
 /**
+ * Send UDP packet low level
+ * @param socket UDP socket
+ * @param pkt UDP packet
+ * @param pktdatasize Size of the payload in bytes
+ * @param data Separate payload
+ * @param datasize Size separate payload in bytes
+ * @return 0 on succes, -1 on failure
+ */
+int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize);
+
+/**
  * Send UDP packet
  * @param socket UDP socket
  * @param pkt UDP packet
  * @param size Size of the payload in bytes
  * @return 0 on succes, -1 on failure
  */
-int udp_packet_send(udp_socket_t *socket, udp_packet_t *pkt, uint16_t size);
+static inline int udp_packet_send(udp_socket_t *socket, udp_packet_t *pkt, uint16_t size)
+{
+    return udp_packet_send_ll(socket, pkt, size, NULL, 0);
+}
 
 /**
  * Set the local IP address

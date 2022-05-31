@@ -151,14 +151,14 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
     return NumPacketsReceived;
 }
 
-static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *data, size_t length)
+static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, uint16_t headersize, void *data, uint16_t datasize)
 {
     USE_SMAP_EMAC3_REGS;
     USE_SMAP_TX_BD;
     volatile u8 *smap_regbase;
     volatile smap_bd_t *BD_ptr;
     u16 BD_data_ptr;
-    unsigned int SizeRounded = (length + 3) & ~3;
+    unsigned int SizeRounded = (headersize + datasize + 3) & ~3;
 
     while (SmapDrivPrivData->NumPacketsInTx > 0) {
         u16 ctrl_stat = tx_bd[SmapDrivPrivData->TxDNVBDIndex % SMAP_BD_MAX_ENTRY].ctrl_stat;
@@ -180,9 +180,12 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *data, siz
     BD_data_ptr = SMAP_REG16(SMAP_R_TXFIFO_WR_PTR) + SMAP_TX_BASE;
     BD_ptr = &tx_bd[SmapDrivPrivData->TxBDIndex % SMAP_BD_MAX_ENTRY];
 
-    CopyToFIFO(SmapDrivPrivData->smap_regbase, data, length);
+    if (headersize > 0)
+        CopyToFIFO(SmapDrivPrivData->smap_regbase, header, headersize);
+    if (datasize > 0)
+        CopyToFIFO(SmapDrivPrivData->smap_regbase, data, datasize);
 
-    BD_ptr->length = length;
+    BD_ptr->length = headersize + datasize;
     BD_ptr->pointer = BD_data_ptr;
     SMAP_REG8(SMAP_R_TXFIFO_FRAME_INC) = 0;
     BD_ptr->ctrl_stat = SMAP_BD_TX_READY | SMAP_BD_TX_GENFCS | SMAP_BD_TX_GENPAD;
@@ -195,12 +198,12 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *data, siz
     return 1;
 }
 
-int smap_transmit(void *buf, size_t size)
+int smap_transmit(void *header, uint16_t headersize, void *data, uint16_t datasize)
 {
     WaitSema(tx_sema);
 
     // Add packet to queue (if there's room)    
-    HandleTxReqs(&SmapDriverData, buf, size);
+    HandleTxReqs(&SmapDriverData, header, headersize, data, datasize);
 
     SignalSema(tx_sema);
 
