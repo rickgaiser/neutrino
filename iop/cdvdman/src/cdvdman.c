@@ -50,9 +50,6 @@ static int cdvdman_ReadingThreadID;
 static StmCallback_t Stm0Callback = NULL;
 static iop_sys_clock_t gCallbackSysClock;
 
-// buffers
-u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
-
 #define CDVDMAN_MODULE_VERSION 0x225
 static int cdvdman_debug_print_flag = 0;
 

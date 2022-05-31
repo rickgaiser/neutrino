@@ -104,9 +104,6 @@ extern void cdvdman_initdev(void);
 
 extern struct CDVDMAN_SETTINGS_TYPE cdvdman_settings;
 
-#define CDVDMAN_BUF_SECTORS 2
-extern u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
-
 extern int cdrom_io_sema;
 extern int cdvdman_searchfilesema;
 

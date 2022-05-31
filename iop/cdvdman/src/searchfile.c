@@ -10,6 +10,8 @@ static void cdvdman_trimspaces(char *str);
 static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLength, int layer);
 static int cdvdman_findfile(sceCdlFILE *pcd_file, const char *name, int layer);
 
+u8 cdvdman_buf[2048];
+
 typedef struct
 {
     u32 rootDirtocLBA;
