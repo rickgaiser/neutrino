@@ -3,7 +3,6 @@ DEBUG=0
 all:
 	$(MAKE) -C iop/cdvdfsv  all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/cdvdman  all DEBUG=$(DEBUG) USE_BDM=1
-	$(MAKE) -C iop/dev9     all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/smap     all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/eesync   all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/imgdrv   all DEBUG=$(DEBUG)
@@ -19,7 +18,6 @@ format:
 clean:
 	$(MAKE) -C iop/cdvdfsv   clean
 	$(MAKE) -C iop/cdvdman   clean USE_BDM=1
-	$(MAKE) -C iop/dev9      clean
 	$(MAKE) -C iop/smap      clean
 	$(MAKE) -C iop/eesync    clean
 	$(MAKE) -C iop/imgdrv    clean
