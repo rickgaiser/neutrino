@@ -271,8 +271,8 @@ int main(int argc, char *argv[])
     struct cdvdman_settings_bdm *settings;
     const char *sFileName;
     const char *sDriver;
-    char *sConfigName = "SLES_549.45";
-    int iLBA = 10089840;
+    char *sConfigName;
+    int iLBA;
     int iMode;
 
     printf("Modular PS2 Game Loader\n");
@@ -384,29 +384,47 @@ int main(int argc, char *argv[])
     fileXioUmount("iso:");
 #else
     // SCUS_971.13.ICO.iso
-    sConfigName = "SCUS_971.13";
-    iLBA = 32768;
+    // 30-5: MLR: 260KiB free IOP RAM lowest value (ingame)
+    // 30-5: OPL: CRASH!
+    //sConfigName = "SCUS_971.13";
+    //iLBA = 32768;
     
     // SCUS_973.28.Gran Turismo 4.iso
+    // 30-5: MLR: 526KiB free IOP RAM lowest value
+    // 30-5: OPL: 518KiB free IOP RAM lowest value
     //sConfigName = "SCUS_973.28";
     //iLBA = 1118896;
     
     // SLES_501.26.Quake III Revolution.iso
+    // 30-5: MLR: CRASH!
+    // 30-5: OPL: 20KiB free IOP RAM lowest value (ingame)
     //sConfigName = "SLES_501.26";
     //iLBA = 8816816;
     
     // SLES_539.74.Dragon Quest 8.iso
+    // 30-5: MLR: 1084KiB free IOP RAM lowest value (ingame) +117KiB !
+    // 30-5: OPL:  967KiB free IOP RAM lowest value (ingame)
     //sConfigName = "SLES_539.74";
-    //iLBA = ???;
+    //iLBA = 20229424;
     
     // SLES_549.45.DragonBall Z Budokai Tenkaichi 3.iso
+    // 30-5: MLR: 239KiB free IOP RAM lowest value (ingame) +117KiB !
+    // 30-5: OPL: 122KiB free IOP RAM lowest value (ingame)
     //sConfigName = "SLES_549.45";
     //iLBA = 10089840;
-    
-    // SLES_551.87.Wall-E.zso
-    //sConfigName = "SLES_551.87";
-    //iLBA = ???;
 
+    // SCES_516.07.Ratchet Clank - Going Commando.iso
+    // 30-5: MLR:   5KiB free IOP RAM lowest value (direct daarna 226KiB) +116KiB !
+    // 30-5: OPL:   5KiB free IOP RAM lowest value (direct daarna 110KiB)
+    //sConfigName = "SCES_516.07";
+    //iLBA = 19059392;
+    
+    // SCES_550.19.Ratchet Clank - Size Matters.iso
+    // 30-5: MLR: 186KiB free IOP RAM lowest value +119KiB !
+    // 30-5: OPL:  67KiB free IOP RAM lowest value
+    sConfigName = "SCES_550.19";
+    iLBA = 15186368;
+    
     // SCUS_974.81.God of War II.iso
     //sConfigName = "SCUS_974.81";
     //iLBA = 0; // ISO as BD
@@ -489,17 +507,15 @@ int main(int argc, char *argv[])
     irxtable->count++;
 
     // For debugging (udptty) and also udpbd
-    irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
-    //irxptr += load_file_mod("dev9_dma.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
+    //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
+    //irxtable->count++;
     irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
-
-    irxptr += load_file_mod("usbd.irx", irxptr, irxptr_tab++);
     irxtable->count++;
 
     switch (iMode) {
         case BDM_USB_MODE:
+            irxptr += load_file_mod("usbd.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
             irxptr += load_file_mod("usbmass_bd.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;

@@ -6,9 +6,7 @@ IOP_BIN  = bdm_cdvdman.irx
 IOP_OBJS_DIR = obj.bdm/
 IOP_OBJS += device-bdm.o
 IOP_CFLAGS += -DBDM_DRIVER
-ifeq ($(IOPCORE_DEBUG),1)
 USE_DEV9 = 1
-endif
 endif
 
 IOP_INCS += -I../common
@@ -18,6 +16,7 @@ IOP_CFLAGS += -DDEBUG
 endif
 
 ifeq ($(USE_DEV9),1)
+IOP_OBJS += dev9.o
 IOP_CFLAGS += -D__USE_DEV9
 endif
 
