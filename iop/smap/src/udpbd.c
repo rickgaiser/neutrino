@@ -148,7 +148,7 @@ static int udpbd_write(struct block_device *bd, uint32_t sector, const void *buf
 {
     M_DEBUG("%s\n", __func__);
 
-    return -EIO;
+    return count;
 }
 
 static void udpbd_flush(struct block_device *bd)
@@ -161,6 +161,59 @@ static int udpbd_stop(struct block_device *bd)
     M_DEBUG("%s\n", __func__);
 
     return 0;
+}
+
+static inline void _cmd_info(udpbd_header_t *hdr)
+{
+    if (bdm_connected == 0)
+    {
+        g_udpbd.sectorSize  = hdr->par1;
+        g_udpbd.sectorCount = hdr->par2;
+        bdm_connected = 1;
+        bdm_connect_bd(&g_udpbd);
+    }
+}
+
+static inline void _cmd_read(udpbd_header_t *hdr)
+{
+    if ((g_buffer != NULL) && (g_read_size >= hdr->par1) && (g_cmdid == hdr->cmdid))
+    {
+        // Validate packet order
+        if (hdr->cmdpkt != (g_read_cmdpkt & 0xff))
+        {
+            // Error, wakeup caller
+            g_read_size = 0;
+            g_errno     = 2;
+            SetEventFlag(g_read_done, 2);
+            return;
+        }
+        g_read_cmdpkt++;
+
+        // Validate packet data size
+        if ((hdr->par1 > UDPBD_MAX_DATA) || (hdr->par1 & 127))
+        {
+            // Error, wakeup caller
+            g_read_size = 0;
+            g_errno     = 3;
+            SetEventFlag(g_read_done, 2);
+            return;
+        }
+
+        // Directly DMA the packet data into the user buffer
+        dev9DmaTransfer(1, (uint8_t *)g_buffer + ((g_read_cmdpkt - 2) * UDPBD_MAX_DATA), (hdr->par1 >> 7) << 16 | 0x20, DMAC_TO_MEM);
+
+        g_read_size -= hdr->par1;
+        if (g_read_size == 0)
+        {
+            // Done, wakeup caller
+            SetEventFlag(g_read_done, 1);
+            return;
+        }
+    }
+}
+
+static inline void _cmd_write(udpbd_header_t *hdr)
+{
 }
 
 static int udpbd_isr(udp_socket_t *socket, uint16_t pointer, void *arg)
@@ -177,51 +230,13 @@ static int udpbd_isr(udp_socket_t *socket, uint16_t pointer, void *arg)
     switch (hdr.cmd)
     {
         case UDPBD_CMD_INFO:
-            if (bdm_connected == 0)
-            {
-                g_udpbd.sectorSize  = hdr.par1;
-                g_udpbd.sectorCount = hdr.par2;
-                bdm_connected = 1;
-                bdm_connect_bd(&g_udpbd);
-            }
+            _cmd_info(&hdr);
             break;
         case UDPBD_CMD_READ:
-            if ((g_buffer != NULL) && (g_read_size >= hdr.par1) && (g_cmdid == hdr.cmdid))
-            {
-                // Validate packet order
-                if (hdr.cmdpkt != (g_read_cmdpkt & 0xff))
-                {
-                    // Error, wakeup caller
-                    g_read_size = 0;
-                    g_errno     = 2;
-                    SetEventFlag(g_read_done, 2);
-                    break;
-                }
-                g_read_cmdpkt++;
-
-                // Validate packet data size
-                if ((hdr.par1 > UDPBD_MAX_DATA) || (hdr.par1 & 127))
-                {
-                    // Error, wakeup caller
-                    g_read_size = 0;
-                    g_errno     = 3;
-                    SetEventFlag(g_read_done, 2);
-                    break;
-                }
-
-                // Directly DMA the packet data into the user buffer
-                dev9DmaTransfer(1, (uint8_t *)g_buffer + ((g_read_cmdpkt - 2) * UDPBD_MAX_DATA), (hdr.par1 >> 7) << 16 | 0x20, DMAC_TO_MEM);
-
-                g_read_size -= hdr.par1;
-                if (g_read_size == 0)
-                {
-                    // Done, wakeup caller
-                    SetEventFlag(g_read_done, 1);
-                    break;
-                }
-            }
+            _cmd_read(&hdr);
             break;
         case UDPBD_CMD_WRITE:
+            _cmd_write(&hdr);
             break;
     };
 
