@@ -442,7 +442,11 @@ int main(int argc, char *argv[])
     //iLBA = 0; // ISO as BD
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
     memset((void *)0x00084000, 0, 0x00100000 - 0x00084000);
+#pragma GCC diagnostic pop
 
     irxtable = (irxtab_t *)OPL_MOD_STORAGE;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
