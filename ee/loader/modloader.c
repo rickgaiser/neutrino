@@ -71,25 +71,28 @@ struct SModule
 #define SMF_D_USB    (1 << 10)
 #define SMF_D_UDPBD  (1 << 11)
 #define SMF_D_MX4SIO (1 << 12)
+#define SMF_D_ILINK  (1 << 13)
 // clang-format off
 struct SModule mod[] = {
-    {"",        "udnl.irx"           , NULL, 0, false, 0            , OPL_MODULE_ID_UDNL},
-    {"",        "IOPRP.img"          , NULL, 0, false, 0            , OPL_MODULE_ID_IOPRP},
-    {"CDVDMAN", "bdm_cdvdman.irx"    , NULL, 0, false, SMF_IOPRP    , 0},
-    {"CDVDFSV", "cdvdfsv.irx"        , NULL, 0, false, SMF_IOPRP    , 0},
-    {"EESYNC",  "eesync.irx"         , NULL, 0, false, SMF_IOPRP    , 0},
-    {"",        "imgdrv.irx"         , NULL, 0, false, 0            , OPL_MODULE_ID_IMGDRV},
-    {"",        "resetspu.irx"       , NULL, 0, false, 0            , OPL_MODULE_ID_RESETSPU},
-    {"",        "iomanX.irx"         , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "fileXio.irx"        , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "isofs.irx"          , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "bdm.irx"            , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "bdmfs_vfat.irx"     , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "usbd.irx"           , NULL, 0, false, SMF_D_USB    , 0},
-    {"",        "mx4sio_bd.irx"      , NULL, 0, false, SMF_D_MX4SIO , 0},
-    {"",        "usbmass_bd.irx"     , NULL, 0, false, SMF_D_USB    , 0},
-    {"",        "ps2dev9.irx"        , NULL, 0, false, SMF_D_UDPBD  , 0},
-    {"",        "smap.irx"           , NULL, 0, false, SMF_D_UDPBD  , 0},
+    {"",        "udnl.irx"             , NULL, 0, false, 0            , OPL_MODULE_ID_UDNL},
+    {"",        "IOPRP.img"            , NULL, 0, false, 0            , OPL_MODULE_ID_IOPRP},
+    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, false, SMF_IOPRP    , 0},
+    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, false, SMF_IOPRP    , 0},
+    {"EESYNC",  "eesync.irx"           , NULL, 0, false, SMF_IOPRP    , 0},
+    {"",        "imgdrv.irx"           , NULL, 0, false, 0            , OPL_MODULE_ID_IMGDRV},
+    {"",        "resetspu.irx"         , NULL, 0, false, 0            , OPL_MODULE_ID_RESETSPU},
+    {"",        "iomanX.irx"           , NULL, 0, false, SMF_SYSTEM   , 0},
+    {"",        "fileXio.irx"          , NULL, 0, false, SMF_SYSTEM   , 0},
+    {"",        "isofs.irx"            , NULL, 0, false, SMF_SYSTEM   , 0},
+    {"",        "bdm.irx"              , NULL, 0, false, SMF_SYSTEM   , 0},
+    {"",        "bdmfs_vfat.irx"       , NULL, 0, false, SMF_SYSTEM   , 0},
+    {"",        "usbd.irx"             , NULL, 0, false, SMF_D_USB    , 0},
+    {"",        "mx4sio_bd_mini.irx"   , NULL, 0, false, SMF_D_MX4SIO , 0},
+    {"",        "usbmass_bd_mini.irx"  , NULL, 0, false, SMF_D_USB    , 0},
+    {"",        "ps2dev9.irx"          , NULL, 0, false, SMF_D_UDPBD  , 0},
+    {"",        "smap.irx"             , NULL, 0, false, SMF_D_UDPBD  , 0},
+    {"",        "iLinkman.irx"         , NULL, 0, false, SMF_D_ILINK  , 0},
+    {"",        "IEEE1394_bd_mini.irx" , NULL, 0, false, SMF_D_ILINK  , 0},
     {NULL, NULL, 0, 0}
 };
 // clang-format on
@@ -269,8 +272,6 @@ int main(int argc, char *argv[])
     off_t size;
     void *eeloadCopy, *initUserMemory;
     struct cdvdman_settings_bdm *settings;
-    const char *sFileName;
-    const char *sDriver;
     char *sConfigName;
     int iLBA;
     int iMode;
@@ -287,8 +288,6 @@ int main(int argc, char *argv[])
         print_usage();
         return -1;
     }
-    sDriver = argv[1];
-    sFileName = argv[2];
 
     /*
      * Load system drivers
@@ -298,15 +297,19 @@ int main(int argc, char *argv[])
     /*
      * Load file system drivers
      */
+    const char *sDriver = argv[1];
     if (!strncmp(sDriver, "usb", 3)) {
         printf("Loading USB drivers\n");
         iMode = BDM_USB_MODE;
     } else if (!strncmp(sDriver, "udpbd", 5)) {
         printf("Loading UDPBD drivers\n");
         iMode = BDM_UDP_MODE;
-    } else if (!strncmp(sDriver, "mx4sio", 5)) {
+    } else if (!strncmp(sDriver, "mx4sio", 6)) {
         printf("Loading UDPBD drivers\n");
         iMode = BDM_M4S_MODE;
+    } else if (!strncmp(sDriver, "ilink", 5)) {
+        printf("Loading iLink drivers\n");
+        iMode = BDM_ILK_MODE;
     } else {
         printf("ERROR: driver %s not supported\n", sDriver);
         print_usage();
@@ -323,6 +326,9 @@ int main(int argc, char *argv[])
         case BDM_M4S_MODE:
             start_modules(SMF_D_MX4SIO);
             break;
+        case BDM_ILK_MODE:
+            start_modules(SMF_D_MX4SIO);
+            break;
     }
 
 #if 0
@@ -330,6 +336,7 @@ int main(int argc, char *argv[])
      * Check if file exists
      * Give low level drivers 10s to start
      */
+    const char *sFileName = argv[2];
     for (i = 0; i < 10; i++) {
         fd = open(sFileName, O_RDONLY);
         if (fd >= 0)
@@ -495,7 +502,10 @@ int main(int argc, char *argv[])
     settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
     // settings->common.layer1_start = 0x0;
     // settings->common.DiscID[5];
-    // settings->common.padding[3];
+    // settings->common.padding[2];
+    settings->common.fakemodule_flags = 0;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDFSV;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDSTM;
     settings->LBAs[0] = iLBA;
     // settings->LBAs[1];
 
@@ -523,13 +533,16 @@ int main(int argc, char *argv[])
     irxtable->count++;
 
     // For debugging (udptty) and also udpbd
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9; // FIXME! dev9 always builtin?
     //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
     //irxtable->count++;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
     irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
     irxtable->count++;
 
     switch (iMode) {
         case BDM_USB_MODE:
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD;
             irxptr += load_file_mod("usbd.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             irxptr += load_file_mod("usbmass_bd.irx", irxptr, irxptr_tab++);
@@ -541,6 +554,12 @@ int main(int argc, char *argv[])
             break;
         case BDM_M4S_MODE:
             irxptr += load_file_mod("mx4sio_bd.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
+            break;
+        case BDM_ILK_MODE:
+            irxptr += load_file_mod("iLinkman.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
+            irxptr += load_file_mod("IEEE1394_bd.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
     }
