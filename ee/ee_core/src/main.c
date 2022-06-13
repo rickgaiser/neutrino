@@ -23,6 +23,13 @@ char GameID[16];
 int GameMode;
 int EnableDebug = 0;
 
+// This function is defined as weak in ps2sdkc, so how
+// we are not using time zone, so we can safe some KB
+void _ps2sdk_timezone_update() {}
+
+DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
+DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
+
 static void set_args_drv(const char *arg)
 {
     if (!_strncmp(arg, "BDM_ILK_MODE", 12))
