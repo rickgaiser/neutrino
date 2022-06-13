@@ -12,7 +12,7 @@
 #define UDPBD_CMD_READ        0x01
 #define UDPBD_CMD_WRITE       0x02
 #define UDPBD_MAX_DATA        1408 // 1408 bytes = max 11 x 128b blocks
-#define UDPBD_MAX_SECTOR_READ 128
+#define UDPBD_MAX_SECTOR_READ 255
 
 /* UDP BD header (16 bytes) */
 typedef struct
