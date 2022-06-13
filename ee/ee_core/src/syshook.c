@@ -154,8 +154,8 @@ void Install_Kernel_Hooks(void)
     Old_SifSetReg = GetSyscallHandler(__NR_SifSetReg);
     SetSyscall(__NR_SifSetReg, &Hook_SifSetReg);
 
-    Old_Exit = GetSyscallHandler(__NR__Exit);
-    SetSyscall(__NR__Exit, &Hook_Exit);
+    Old_Exit = GetSyscallHandler(__NR_KExit);
+    SetSyscall(__NR_KExit, &Hook_Exit);
 }
 
 /*----------------------------------------------------------------------------------------------*/
@@ -166,7 +166,7 @@ void Remove_Kernel_Hooks(void)
 {
     SetSyscall(__NR_SifSetDma, Old_SifSetDma);
     SetSyscall(__NR_SifSetReg, Old_SifSetReg);
-    SetSyscall(__NR__Exit, Old_Exit);
+    SetSyscall(__NR_KExit, Old_Exit);
 
     DI();
     ee_kmode_enter();
