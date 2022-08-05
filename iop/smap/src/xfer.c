@@ -151,7 +151,7 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
     return NumPacketsReceived;
 }
 
-static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, uint16_t headersize, void *data, uint16_t datasize)
+static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, uint16_t headersize, const void *data, uint16_t datasize)
 {
     USE_SMAP_EMAC3_REGS;
     USE_SMAP_TX_BD;
@@ -198,12 +198,18 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, u
     return 1;
 }
 
-int smap_transmit(void *header, uint16_t headersize, void *data, uint16_t datasize)
+int smap_transmit(void *header, uint16_t headersize, const void *data, uint16_t datasize)
 {
     WaitSema(tx_sema);
 
-    // Add packet to queue (if there's room)    
-    HandleTxReqs(&SmapDriverData, header, headersize, data, datasize);
+    // Add packet to queue (if there's room)
+    while (HandleTxReqs(&SmapDriverData, header, headersize, data, datasize) < 0) {
+        // Wait for about 1KiB (at a speed of 100Mbps)
+        // FIXME! We want a blocking write, this works but it's not ideal.
+        // - can the interrupt thread fetch the data?
+        // - use a mutex/semaphore?
+        DelayThread(100);
+    }
 
     SignalSema(tx_sema);
 

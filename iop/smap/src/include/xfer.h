@@ -12,7 +12,7 @@
  * @param size Size of the data in bytes
  * @return 0 on succes, -1 on failure
  */
-int smap_transmit(void *header, uint16_t headersize, void *data, uint16_t datasize);
+int smap_transmit(void *header, uint16_t headersize, const void *data, uint16_t datasize);
 
 void xfer_init(void);
 int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData);

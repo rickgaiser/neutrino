@@ -21,6 +21,7 @@
 #include "xfer.h"
 #include "udpbd.h"
 #include "udptty.h"
+int udpbd_init(void);
 
 /*  There is a difference in how the transmissions are made,
     between this driver and the SONY original.
@@ -203,8 +204,8 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
 
     RepeatAutoNegoProcess:
         for (AutoNegoRetries = 0; AutoNegoRetries < 3; AutoNegoRetries++) {
-            for (i = 0; i < 3; i++) {
-                DelayThread(1000000);
+            for (i = 0; i < 15; i++) {
+                DelayThread(200000);
                 if (SmapDrivPrivData->NetDevStopFlag)
                     return 0;
             }
@@ -236,9 +237,11 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
                 PRINTF("smap: waiting valid link for 100Mbps Half-Duplex\n");
 
             _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_100M);
-            DelayThread(1000000);
-            if (SmapDrivPrivData->NetDevStopFlag)
-                return 0;
+            for (i = 0; i < 5; i++) {
+                DelayThread(200000);
+                if (SmapDrivPrivData->NetDevStopFlag)
+                    return 0;
+            }
 
             for (i = 0; !(_smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMSR) & SMAP_PHY_BMSR_LINK); i++) {
                 DelayThread(100000);
@@ -253,9 +256,11 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
                     PRINTF("smap: waiting valid link for 10Mbps Half-Duplex\n");
 
                 _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_10M);
-                DelayThread(1000000);
-                if (SmapDrivPrivData->NetDevStopFlag)
-                    return 0;
+                for (i = 0; i < 5; i++) {
+                    DelayThread(200000);
+                    if (SmapDrivPrivData->NetDevStopFlag)
+                        return 0;
+                }
 
                 for (i = 0; !(_smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMSR) & SMAP_PHY_BMSR_LINK); i++) {
                     DelayThread(100000);

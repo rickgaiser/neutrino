@@ -128,7 +128,7 @@ void eth_packet_init(eth_packet_t *pkt, uint16_t type);
  * @param datasize Size separate payload in bytes
  * @return 0 on succes, -1 on failure
  */
-int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize);
+int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize);
 
 /**
  * Send ethernet packet
@@ -156,7 +156,7 @@ void ip_packet_init(ip_packet_t *pkt, uint32_t ip_dst);
  * @param datasize Size separate payload in bytes
  * @return 0 on succes, -1 on failure
  */
-int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize);
+int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize);
 
 /**
  * Send IP packet
@@ -204,7 +204,7 @@ void udp_packet_init(udp_packet_t *pkt, uint32_t ip_dst, uint16_t port_dst);
  * @param datasize Size separate payload in bytes
  * @return 0 on succes, -1 on failure
  */
-int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize);
+int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize);
 
 /**
  * Send UDP packet

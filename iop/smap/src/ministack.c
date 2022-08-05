@@ -75,12 +75,12 @@ static uint16_t ip_checksum(ip_header_t *ip)
     return ~((uint16_t)csum & 0xffff);
 }
 
-int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize)
+int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize)
 {
     return smap_transmit(pkt, sizeof(eth_header_t) + pktdatasize, data, datasize);
 }
 
-int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize)
+int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize)
 {
     pkt->ip.len  = htons(sizeof(ip_header_t) + pktdatasize + datasize);
     pkt->ip.csum = 0;
@@ -107,7 +107,7 @@ udp_socket_t *udp_bind(uint16_t port_src, udp_port_handler handler, void *handle
     return NULL;
 }
 
-int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdatasize, void *data, uint16_t datasize)
+int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize)
 {
     pkt->udp.port_src = socket->port_src;
     pkt->udp.len  = htons(sizeof(udp_header_t) + pktdatasize + datasize);

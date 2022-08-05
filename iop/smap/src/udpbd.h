@@ -3,48 +3,111 @@
 
 
 #include <stdint.h>
-#include "ministack.h"
 
 
 #define UDPBD_PORT            0xBDBD //The port on which to listen for incoming data
-#define UDPBD_HEADER_MAGIC    0xBDBDBDBD
-#define UDPBD_CMD_INFO        0x00
-#define UDPBD_CMD_READ        0x01
-#define UDPBD_CMD_WRITE       0x02
-#define UDPBD_MAX_DATA        1408 // 1408 bytes = max 11 x 128b blocks
-#define UDPBD_MAX_SECTOR_READ 255
 
-/* UDP BD header (16 bytes) */
-typedef struct
-{
-    uint32_t magic;
+#define UDPBD_CMD_INFO        0x00 // client -> server
+#define UDPBD_CMD_INFO_REPLY  0x01 // server -> client
+#define UDPBD_CMD_READ        0x02 // client -> server
+#define UDPBD_CMD_READ_RDMA   0x03 // server -> client
+#define UDPBD_CMD_WRITE       0x04 // client -> server
+#define UDPBD_CMD_WRITE_RDMA  0x05 // client -> server
+#define UDPBD_CMD_WRITE_DONE  0x06 // server -> client
+
+
+#define UDPBD_MAX_SECTOR_READ  512 // 512 sectors of 512 bytes = 256KiB
+
+
+/*
+ * UDPBD v2
+ */
+
+struct SUDPBDv2_Header { // 2 bytes - Must be a "(multiple of 4) + 2" for RDMA on the PS2 !
     union
     {
-        uint32_t cmd32;
+        uint16_t cmd16;
         struct
         {
-            uint8_t cmd;
-            uint8_t cmdid;
-            uint8_t cmdpkt;
-            uint8_t count;
+            uint16_t cmd    : 5; // 0.. 31 - command
+            uint16_t cmdid  : 3; // 0..  8 - increment with every new command sequence
+            uint16_t cmdpkt : 8; // 0..255 - 0=request, 1 or more are response packets
         };
-    };
-    uint32_t par1;
-    uint32_t par2;
-} __attribute__((packed, aligned(4))) udpbd_header_t;
+    };	
+} __attribute__((__packed__));
 
-#define UDPBD_MAX_PAYLOAD 1454
+/*
+ * Info request. Can be a broadcast message to detect server on the network.
+ *
+ * Sequence of packets:
+ * - client: InfoRequest
+ * - server: InfoReply
+ */
+struct SUDPBDv2_InfoRequest {
+	struct SUDPBDv2_Header hdr;
+} __attribute__((__packed__));
 
-typedef struct
+struct SUDPBDv2_InfoReply {
+	struct SUDPBDv2_Header hdr;
+	uint32_t sector_size;
+	uint32_t sector_count;
+} __attribute__((__packed__));
+
+/*
+ * Read request, sequence of packets:
+ * - client: ReadRequest
+ * - server: RDMA (1 or more packets)
+ *
+ * Write request, sequence of packets:
+ * - client: WriteRequest
+ * - client: RDMA (1 or more packets)
+ * - server: WriteDone
+ */
+struct SUDPBDv2_RWRequest {
+	struct SUDPBDv2_Header hdr;
+	uint32_t sector_nr;
+	uint16_t sector_count;
+} __attribute__((__packed__));
+
+struct SUDPBDv2_WriteDone {
+	struct SUDPBDv2_Header hdr;
+	int32_t result;
+} __attribute__((__packed__));
+
+/*
+ * Remote DMA (RDMA) packet
+ * Used for transfering large blocks of data.
+ * The heart of the protocol. Data must be a "(multiple of 4) + 2" for RDMA on the PS2 !
+ */
+union block_type
 {
-    eth_header_t eth;  // 14 bytes
-    ip_header_t ip;    // 20 bytes
-    udp_header_t udp;  //  8 bytes
-    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
-    udpbd_header_t bd; // 16 bytes
-                       //char payload[UDPBD_MAX_PAYLOAD];
-} __attribute__((packed, aligned(4))) udpbd_pkt_t;
+    uint32_t bt;
+    struct
+    {
+        uint32_t block_shift :  4; // 0..7: blocks_size = 1 << (block_shift+2); min=0=4bytes, max=7=512bytes
+        uint32_t block_count :  9; // 1..366 blocks
+        uint32_t spare       : 19;
+    };
+};	
+/*
+ * Maximum payload for an RDMA packet depends on the used block size:
+ * -   4 * 366 = 1464 bytes
+ * -   8 * 183 = 1464 bytes
+ * -  16 *  91 = 1456 bytes
+ * -  32 *  45 = 1440 bytes
+ * -  64 *  22 = 1408 bytes
+ * - 128 *  11 = 1408 bytes <- default
+ * - 256 *   5 = 1280 bytes
+ * - 512 *   2 = 1024 bytes
+ */
+#define UDP_MAX_PAYLOAD  1472
+#define RDMA_MAX_PAYLOAD (UDP_MAX_PAYLOAD - sizeof(struct SUDPBDv2_Header) - sizeof(union block_type)) // 1466
 
-int udpbd_init(void);
+struct SUDPBDv2_RDMA {
+	struct SUDPBDv2_Header hdr;
+    union block_type bt;
+    uint8_t data[RDMA_MAX_PAYLOAD];
+} __attribute__((__packed__));
+
 
 #endif
