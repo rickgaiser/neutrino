@@ -10,8 +10,8 @@ typedef struct {
     uint8_t  mac[6];
     uint32_t ip;
 } arp_entry_t;
-#define UDP_ARP_ENTRIES 8
-arp_entry_t arp_table[UDP_ARP_ENTRIES];
+#define MS_ARP_ENTRIES 8
+arp_entry_t arp_table[MS_ARP_ENTRIES];
 
 
 void eth_packet_init(eth_packet_t *pkt, uint16_t type)
@@ -121,7 +121,7 @@ int arp_add_entry(uint32_t ip, uint8_t mac[6])
     int i;
 
     // Update existing entry
-    for (i=0; i<UDP_ARP_ENTRIES; i++) {
+    for (i=0; i<MS_ARP_ENTRIES; i++) {
         if (ip == arp_table[i].ip) {
             arp_table[i].mac[0] = mac[0];
             arp_table[i].mac[1] = mac[1];
@@ -134,7 +134,7 @@ int arp_add_entry(uint32_t ip, uint8_t mac[6])
     }
 
     // Add new entry
-    for (i=0; i<UDP_ARP_ENTRIES; i++) {
+    for (i=0; i<MS_ARP_ENTRIES; i++) {
         if (ip == 0) {
             arp_table[i].ip  = ip;
             arp_table[i].mac[0] = mac[0];
