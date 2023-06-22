@@ -11,14 +11,6 @@
 #include "iopmgr.h"
 #include "util.h"
 
-extern void *cdvdman_irx;
-extern int size_cdvdman_irx;
-
-extern void *cdvdfsv_irx;
-extern int size_cdvdfsv_irx;
-
-extern void *_end;
-
 /* Do not link to strcpy() from libc */
 void _strcpy(char *dst, const char *src)
 {

@@ -3,8 +3,6 @@
 *.irx
 *.IRX
 *.map
-*.img
 
 .vscode/
-iop/udnl/IOPRP_img.c
 ee/loader/irx/*

@@ -82,7 +82,7 @@ static unsigned int _udpbd_timeout(void *arg)
 //
 // Block device interface
 //
-static int _udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, uint16_t count)
+static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, uint16_t count)
 {
     uint32_t EFBits;
     iop_sys_clock_t clock;
@@ -150,7 +150,7 @@ static int _udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, u
     return -EIO;
 }
 
-static int udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, uint16_t count)
+static int udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, uint16_t count)
 {
     int retries;
     uint16_t count_left = count;
@@ -187,7 +187,7 @@ static int udpbd_read(struct block_device *bd, uint32_t sector, void *buffer, ui
     return count;
 }
 
-static int udpbd_write(struct block_device *bd, uint32_t sector, const void *buffer, uint16_t count)
+static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buffer, uint16_t count)
 {
     uint32_t EFBits;
 
@@ -210,7 +210,7 @@ static int udpbd_write(struct block_device *bd, uint32_t sector, const void *buf
             return -1;
         }
     }
-    
+
     // Send data
     {
         uint16_t count_left = count;

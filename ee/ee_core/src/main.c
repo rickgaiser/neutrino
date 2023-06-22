@@ -118,18 +118,24 @@ static int eecoreInit(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    int argOffset;
+    if (isInit == 0) {
+        // 1st time the ee_core is started (from OPL GUI)
 
-    if (isInit) { // Ignore argv[0], as it contains the name of this module ("EELOAD"), as passed by the LoadExecPS2 syscall itself (2nd invocation and later will be from LoadExecPS2).
+        // Initialize the ee_core
+        int argOffset = eecoreInit(argc, argv);
+        isInit = 1;
+
+        // Start selected elf file (should be something like "cdrom0:\ABCD_123.45;1")
+        LoadExecPS2(argv[argOffset], argc - 1 - argOffset, &argv[1 + argOffset]);
+    } else {
+        // 2nd time and later the ee_core is started (from LoadExecPS2)
+        // LoadExecPS2 is patched so instead of running rom0:EELOAD, this ee_core is started
+
+        // Ignore argv[0], as it contains the name of this module ("EELOAD")
         argv++;
         argc--;
 
         sysLoadElf(argv[0], argc, argv);
-    } else {
-        argOffset = eecoreInit(argc, argv);
-        isInit = 1;
-
-        LoadExecPS2(argv[argOffset], argc - 1 - argOffset, &argv[1 + argOffset]);
     }
 
     return 0;

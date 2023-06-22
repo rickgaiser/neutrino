@@ -35,9 +35,13 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
                         Some games like SOCOM3 will use a command line that isn't NULL terminated, resulting in things like "cdrom0:\RUN\IRX\DNAS300.IMGG;1" */
         _strcpy(&command[arglen + 1], "img0:");
         CommandLen = arglen + 6;
+//        _strcpy(&command[arglen + 1], "cdrom0:\\IOPRP1.IMG");
+//        CommandLen = arglen + 19;
     } else {
         _strcpy(command, "img0:");
         CommandLen = 5;
+//        _strcpy(command, "cdrom0:\\IOPRP1.IMG");
+//        CommandLen = 18;
     }
 
     GetOPLModInfo(OPL_MODULE_ID_IOPRP, &IOPRP_img, &size_IOPRP_img);
@@ -110,9 +114,32 @@ int New_Reset_Iop(const char *arg, int arglen)
     if (EnableDebug)
         GS_BGCOLOUR = 0xFF00FF; // Purple
 
-    SifInitRpc(0);
-
     iop_reboot_count++;
+
+#if 1
+    // Fast IOP reboot:
+    // - 1 IOP reboot to desired state
+    SifInitRpc(0);
+    SifInitIopHeap();
+    LoadFileInit();
+    sbv_patch_enable_lmb();
+
+    if (arglen > 0) {
+        // Reset with IOPRP image
+        ResetIopSpecial(&arg[10], arglen - 10);
+    }
+    else {
+        // Reset without IOPRP image
+        ResetIopSpecial(NULL, 0);
+    }
+    if (EnableDebug)
+        GS_BGCOLOUR = 0x00FFFF; // Yellow
+#else
+    // Legacy IOP reboot:
+    // - 1 IOP reboot to BIOS state
+    // - 2 IOP reboot to emulated cdrom state
+    // - 3 IOP reboot to emulated cdrom state with game IOPRP (optional)
+    SifInitRpc(0);
 
     // Reseting IOP.
     while (!Reset_Iop("", 0)) {
@@ -136,6 +163,7 @@ int New_Reset_Iop(const char *arg, int arglen)
         if (EnableDebug)
             GS_BGCOLOUR = 0x00FFFF; // Yellow
     }
+#endif
 
     DPRINTF("Exiting services...\n");
     SifExitIopHeap();

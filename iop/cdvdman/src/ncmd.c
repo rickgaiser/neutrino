@@ -27,7 +27,8 @@ int sceCdSync(int mode)
 int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 {
     int result;
-    static int count = 0;
+    static u32 free_prev = 0;
+    u32 free;
 
     DPRINTF("sceCdRead lsn=%d sectors=%d buf=%08x\n", (int)lsn, (int)sectors, (int)buf);
 
@@ -37,10 +38,10 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
         result = cdvdman_SyncRead(lsn, sectors, buf);
     }
 
-    count += sectors;
-    if (count > 100) {
-        count=0;
-        printf("- memory free = %dKiB\n", QueryTotalFreeMemSize() / 1024);
+    free = QueryTotalFreeMemSize();
+    if (free != free_prev) {
+        free_prev = free;
+        printf("- memory free = %dKiB\n", free / 1024);
     }
 
     return result;

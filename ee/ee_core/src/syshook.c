@@ -143,8 +143,7 @@ void sysExit(s32 exit_code)
 }
 
 /*----------------------------------------------------------------------------------------*/
-/* Replace SifSetDma, SifSetReg, LoadExecPS2 syscalls in kernel. (Game Loader)            */
-/* Replace CreateThread and ExecPS2 syscalls in kernel. (In Game Reset)                   */
+/* Replace SifSetDma, SifSetReg, Exit syscalls in kernel. (Game Loader)                   */
 /*----------------------------------------------------------------------------------------*/
 void Install_Kernel_Hooks(void)
 {
@@ -158,10 +157,9 @@ void Install_Kernel_Hooks(void)
     SetSyscall(__NR_KExit, &Hook_Exit);
 }
 
-/*----------------------------------------------------------------------------------------------*/
-/* Restore original SifSetDma, SifSetReg, LoadExecPS2, Exit syscalls in kernel. (Game loader)   */
-/* Restore original CreateThread and ExecPS2 syscalls in kernel. (In Game Reset)                */
-/*----------------------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------------------*/
+/* Restore original SifSetDma, SifSetReg, Exit syscalls in kernel. (Game loader)          */
+/*----------------------------------------------------------------------------------------*/
 void Remove_Kernel_Hooks(void)
 {
     SetSyscall(__NR_SifSetDma, Old_SifSetDma);

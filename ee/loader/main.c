@@ -48,12 +48,15 @@ static const struct cdvdman_settings_common cdvdman_settings_common_sample = {
 
 void print_usage()
 {
-    printf("ps2client -h 192.168.1.10 execee host:modloader.elf <driver> <path>\n");
+    printf("ps2client -h 192.168.1.10 execee host:neutrino.elf <driver> <path>\n");
     printf("Supported drivers:\n");
     printf(" - usb\n");
+    printf(" - mx4sio\n");
+    printf(" - udpbd\n");
+    printf(" - ilink\n");
     printf("\n");
     printf("Usage example:\n");
-    printf("  ps2client -h 192.168.1.10 execee host:modloader.elf usb mass:path/to/filename.iso\n");
+    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf usb mass:path/to/filename.iso\n");
 }
 
 struct SModule
@@ -75,7 +78,6 @@ struct SModule
 // clang-format off
 struct SModule mod[] = {
     {"",        "udnl.irx"             , NULL, 0, false, 0            , OPL_MODULE_ID_UDNL},
-    {"",        "IOPRP.img"            , NULL, 0, false, 0            , OPL_MODULE_ID_IOPRP},
     {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, false, SMF_IOPRP    , 0},
     {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, false, SMF_IOPRP    , 0},
     {"EESYNC",  "eesync.irx"           , NULL, 0, false, SMF_IOPRP    , 0},
@@ -85,10 +87,10 @@ struct SModule mod[] = {
     {"",        "fileXio.irx"          , NULL, 0, false, SMF_SYSTEM   , 0},
     {"",        "isofs.irx"            , NULL, 0, false, SMF_SYSTEM   , 0},
     {"",        "bdm.irx"              , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "bdmfs_vfat.irx"       , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "usbd.irx"             , NULL, 0, false, SMF_D_USB    , 0},
+    {"",        "bdmfs_fatfs.irx"      , NULL, 0, false, SMF_SYSTEM   , 0},
+    {"USBD",    "usbd.irx"             , NULL, 0, false, SMF_D_USB    , 0},
+    {"USBMASS", "usbmass_bd_mini.irx"  , NULL, 0, false, SMF_D_USB    , 0},
     {"",        "mx4sio_bd_mini.irx"   , NULL, 0, false, SMF_D_MX4SIO , 0},
-    {"",        "usbmass_bd_mini.irx"  , NULL, 0, false, SMF_D_USB    , 0},
     {"",        "ps2dev9.irx"          , NULL, 0, false, SMF_D_UDPBD  , 0},
     {"",        "smap.irx"             , NULL, 0, false, SMF_D_UDPBD  , 0},
     {"",        "iLinkman.irx"         , NULL, 0, false, SMF_D_ILINK  , 0},
@@ -96,7 +98,7 @@ struct SModule mod[] = {
     {NULL, NULL, 0, 0}
 };
 // clang-format on
-struct SModule *mod_cdvdman = &mod[2];
+struct SModule *mod_cdvdman = &mod[1];
 
 #define MAX_FILENAME 128
 int load_module(struct SModule *mod)
@@ -168,7 +170,7 @@ static off_t load_file_mod(const char *filename, void *addr, irxptr_t *irx)
     irx->info = mod->iSize | SET_OPL_MOD_ID(mod->eecid);
     irx->ptr = addr;
 
-    printf("SYSTEM IRX %u address start: %p end: %p\n", mod->eecid, addr, addr + mod->iSize);
+    printf("SYSTEM IRX %u address start: %p end: %p\n", mod->eecid, addr, (u8*)addr + mod->iSize);
 
     // Align to 16 bytes
     return (mod->iSize + 0xf) & ~0xf;
@@ -234,33 +236,96 @@ void start_modules(u32 flags)
     - CDVDFSV
     - EESYNC
 ------------------------------------------------------------------------------------------*/
-static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, struct romdir_entry *romdir_in)
+static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const struct romdir_entry *romdir_in)
 {
     struct romdir_entry *romdir_out_org = romdir_out;
     u8 *ioprp_in = (u8 *)romdir_in;
     u8 *ioprp_out = (u8 *)romdir_out;
 
-    while (romdir_in->fileName[0] != '\0') {
-        struct SModule *mod = load_module_udnlname(romdir_in->fileName);
+    while (romdir_in->name[0] != '\0') {
+        struct SModule *mod = load_module_udnlname(romdir_in->name);
         if (mod != NULL) {
-            printf("IOPRP: replacing %s with %s\n", romdir_in->fileName, mod->sFileName);
+            printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
             memcpy(ioprp_out, mod->pData, mod->iSize);
-            romdir_out->fileSize = mod->iSize;
+            romdir_out->size = mod->iSize;
         } else {
-            printf("IOPRP: keeping %s\n", romdir_in->fileName);
-            memcpy(ioprp_out, ioprp_in, romdir_in->fileSize);
-            romdir_out->fileSize = romdir_in->fileSize;
+            printf("IOPRP: keeping %s\n", romdir_in->name);
+            memcpy(ioprp_out, ioprp_in, romdir_in->size);
+            romdir_out->size = romdir_in->size;
         }
 
         // Align all addresses to a multiple of 16
-        ioprp_in += (romdir_in->fileSize + 0xF) & ~0xF;
-        ioprp_out += (romdir_out->fileSize + 0xF) & ~0xF;
+        ioprp_in += (romdir_in->size + 0xF) & ~0xF;
+        ioprp_out += (romdir_out->size + 0xF) & ~0xF;
         romdir_in++;
         romdir_out++;
     }
 
     return (ioprp_out - (u8 *)romdir_out_org);
 }
+
+struct ioprp_ext {
+    extinfo_t reset_date_ext;
+    uint32_t  reset_date;
+
+    extinfo_t cdvdman_date_ext;
+    uint32_t  cdvdman_date;
+    extinfo_t cdvdman_version_ext;
+    extinfo_t cdvdman_comment_ext;
+    char      cdvdman_comment[12];
+
+    extinfo_t cdvdfsv_date_ext;
+    uint32_t  cdvdfsv_date;
+    extinfo_t cdvdfsv_version_ext;
+    extinfo_t cdvdfsv_comment_ext;
+    char      cdvdfsv_comment[16];
+
+    extinfo_t syncee_date_ext;
+    uint32_t  syncee_date;
+    extinfo_t syncee_version_ext;
+    extinfo_t syncee_comment_ext;
+    char      syncee_comment[8];
+};
+
+#define ROMDIR_ENTRY_COUNT 7
+struct ioprp_img
+{
+    romdir_entry_t romdir[ROMDIR_ENTRY_COUNT];
+    struct ioprp_ext ext;
+};
+
+static const struct ioprp_img ioprp_img_base = {
+    {{"RESET"  ,  8, 0},
+     {"ROMDIR" ,  0, 0x10 * ROMDIR_ENTRY_COUNT},
+     {"EXTINFO",  0, sizeof(struct ioprp_ext)},
+     {"CDVDMAN", 28, 0},
+     {"CDVDFSV", 32, 0},
+     {"EESYNC" , 24, 0},
+     {"", 0, 0}},
+    {
+        // RESET extinfo
+        {0, 4, EXTINFO_TYPE_DATE},
+        0x20230621,
+        // CDVDMAN extinfo
+        {0, 4, EXTINFO_TYPE_DATE},
+        0x20230621,
+        {0x9999, 0, EXTINFO_TYPE_VERSION},
+        {0, 12, EXTINFO_TYPE_COMMENT},
+        "cdvd_driver",
+        // CDVDFSV extinfo
+        {0, 4, EXTINFO_TYPE_DATE},
+        0x20230621,
+        {0x9999, 0, EXTINFO_TYPE_VERSION},
+        {0, 16, EXTINFO_TYPE_COMMENT},
+        "cdvd_ee_driver",
+        // SYNCEE extinfo
+        {0, 4, EXTINFO_TYPE_DATE},
+        0x20230621,
+        {0x9999, 0, EXTINFO_TYPE_VERSION},
+        {0, 8, EXTINFO_TYPE_COMMENT},
+        "SyncEE"
+    }};
+
 
 int main(int argc, char *argv[])
 {
@@ -272,12 +337,14 @@ int main(int argc, char *argv[])
     off_t size;
     void *eeloadCopy, *initUserMemory;
     struct cdvdman_settings_bdm *settings;
-    char *sConfigName;
-    int iLBA;
+    const char *sConfigName;
+    uint64_t iLBA;
     int iMode;
 
-    printf("Modular PS2 Game Loader\n");
-    printf("  By Maximus32\n");
+    printf("----------------------------\n");
+    printf("- Neutrino PS2 Game Loader -\n");
+    printf("-       By Maximus32       -\n");
+    printf("----------------------------\n");
 
     // printf("argc = %d\n", argc);
     // for (int i=0; i<argc; i++)
@@ -293,6 +360,7 @@ int main(int argc, char *argv[])
      * Load system drivers
      */
     start_modules(SMF_SYSTEM);
+    fileXioInit();
 
     /*
      * Load file system drivers
@@ -305,7 +373,7 @@ int main(int argc, char *argv[])
         printf("Loading UDPBD drivers\n");
         iMode = BDM_UDP_MODE;
     } else if (!strncmp(sDriver, "mx4sio", 6)) {
-        printf("Loading UDPBD drivers\n");
+        printf("Loading MX4SIO drivers\n");
         iMode = BDM_M4S_MODE;
     } else if (!strncmp(sDriver, "ilink", 5)) {
         printf("Loading iLink drivers\n");
@@ -327,11 +395,10 @@ int main(int argc, char *argv[])
             start_modules(SMF_D_MX4SIO);
             break;
         case BDM_ILK_MODE:
-            start_modules(SMF_D_MX4SIO);
+            start_modules(SMF_D_ILINK);
             break;
     }
 
-#if 0
     /*
      * Check if file exists
      * Give low level drivers 10s to start
@@ -349,13 +416,43 @@ int main(int argc, char *argv[])
         printf("Unable to open %s\n", sFileName);
         return -1;
     }
+    // Get ISO file size
     size = lseek64(fd, 0, SEEK_END);
+    char buffer[6];
+    // Validate this is an ISO
+    lseek64(fd, 16 * 2048, SEEK_SET);
+    if (read(fd, buffer, sizeof(buffer)) != sizeof(buffer)) {
+        printf("Unable to read ISO\n");
+        return -1;
+    }
+    if ((buffer[0x00] != 1) || (strncmp(&buffer[0x01], "CD001", 5))) {
+        printf("File is not a valid ISO\n");
+        return -1;
+    }
+    // Get ISO layer0 size
+    uint32_t layer0_lba_size;
+    lseek64(fd, 16 * 2048 + 80, SEEK_SET);
+    if (read(fd, &layer0_lba_size, sizeof(layer0_lba_size)) != sizeof(layer0_lba_size)) {
+        printf("ISO invalid\n");
+        return -1;
+    }
+    // Try to get ISO layer1 size
+    uint32_t layer1_lba_start = 0;
+    lseek64(fd, (uint64_t)layer0_lba_size * 2048, SEEK_SET);
+    if (read(fd, buffer, sizeof(buffer)) == sizeof(buffer)) {
+        if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
+            layer1_lba_start = layer0_lba_size - 16;
+            printf("DVD-DL detected\n");
+        }
+    }
     lseek64(fd, 0, SEEK_SET);
-    iLBA = fileXioIoctl(fd, USBMASS_IOCTL_GET_LBA, "");
+    fileXioIoctl2(fd, USBMASS_IOCTL_GET_LBA, "", 0, &iLBA, sizeof(iLBA));
     int iFrag = fileXioIoctl(fd, USBMASS_IOCTL_CHECK_CHAIN, "");
+    close(fd);
+
     printf("Loading %s...\n", sFileName);
     printf("- size = %lldMiB\n", size / (1024 * 1024));
-    printf("- LBA  = %d\n", iLBA);
+    printf("- LBA  = %lld\n", iLBA);
     printf("- frag = %d\n", iFrag);
 
     if (iFrag != 1) {
@@ -389,65 +486,6 @@ int main(int argc, char *argv[])
     printf("config name: %s\n", sConfigName);
     close(fd_config);
     fileXioUmount("iso:");
-#else
-    //
-    // 32GB uSD
-    //
-
-    // SCUS_971.13.ICO.iso
-    // 30-5: MLR: 260KiB free IOP RAM lowest value (ingame)
-    // 30-5: OPL: CRASH!
-    //sConfigName = "SCUS_971.13";
-    //iLBA = 32768;
-    
-    // SCUS_973.28.Gran Turismo 4.iso
-    // 30-5: MLR: 526KiB free IOP RAM lowest value
-    // 30-5: OPL: 518KiB free IOP RAM lowest value
-    //sConfigName = "SCUS_973.28";
-    //iLBA = 1118896;
-    
-    // SLES_501.26.Quake III Revolution.iso
-    // 30-5: MLR: CRASH!
-    // 30-5: OPL: 20KiB free IOP RAM lowest value (ingame)
-    //sConfigName = "SLES_501.26";
-    //iLBA = 8816816;
-    
-    // SLES_539.74.Dragon Quest 8.iso
-    // 30-5: MLR: 1084KiB free IOP RAM lowest value (ingame) +117KiB !
-    // 30-5: OPL:  967KiB free IOP RAM lowest value (ingame)
-    //sConfigName = "SLES_539.74";
-    //iLBA = 20229424;
-    
-    // SLES_549.45.DragonBall Z Budokai Tenkaichi 3.iso
-    // 30-5: MLR: 239KiB free IOP RAM lowest value (ingame) +117KiB !
-    // 30-5: OPL: 122KiB free IOP RAM lowest value (ingame)
-    sConfigName = "SLES_549.45";
-    iLBA = 10089840;
-
-    //
-    // 128GB USB
-    //
-
-    // SCES_516.07.Ratchet Clank - Going Commando.iso
-    // 30-5: MLR:   5KiB free IOP RAM lowest value (direct daarna 226KiB) +116KiB !
-    // 30-5: OPL:   5KiB free IOP RAM lowest value (direct daarna 110KiB)
-    //sConfigName = "SCES_516.07";
-    //iLBA = 19059392;
-    
-    // SCES_550.19.Ratchet Clank - Size Matters.iso
-    // 30-5: MLR: 186KiB free IOP RAM lowest value +119KiB !
-    // 30-5: OPL:  67KiB free IOP RAM lowest value
-    //sConfigName = "SCES_550.19";
-    //iLBA = 15186368;
-
-    //
-    // Direct ISO
-    //
-    
-    // SCUS_974.81.God of War II.iso
-    //sConfigName = "SCUS_974.81";
-    //iLBA = 0; // ISO as BD
-#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
@@ -469,20 +507,6 @@ int main(int argc, char *argv[])
     irxtable->count++;
 
     //
-    // Load IOPRP.img
-    //
-    fd = open("modules/IOPRP.img", O_RDONLY);
-    if (fd < 0) {
-        printf("Unable to open %s\n", "modules/IOPRP.img");
-        return -1;
-    }
-    size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    void *pIOPRP = malloc(size);
-    read(fd, pIOPRP, size);
-    close(fd);
-
-    //
     // Locate and set cdvdman settings
     //
     load_module(mod_cdvdman);
@@ -499,8 +523,8 @@ int main(int argc, char *argv[])
     memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
     settings->common.NumParts = 1;
     settings->common.media = SCECdPS2DVD;
-    settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
-    // settings->common.layer1_start = 0x0;
+    //settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
+    settings->common.layer1_start = layer1_lba_start;
     // settings->common.DiscID[5];
     // settings->common.padding[2];
     settings->common.fakemodule_flags = 0;
@@ -513,14 +537,13 @@ int main(int argc, char *argv[])
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
     //
     printf("IOPRP.img (old):\n");
-    print_romdir(pIOPRP);
-    size = patch_IOPRP_image((struct romdir_entry *)irxptr, (struct romdir_entry *)pIOPRP);
+    print_romdir(ioprp_img_base.romdir);
+    size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
     printf("IOPRP.img (new):\n");
-    print_romdir((void *)irxptr);
+    print_romdir((struct romdir_entry *)irxptr);
     irxptr_tab->info = size | SET_OPL_MOD_ID(OPL_MODULE_ID_IOPRP);
     irxptr_tab->ptr = irxptr;
     irxptr_tab++;
-    free(pIOPRP);
     irxptr += size;
     irxtable->count++;
 
@@ -533,7 +556,7 @@ int main(int argc, char *argv[])
     irxtable->count++;
 
     // For debugging (udptty) and also udpbd
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9; // FIXME! dev9 always builtin?
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
     //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
     //irxtable->count++;
     settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
@@ -545,10 +568,14 @@ int main(int argc, char *argv[])
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD;
             irxptr += load_file_mod("usbd.irx", irxptr, irxptr_tab++);
             irxtable->count++;
-            irxptr += load_file_mod("usbmass_bd.irx", irxptr, irxptr_tab++);
+            irxptr += load_file_mod("usbmass_bd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
         case BDM_UDP_MODE:
+            //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+            //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
+            //irxtable->count++;
+            //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
             //irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
             //irxtable->count++;
             break;
@@ -608,7 +635,7 @@ int main(int argc, char *argv[])
     // Set arguments, and start EECORE
     //
     eecc_init(&eeconf);
-    eecc_setGameMode(&eeconf, iMode);
+    eecc_setGameMode(&eeconf, (enum GAME_MODE)iMode);
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
     eecc_setFileName(&eeconf, sConfigName);
