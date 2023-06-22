@@ -54,7 +54,9 @@ copy:
 	cp $(PS2SDK)/iop/irx/fileXio.irx          modules
 	cp $(PS2SDK)/iop/irx/bdm.irx              modules
 	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx      modules
+	cp $(PS2SDK)/iop/irx/ata_bd.irx           modules
 	cp $(PS2SDK)/iop/irx/usbd.irx             modules
+	cp $(PS2SDK)/iop/irx/usbd_mini.irx        modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd.irx       modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx  modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd.irx        modules

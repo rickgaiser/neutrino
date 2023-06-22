@@ -50,6 +50,7 @@ void print_usage()
 {
     printf("ps2client -h 192.168.1.10 execee host:neutrino.elf <driver> <path>\n");
     printf("Supported drivers:\n");
+    printf(" - ata\n");
     printf(" - usb\n");
     printf(" - mx4sio\n");
     printf(" - udpbd\n");
@@ -69,27 +70,29 @@ struct SModule
     u32 iFlags;
     u32 eecid;
 };
-#define SMF_IOPRP    (1 << 2)
+#define SMF_IOPCORE  (1 << 2)
 #define SMF_SYSTEM   (1 << 3)
-#define SMF_D_USB    (1 << 10)
-#define SMF_D_UDPBD  (1 << 11)
-#define SMF_D_MX4SIO (1 << 12)
-#define SMF_D_ILINK  (1 << 13)
+#define SMF_D_ATA    (1 << 10)
+#define SMF_D_USB    (1 << 11)
+#define SMF_D_UDPBD  (1 << 12)
+#define SMF_D_MX4SIO (1 << 13)
+#define SMF_D_ILINK  (1 << 14)
 // clang-format off
 struct SModule mod[] = {
-    {"",        "udnl.irx"             , NULL, 0, false, 0            , OPL_MODULE_ID_UDNL},
-    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, false, SMF_IOPRP    , 0},
-    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, false, SMF_IOPRP    , 0},
-    {"EESYNC",  "eesync.irx"           , NULL, 0, false, SMF_IOPRP    , 0},
-    {"",        "imgdrv.irx"           , NULL, 0, false, 0            , OPL_MODULE_ID_IMGDRV},
-    {"",        "resetspu.irx"         , NULL, 0, false, 0            , OPL_MODULE_ID_RESETSPU},
+    {"",        "udnl.irx"             , NULL, 0, false, SMF_IOPCORE  , OPL_MODULE_ID_UDNL},
+    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, false, SMF_IOPCORE  , 0},
+    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, false, SMF_IOPCORE  , 0},
+    {"EESYNC",  "eesync.irx"           , NULL, 0, false, SMF_IOPCORE  , 0},
+    {"",        "imgdrv.irx"           , NULL, 0, false, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
+    {"",        "resetspu.irx"         , NULL, 0, false, SMF_IOPCORE  , OPL_MODULE_ID_RESETSPU},
     {"",        "iomanX.irx"           , NULL, 0, false, SMF_SYSTEM   , 0},
     {"",        "fileXio.irx"          , NULL, 0, false, SMF_SYSTEM   , 0},
     {"",        "isofs.irx"            , NULL, 0, false, SMF_SYSTEM   , 0},
     {"",        "bdm.irx"              , NULL, 0, false, SMF_SYSTEM   , 0},
     {"",        "bdmfs_fatfs.irx"      , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"USBD",    "usbd.irx"             , NULL, 0, false, SMF_D_USB    , 0},
-    {"USBMASS", "usbmass_bd_mini.irx"  , NULL, 0, false, SMF_D_USB    , 0},
+    {"",        "ata_bd.irx"           , NULL, 0, false, SMF_D_ATA    , 0},
+    {"",        "usbd_mini.irx"        , NULL, 0, false, SMF_D_USB    , 0},
+    {"",        "usbmass_bd_mini.irx"  , NULL, 0, false, SMF_D_USB    , 0},
     {"",        "mx4sio_bd_mini.irx"   , NULL, 0, false, SMF_D_MX4SIO , 0},
     {"",        "ps2dev9.irx"          , NULL, 0, false, SMF_D_UDPBD  , 0},
     {"",        "smap.irx"             , NULL, 0, false, SMF_D_UDPBD  , 0},
@@ -108,7 +111,7 @@ int load_module(struct SModule *mod)
     printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
 
     if (mod->bLoaded == true) {
-        printf("WARNING: Module already loaded: %s\n", mod->sFileName);
+        //printf("WARNING: Module already loaded: %s\n", mod->sFileName);
         return 0;
     }
 
@@ -116,13 +119,8 @@ int load_module(struct SModule *mod)
     snprintf(sFilePath, MAX_FILENAME, "modules/%s", mod->sFileName);
     int fd = open(sFilePath, O_RDONLY);
     if (fd < 0) {
-        // Open module on alternative location
-        snprintf(sFilePath, MAX_FILENAME, "irx/gt4/%s", mod->sFileName);
-        int fd = open(sFilePath, O_RDONLY);
-        if (fd < 0) {
-            printf("ERROR: Unable to open %s\n", mod->sFileName);
-            return -1;
-        }
+        printf("ERROR: Unable to open %s\n", mod->sFileName);
+        return -1;
     }
 
     printf("%s(%s) loaded %s\n", __FUNCTION__, mod->sFileName, sFilePath);
@@ -208,26 +206,30 @@ int start_module(struct SModule *mod)
     return 0;
 }
 
-void load_modules(u32 flags)
+int load_modules(u32 flags)
 {
     int modid;
 
     for (modid = 0; mod[modid].sFileName != NULL; modid++) {
-        if ((mod[modid].iFlags & flags) == flags) {
-            load_module(&mod[modid]);
+        if (mod[modid].iFlags & flags) {
+            if(load_module(&mod[modid]) < 0)
+                return -1;
         }
     }
+    return 0;
 }
 
-void start_modules(u32 flags)
+int start_modules(u32 flags)
 {
     int modid;
 
     for (modid = 0; mod[modid].sFileName != NULL; modid++) {
-        if ((mod[modid].iFlags & flags) == flags) {
-            start_module(&mod[modid]);
+        if (mod[modid].iFlags & flags) {
+            if (start_module(&mod[modid]) < 0)
+                return -1;
         }
     }
+    return 0;
 }
 
 /*----------------------------------------------------------------------------------------
@@ -245,11 +247,11 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
     while (romdir_in->name[0] != '\0') {
         struct SModule *mod = load_module_udnlname(romdir_in->name);
         if (mod != NULL) {
-            printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
+            //printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
             memcpy(ioprp_out, mod->pData, mod->iSize);
             romdir_out->size = mod->iSize;
         } else {
-            printf("IOPRP: keeping %s\n", romdir_in->name);
+            //printf("IOPRP: keeping %s\n", romdir_in->name);
             memcpy(ioprp_out, ioprp_in, romdir_in->size);
             romdir_out->size = romdir_in->size;
         }
@@ -340,6 +342,7 @@ int main(int argc, char *argv[])
     const char *sConfigName;
     uint64_t iLBA;
     int iMode;
+    int iDrivers;
 
     printf("----------------------------\n");
     printf("- Neutrino PS2 Game Loader -\n");
@@ -357,47 +360,47 @@ int main(int argc, char *argv[])
     }
 
     /*
-     * Load system drivers
-     */
-    start_modules(SMF_SYSTEM);
-    fileXioInit();
-
-    /*
-     * Load file system drivers
+     * Figure out what drivers we need
      */
     const char *sDriver = argv[1];
-    if (!strncmp(sDriver, "usb", 3)) {
+    if (!strncmp(sDriver, "ata", 3)) {
+        printf("Loading ATA drivers\n");
+        iMode = BDM_ATA_MODE;
+        iDrivers = SMF_D_ATA;
+    } else if (!strncmp(sDriver, "usb", 3)) {
         printf("Loading USB drivers\n");
         iMode = BDM_USB_MODE;
+        iDrivers = SMF_D_USB;
     } else if (!strncmp(sDriver, "udpbd", 5)) {
         printf("Loading UDPBD drivers\n");
         iMode = BDM_UDP_MODE;
+        iDrivers = SMF_D_UDPBD;
     } else if (!strncmp(sDriver, "mx4sio", 6)) {
         printf("Loading MX4SIO drivers\n");
         iMode = BDM_M4S_MODE;
+        iDrivers = SMF_D_MX4SIO;
     } else if (!strncmp(sDriver, "ilink", 5)) {
         printf("Loading iLink drivers\n");
         iMode = BDM_ILK_MODE;
+        iDrivers = SMF_D_ILINK;
     } else {
         printf("ERROR: driver %s not supported\n", sDriver);
         print_usage();
         return -1;
     }
 
-    switch (iMode) {
-        case BDM_USB_MODE:
-            start_modules(SMF_D_USB);
-            break;
-        case BDM_UDP_MODE:
-            start_modules(SMF_D_UDPBD);
-            break;
-        case BDM_M4S_MODE:
-            start_modules(SMF_D_MX4SIO);
-            break;
-        case BDM_ILK_MODE:
-            start_modules(SMF_D_ILINK);
-            break;
-    }
+    /*
+     * Load drivers before rebooting the IOP
+     */
+    if (load_modules(SMF_SYSTEM|SMF_IOPCORE|iDrivers) < 0)
+        return -1;
+
+    /*
+     * Load system drivers
+     */
+    if (start_modules(SMF_SYSTEM|iDrivers))
+        return -1;
+    fileXioInit();
 
     /*
      * Check if file exists
@@ -536,11 +539,11 @@ int main(int argc, char *argv[])
     //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
     //
-    printf("IOPRP.img (old):\n");
-    print_romdir(ioprp_img_base.romdir);
+    //printf("IOPRP.img (old):\n");
+    //print_romdir(ioprp_img_base.romdir);
     size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
-    printf("IOPRP.img (new):\n");
-    print_romdir((struct romdir_entry *)irxptr);
+    //printf("IOPRP.img (new):\n");
+    //print_romdir((struct romdir_entry *)irxptr);
     irxptr_tab->info = size | SET_OPL_MOD_ID(OPL_MODULE_ID_IOPRP);
     irxptr_tab->ptr = irxptr;
     irxptr_tab++;
@@ -556,37 +559,45 @@ int main(int argc, char *argv[])
     irxtable->count++;
 
     // For debugging (udptty) and also udpbd
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+    //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
     //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
     //irxtable->count++;
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
-    irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
+    //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
+    //irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
+    //irxtable->count++;
 
     switch (iMode) {
+        case BDM_ATA_MODE:
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+            irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_ATAD;
+            irxptr += load_file_mod("ata_bd.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
+            break;
         case BDM_USB_MODE:
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD;
-            irxptr += load_file_mod("usbd.irx", irxptr, irxptr_tab++);
+            irxptr += load_file_mod("usbd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             irxptr += load_file_mod("usbmass_bd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
         case BDM_UDP_MODE:
-            //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
-            //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
-            //irxtable->count++;
-            //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
-            //irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
-            //irxtable->count++;
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+            irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
+            irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
             break;
         case BDM_M4S_MODE:
-            irxptr += load_file_mod("mx4sio_bd.irx", irxptr, irxptr_tab++);
+            irxptr += load_file_mod("mx4sio_bd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
         case BDM_ILK_MODE:
             irxptr += load_file_mod("iLinkman.irx", irxptr, irxptr_tab++);
             irxtable->count++;
-            irxptr += load_file_mod("IEEE1394_bd.irx", irxptr, irxptr_tab++);
+            irxptr += load_file_mod("IEEE1394_bd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
     }

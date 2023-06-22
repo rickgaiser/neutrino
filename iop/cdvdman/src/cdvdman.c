@@ -19,9 +19,6 @@ struct CDVDMAN_SETTINGS_TYPE cdvdman_settings = {
 extern struct irx_export_table _exp_cdvdman;
 extern struct irx_export_table _exp_cdvdstm;
 extern struct irx_export_table _exp_smsutils;
-#ifdef __USE_DEV9
-extern struct irx_export_table _exp_dev9;
-#endif
 
 // internal functions prototypes
 static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 out_size);
@@ -70,6 +67,8 @@ void cdvdman_init(void)
 
 int sceCdInit(int init_mode)
 {
+    DPRINTF("%s\n", __FUNCTION__);
+
     cdvdman_init();
     return 1;
 }
@@ -546,10 +545,6 @@ int _start(int argc, char **argv)
     RegisterLibraryEntries(&_exp_cdvdman);
     RegisterLibraryEntries(&_exp_cdvdstm);
     RegisterLibraryEntries(&_exp_smsutils);
-#ifdef __USE_DEV9
-    RegisterLibraryEntries(&_exp_dev9);
-    dev9d_init();
-#endif
 
     DeviceInit();
 

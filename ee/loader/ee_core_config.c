@@ -203,6 +203,8 @@ const char *eecc_getGameModeString(struct SEECoreConfig *eecc)
             return "BDM_USB_MODE";
         case BDM_UDP_MODE:
             return "BDM_UDP_MODE";
+        case BDM_ATA_MODE:
+            return "BDM_ATA_MODE";
         case ETH_MODE:
             return "ETH_MODE";
         case HDD_MODE:

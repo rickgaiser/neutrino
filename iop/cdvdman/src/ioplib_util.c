@@ -57,18 +57,11 @@ enum FAKE_MODULE_ID {
 };
 
 static struct FakeModule modulefake_list[] = {
-#ifdef __USE_DEV9
     {"DEV9.IRX", "dev9", FAKE_MODULE_ID_DEV9, FAKE_MODULE_FLAG_DEV9, 0x0208, 0},
-#endif
-    // Faked dynamically for BDM-USB and PADEMU
     {"USBD.IRX", "USB_driver", FAKE_MODULE_ID_USBD, FAKE_MODULE_FLAG_USBD, 0x0204, 2},
-#ifdef SMB_DRIVER
     {"SMAP.IRX", "INET_SMAP_driver", FAKE_MODULE_ID_SMAP, FAKE_MODULE_FLAG_SMAP, 0x0219, 2},
     {"ENT_SMAP.IRX", "ent_smap", FAKE_MODULE_ID_SMAP, FAKE_MODULE_FLAG_SMAP, 0x021f, 2},
-#endif
-#ifdef HDD_DRIVER
     {"ATAD.IRX", "atad_driver", FAKE_MODULE_ID_ATAD, FAKE_MODULE_FLAG_ATAD, 0x0207, 0},
-#endif
     {"CDVDSTM.IRX", "cdvd_st_driver", FAKE_MODULE_ID_CDVDSTM, FAKE_MODULE_FLAG_CDVDSTM, 0x0202, 2},
     // Games cannot load CDVDFSV, but this exits to prevent games from trying to unload it. Some games like Jak X check if this module can be unloaded, ostensibly as an anti-HDLoader measure.
     {"CDVDFSV.IRX", "cdvd_ee_driver", FAKE_MODULE_ID_CDVDFSV, FAKE_MODULE_FLAG_CDVDFSV, 0x0202, 2},
