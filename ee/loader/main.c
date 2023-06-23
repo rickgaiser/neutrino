@@ -10,6 +10,7 @@
 #include <kernel.h>
 #include <tamtypes.h>
 #include <loadfile.h>
+#include <iopcontrol.h>
 #include <usbhdfsd-common.h>
 #include <libcdvd-common.h>
 
@@ -108,7 +109,7 @@ int load_module(struct SModule *mod)
 {
     char sFilePath[MAX_FILENAME];
 
-    printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
+    //printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
 
     if (mod->bLoaded == true) {
         //printf("WARNING: Module already loaded: %s\n", mod->sFileName);
@@ -123,7 +124,7 @@ int load_module(struct SModule *mod)
         return -1;
     }
 
-    printf("%s(%s) loaded %s\n", __FUNCTION__, mod->sFileName, sFilePath);
+    //printf("%s(%s) loaded %s\n", __FUNCTION__, mod->sFileName, sFilePath);
 
     // Get module size
     mod->iSize = lseek(fd, 0, SEEK_END);
@@ -340,7 +341,6 @@ int main(int argc, char *argv[])
     void *eeloadCopy, *initUserMemory;
     struct cdvdman_settings_bdm *settings;
     const char *sConfigName;
-    uint64_t iLBA;
     int iMode;
     int iDrivers;
 
@@ -396,6 +396,36 @@ int main(int argc, char *argv[])
         return -1;
 
     /*
+     * Load EECORE before rebooting the IOP
+     */
+    fd = open("modules/ee_core.elf", O_RDONLY);
+    if (fd < 0) {
+        printf("Unable to open %s\n", "modules/ee_core.elf");
+        return -1;
+    }
+    size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    void *ee_core = malloc(size);
+    read(fd, ee_core, size);
+    close(fd);
+
+    /*
+     * Reboot the IOP
+     */
+    //fileXioExit();
+    SifExitIopHeap();
+    SifLoadFileExit();
+    SifExitRpc();
+    SifInitRpc(0);
+    while(!SifIopReset(NULL, 0)){};
+    while(!SifIopSync()) {};
+    SifInitRpc(0);
+    SifInitIopHeap();
+    SifLoadFileInit();
+    sbv_patch_enable_lmb();
+    sbv_patch_disable_prefix_check();
+
+    /*
      * Load system drivers
      */
     if (start_modules(SMF_SYSTEM|iDrivers))
@@ -407,6 +437,7 @@ int main(int argc, char *argv[])
      * Give low level drivers 10s to start
      */
     const char *sFileName = argv[2];
+    printf("Loading %s...\n", sFileName);
     for (i = 0; i < 10; i++) {
         fd = open(sFileName, O_RDONLY);
         if (fd >= 0)
@@ -445,23 +476,10 @@ int main(int argc, char *argv[])
     if (read(fd, buffer, sizeof(buffer)) == sizeof(buffer)) {
         if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
             layer1_lba_start = layer0_lba_size - 16;
-            printf("DVD-DL detected\n");
+            printf("- DVD-DL detected\n");
         }
     }
-    lseek64(fd, 0, SEEK_SET);
-    fileXioIoctl2(fd, USBMASS_IOCTL_GET_LBA, "", 0, &iLBA, sizeof(iLBA));
-    int iFrag = fileXioIoctl(fd, USBMASS_IOCTL_CHECK_CHAIN, "");
-    close(fd);
-
-    printf("Loading %s...\n", sFileName);
     printf("- size = %lldMiB\n", size / (1024 * 1024));
-    printf("- LBA  = %lld\n", iLBA);
-    printf("- frag = %d\n", iFrag);
-
-    if (iFrag != 1) {
-        printf("File is fragmented!\n");
-        return -1;
-    }
 
     /*
      * Mount as ISO so we can get some information
@@ -533,8 +551,18 @@ int main(int argc, char *argv[])
     settings->common.fakemodule_flags = 0;
     settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDFSV;
     settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDSTM;
-    settings->LBAs[0] = iLBA;
-    // settings->LBAs[1];
+
+    //
+    // Add ISO as fragfile[0] to fragment list
+    //
+    struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
+    iso_frag->frag_start = 0;
+    iso_frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[0], sizeof(bd_fragment_t) * BDM_MAX_FRAGS);
+    if (iso_frag->frag_count > BDM_MAX_FRAGS) {
+        printf("Too many fragments (%d)\n", iso_frag->frag_count);
+        return -1;
+    }
+    close(fd);
 
     //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
@@ -601,20 +629,6 @@ int main(int argc, char *argv[])
             irxtable->count++;
             break;
     }
-
-    //
-    // Load EECORE file
-    //
-    fd = open("modules/ee_core.elf", O_RDONLY);
-    if (fd < 0) {
-        printf("Unable to open %s\n", "modules/ee_core.elf");
-        return -1;
-    }
-    size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    void *ee_core = malloc(size);
-    read(fd, ee_core, size);
-    close(fd);
 
     //
     // Load EECORE ELF sections
