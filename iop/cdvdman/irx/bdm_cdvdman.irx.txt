@@ -1,13 +1,13 @@
-iopmod id addr		0x4ba8
+iopmod id addr		0x44c4
 iopmod id name		cdvd_driver
 iopmod id version	0x0101
-iopmod entry addr	0xa54
-iopmod unknown addr	0xcd50
-iopmod text size	18816
-iopmod data size	976
-iopmod bss size		20192
-iopmod version		0x0101
-iopmod name		cdvd_driver
+iopmod entry addr	0xa58
+iopmod unknown addr	0x93e0
+iopmod text size	16176
+iopmod data size	1088
+iopmod bss size		19952
+iopmod version		0x0000
+iopmod name		
 import library	0x0101	ioman
 import  0	20
 import  1	21
@@ -69,36 +69,36 @@ import  6	11	thevent_poll_event_flag
 import library	0x0101	sifman
 import  0	32	sifman_set_dma_intr
 export library	0x0101	cdvdman
-export  0	0x0a54	_init_module
+export  0	0x0a58	_init_module
 export  1	0x3880	
-export  2	0x0bfc	
+export  2	0x0bec	
 export  3	0x3880	
 export  4	0x0380	
-export  5	0x18a0	
-export  6	0x1764	
-export  7	0x1850	
-export  8	0x1ab4	
-export  9	0x1828	
-export 10	0x2324	
-export 11	0x16f0	
-export 12	0x1aa4	
-export 13	0x1970	
-export 14	0x1ac4	
-export 15	0x18d4	
+export  5	0x1868	
+export  6	0x1748	
+export  7	0x1818	
+export  8	0x1a7c	
+export  9	0x17f0	
+export 10	0x2314	
+export 11	0x16bc	
+export 12	0x1a6c	
+export 13	0x1938	
+export 14	0x1a8c	
+export 15	0x189c	
 export 16	0x0480	
 export 17	0x04c8	
 export 18	0x3890	
 export 19	0x3890	
 export 20	0x3890	
 export 21	0x3890	
-export 22	0x1c9c	
+export 22	0x1c64	
 export 23	0x3890	
-export 24	0x1a50	
+export 24	0x1a18	
 export 25	0x3890	
 export 26	0x3890	
 export 27	0x3890	
-export 28	0x1bb8	
-export 29	0x1b90	
+export 28	0x1b80	
+export 29	0x1b58	
 export 30	0x3890	
 export 31	0x3890	
 export 32	0x3890	
@@ -107,53 +107,53 @@ export 34	0x3890
 export 35	0x3890	
 export 36	0x3890	
 export 37	0x059c	
-export 38	0x1920	
-export 39	0x1bc8	
-export 40	0x1820	
+export 38	0x18e8	
+export 39	0x1b90	
+export 40	0x17e8	
 export 41	0x3890	
 export 42	0x3890	
 export 43	0x3890	
 export 44	0x03a0	
 export 45	0x3890	
 export 46	0x3890	
-export 47	0x1684	
+export 47	0x165c	
 export 48	0x3890	
 export 49	0x3890	
-export 50	0x05f8	
-export 51	0x1a50	
+export 50	0x05fc	
+export 51	0x1a18	
 export 52	0x3890	
 export 53	0x3890	
 export 54	0x3890	
 export 55	0x3890	
-export 56	0x2664	
-export 57	0x2968	
-export 58	0x2938	
-export 59	0x27d4	
-export 60	0x272c	
-export 61	0x2744	
+export 56	0x262c	
+export 57	0x2930	
+export 58	0x2900	
+export 59	0x279c	
+export 60	0x26f4	
+export 61	0x270c	
 export 62	0x3890	
 export 63	0x3890	
-export 64	0x1de8	
+export 64	0x1db0	
 export 65	0x3890	
 export 66	0x3890	
-export 67	0x2850	
-export 68	0x28d0	
+export 67	0x2818	
+export 68	0x2898	
 export 69	0x3890	
 export 70	0x3890	
 export 71	0x3890	
 export 72	0x3890	
 export 73	0x3890	
-export 74	0x1c18	
+export 74	0x1be0	
 export 75	0x3890	
 export 76	0x3890	
-export 77	0x2938	
+export 77	0x2900	
 export 78	0x3890	
-export 79	0x19f0	
-export 80	0x1d94	
+export 79	0x19bc	
+export 80	0x1d5c	
 export 81	0x3890	
-export 82	0x1da0	
-export 83	0x1c4c	
-export 84	0x232c	
+export 82	0x1d68	
+export 83	0x1c14	
+export 84	0x231c	
 export 85	0x3890	
 export 86	0x3890	
 export 87	0x3890	
@@ -195,27 +195,12 @@ export  0	0x3880
 export  1	0x3880	
 export  2	0x3888	
 export  3	0x3880	
-export  4	0x3b60	
-export  5	0x3bb0	
-export library	0x0109	dev9
-export  0	0x4564	
-export  1	0x3880	
-export  2	0x3888	
-export  3	0x3880	
-export  4	0x40ec	
-export  5	0x4738	
-export  6	0x3880	
-export  7	0x41f8	
-export  8	0x423c	
-export  9	0x48e0	
-export 10	0x493c	
-export 11	0x494c	
-export 12	0x4104	
-export 13	0x411c	
+export  4	0x3b08	
+export  5	0x3b3c	
 export library	0x0101	smsutils
 export  0	0x3880	
 export  1	0x3880	
 export  2	0x3880	
 export  3	0x3880	
-export  4	0x33b0	
-export  5	0x3514	
+export  4	0x33b8	
+export  5	0x351c	

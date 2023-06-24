@@ -3,7 +3,7 @@ EE_BIN_STRIPPED = neutrino_stripped.elf
 EE_BIN_PACKED = neutrino_packed.elf
 EE_OBJS = main.o patch.o ee_core_config.o ioprp.o
 EE_INCS = -I../ee_core/include
-EE_LIBS = -lfileXio
+EE_LIBS = -lfileXio -lpatches
 
 $(EE_BIN_STRIPPED): $(EE_BIN)
 	$(EE_STRIP) -o $@ $<
@@ -30,7 +30,7 @@ GAME = 'SCUS_974.81.God of War II.iso'
 #GAME = 'SCUS_973.28.Gran Turismo 4.iso'
 #GAME = 'SCUS_973.53.Ratchet Clank - Up Your Arsenal.iso'
 run: all copy
-	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) usb mass:DVD/$(GAME)
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) udpbd mass:DVD/$(GAME)
 
 reset: clean
 	ps2client -h 192.168.1.10 reset
@@ -55,15 +55,11 @@ copy:
 	cp $(PS2SDK)/iop/irx/bdm.irx              modules
 	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx      modules
 	cp $(PS2SDK)/iop/irx/ata_bd.irx           modules
-	cp $(PS2SDK)/iop/irx/usbd.irx             modules
 	cp $(PS2SDK)/iop/irx/usbd_mini.irx        modules
-	cp $(PS2SDK)/iop/irx/usbmass_bd.irx       modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx  modules
-	cp $(PS2SDK)/iop/irx/mx4sio_bd.irx        modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx   modules
 	cp $(PS2SDK)/iop/irx/ps2dev9.irx          modules
 	cp $(PS2SDK)/iop/irx/iLinkman.irx         modules
-	cp $(PS2SDK)/iop/irx/IEEE1394_bd.irx      modules
 	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx modules
 
 include $(PS2SDK)/samples/Makefile.pref

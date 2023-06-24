@@ -109,7 +109,7 @@ static inline void cdvd_readee(void *buf)
     cdvdfsv_readee_t readee;
     RpcCdvd_t *r = (RpcCdvd_t *)buf;
 
-    PRINTF("%s %d %d @0x%X -> 0x%X / 0x%X)\n", __FUNCTION__, r->lsn, r->sectors, r->buf, r->eeaddr1, r->eeaddr2);
+    //PRINTF("%s %d %d @0x%X -> 0x%X / 0x%X)\n", __FUNCTION__, r->lsn, r->sectors, r->buf, r->eeaddr1, r->eeaddr2);
 
     if (r->sectors == 0) {
         *(int *)buf = 0;

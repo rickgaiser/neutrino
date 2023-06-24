@@ -2,8 +2,8 @@ iopmod id addr		0xffffffff
 iopmod id name		
 iopmod id version	0x0000
 iopmod entry addr	0x2c
-iopmod unknown addr	0x81d0
-iopmod text size	464
+iopmod unknown addr	0x1c0
+iopmod text size	444
 iopmod data size	0
 iopmod bss size		0
 iopmod version		0x0000

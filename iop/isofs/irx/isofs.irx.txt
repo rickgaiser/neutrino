@@ -1,10 +1,10 @@
 iopmod id addr		0xffffffff
 iopmod id name		
 iopmod id version	0x0000
-iopmod entry addr	0xa24
-iopmod unknown addr	0x8be0
-iopmod text size	2880
-iopmod data size	160
+iopmod entry addr	0xa2c
+iopmod unknown addr	0x1d40
+iopmod text size	2872
+iopmod data size	128
 iopmod bss size		4448
 iopmod version		0x0000
 iopmod name		
@@ -13,7 +13,7 @@ import  0	 4	thsemap_create_sema
 import  1	 5	thsemap_delete_sema
 import  2	 6	thsemap_signal_sema
 import  3	 8	thsemap_wait_sema
-import library	0x0101	ioman
+import library	0x0101	iomanx
 import  0	 4
 import  1	 5
 import  2	 6

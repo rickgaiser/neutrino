@@ -30,7 +30,7 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
     static u32 free_prev = 0;
     u32 free;
 
-    DPRINTF("sceCdRead lsn=%d sectors=%d buf=%08x\n", (int)lsn, (int)sectors, (int)buf);
+    //DPRINTF("sceCdRead lsn=%d sectors=%d buf=%08x\n", (int)lsn, (int)sectors, (int)buf);
 
     if ((!(cdvdman_settings.common.flags & IOPCORE_COMPAT_ALT_READ)) || QueryIntrContext()) {
         result = cdvdman_AsyncRead(lsn, sectors, buf);
@@ -125,7 +125,7 @@ int sceCdPause(void)
 //-------------------------------------------------------------------------
 int sceCdDiskReady(int mode)
 {
-    DPRINTF("sceCdDiskReady %d locked = %d\n", mode, sync_flag_locked);
+    //DPRINTF("sceCdDiskReady %d locked = %d\n", mode, sync_flag_locked);
     cdvdman_stat.err = SCECdErNO;
 
     if (cdvdman_cdinited) {

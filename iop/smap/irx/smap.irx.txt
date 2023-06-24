@@ -1,13 +1,13 @@
-iopmod id addr		0x2380
+iopmod id addr		0x2370
 iopmod id name		SMAP_driver
 iopmod id version	0x021a
 iopmod entry addr	0x0
-iopmod unknown addr	0xa420
-iopmod text size	9040
-iopmod data size	208
-iopmod bss size		368
-iopmod version		0x021a
-iopmod name		SMAP_driver
+iopmod unknown addr	0x2560
+iopmod text size	9012
+iopmod data size	116
+iopmod bss size		364
+iopmod version		0x0000
+iopmod name		
 import library	0x0101	bdm
 import  0	 4
 import  1	 5
@@ -53,7 +53,7 @@ import  4	13
 import  5	 5
 import  6	 9
 export library	0x0101	smap
-export  0	0x2320	
-export  1	0x2320	
-export  2	0x2320	
-export  3	0x2320	
+export  0	0x2304	
+export  1	0x2304	
+export  2	0x2304	
+export  3	0x2304	

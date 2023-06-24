@@ -250,7 +250,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
 
     WaitSema(cdrom_io_sema);
 
-    DPRINTF("cdrom_read size=%db (%ds) file_position=%d\n", size, size / 2048, fh->position);
+    //DPRINTF("cdrom_read size=%db (%ds) file_position=%d\n", size, size / 2048, fh->position);
 
     if ((fh->position + size) > fh->filesize)
         size = fh->filesize - fh->position;
@@ -304,7 +304,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
         }
     }
 
-    DPRINTF("cdrom_read ret=%d\n", rpos);
+    //DPRINTF("cdrom_read ret=%d\n", rpos);
     SignalSema(cdrom_io_sema);
 
     return rpos;

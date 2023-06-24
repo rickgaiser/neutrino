@@ -1,13 +1,13 @@
 iopmod id addr		0x13e0
 iopmod id name		cdvd_ee_driver
 iopmod id version	0x0202
-iopmod entry addr	0x4a8
-iopmod unknown addr	0x93f0
-iopmod text size	4784
-iopmod data size	320
-iopmod bss size		3136
-iopmod version		0x0202
-iopmod name		cdvd_ee_driver
+iopmod entry addr	0x4b0
+iopmod unknown addr	0x2010
+iopmod text size	4780
+iopmod data size	8
+iopmod bss size		3096
+iopmod version		0x0000
+iopmod name		
 import library	0x0101	cdvdman
 import  0	 4
 import  1	 5
@@ -73,9 +73,9 @@ import  1	 8	thevent_clear_event_flag
 import  2	10	thevent_wait_event_flag
 import  3	 7	thevent_iset_event_flag
 export library	0x0101	cdvdfsv
-export  0	0x04a8	_init_module
-export  1	0x1270	
-export  2	0x1270	
-export  3	0x1270	
-export  4	0x1278	
-export  5	0x05a8	
+export  0	0x04b0	_init_module
+export  1	0x126c	
+export  2	0x126c	
+export  3	0x126c	
+export  4	0x1274	
+export  5	0x05b0	

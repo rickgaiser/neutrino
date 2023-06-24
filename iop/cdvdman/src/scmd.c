@@ -79,7 +79,7 @@ int sceCdTrayReq(int mode, u32 *traycnt)
 //-------------------------------------------------------------------------
 int sceCdApplySCmd(u8 cmd, const void *in, u16 in_size, void *out)
 {
-    DPRINTF("sceCdApplySCmd\n");
+    //DPRINTF("sceCdApplySCmd\n");
 
     return cdvdman_sendSCmd(cmd & 0xff, in, in_size, out, 16);
 }
