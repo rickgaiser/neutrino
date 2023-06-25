@@ -107,6 +107,7 @@ void print_usage()
     printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio, udpbd and ilink\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
     printf("  -nR               No reboot before loading the iso (faster)\n");
+    printf("  -eC               Enable eecore debug colors\n");
     printf("\n");
     printf("Usage example:\n");
     printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso\n");
@@ -453,6 +454,7 @@ int main(int argc, char *argv[])
     const char *sDriver = NULL;
     const char *sFileName = NULL;
     int iNoReboot = 0;
+    int iEnableDebugColors = 0;
     for (i=1; i<argc; i++) {
         //printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-drv=", 5))
@@ -461,6 +463,8 @@ int main(int argc, char *argv[])
             sFileName = &argv[i][5];
         else if (!strncmp(argv[i], "-nR", 3))
             iNoReboot = 1;
+        else if (!strncmp(argv[i], "-eC", 3))
+            iEnableDebugColors = 1;
         else {
             printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
             print_usage();
@@ -761,7 +765,7 @@ int main(int argc, char *argv[])
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
     eecc_setFileName(&eeconf, sConfigName);
-    eecc_setDebugColors(&eeconf, true);
+    eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
     printf("Starting ee_core with following arguments:\n");
     eecc_print(&eeconf);
 
