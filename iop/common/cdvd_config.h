@@ -53,4 +53,10 @@ struct cdvdman_settings_bdm
     bd_fragment_t frags[BDM_MAX_FRAGS];
 } __attribute__((packed));
 
+struct cdvdman_settings_file
+{
+    struct cdvdman_settings_common common;
+    char filename[256];
+} __attribute__((packed));
+
 #endif

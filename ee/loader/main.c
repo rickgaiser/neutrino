@@ -26,6 +26,58 @@
 #include <fileXio_rpc.h>
 #include <io_common.h>
 
+//DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
+//DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
+
+#ifdef BUILTIN_COMMON
+    #define IRX_COMMON_DEFINE(mod)        \
+        extern unsigned char mod##_irx[]; \
+        extern unsigned int size_##mod##_irx
+    #define ELF_DEFINE(mod)               \
+        extern unsigned char mod##_elf[]; \
+        extern unsigned int size_##mod##_elf
+#else
+    #define IRX_COMMON_DEFINE(mod)             \
+        const unsigned char *mod##_irx = NULL; \
+        const unsigned int size_##mod##_irx = 0
+    #define ELF_DEFINE(mod)               \
+        const unsigned char *mod##_elf = NULL; \
+        const unsigned int size_##mod##_elf = 0
+#endif
+
+#ifdef BUILTIN_DRIVERS
+    #define IRX_DRIVER_DEFINE(mod)        \
+        extern unsigned char mod##_irx[]; \
+        extern unsigned int size_##mod##_irx
+#else
+    #define IRX_DRIVER_DEFINE(mod)        \
+        const unsigned char *mod##_irx = NULL; \
+        const unsigned int size_##mod##_irx = 0
+#endif
+
+IRX_COMMON_DEFINE(cdvdfsv);
+IRX_COMMON_DEFINE(bdm_cdvdman);
+IRX_COMMON_DEFINE(imgdrv);
+IRX_COMMON_DEFINE(isofs);
+IRX_COMMON_DEFINE(resetspu);
+IRX_COMMON_DEFINE(eesync);
+IRX_COMMON_DEFINE(udnl);
+IRX_COMMON_DEFINE(iomanX);
+IRX_COMMON_DEFINE(fileXio);
+IRX_COMMON_DEFINE(bdm);
+IRX_COMMON_DEFINE(bdmfs_fatfs);
+
+IRX_DRIVER_DEFINE(smap);
+IRX_DRIVER_DEFINE(ata_bd);
+IRX_DRIVER_DEFINE(usbd_mini);
+IRX_DRIVER_DEFINE(usbmass_bd_mini);
+IRX_DRIVER_DEFINE(mx4sio_bd_mini);
+IRX_DRIVER_DEFINE(ps2dev9);
+IRX_DRIVER_DEFINE(iLinkman);
+IRX_DRIVER_DEFINE(IEEE1394_bd_mini);
+
+ELF_DEFINE(ee_core);
+
 
 #define OPL_MOD_STORAGE 0x00097000 //(default) Address of the module storage region
 /*
@@ -49,16 +101,15 @@ static const struct cdvdman_settings_common cdvdman_settings_common_sample = {
 
 void print_usage()
 {
-    printf("ps2client -h 192.168.1.10 execee host:neutrino.elf <driver> <path>\n");
-    printf("Supported drivers:\n");
-    printf(" - ata\n");
-    printf(" - usb\n");
-    printf(" - mx4sio\n");
-    printf(" - udpbd\n");
-    printf(" - ilink\n");
+    printf("Usage: neutrino.elf -drv=<driver> -iso=<path>\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio, udpbd and ilink\n");
+    printf("  -iso=<file>       Select iso file (full path!)\n");
+    printf("  -nR               No reboot before loading the iso (faster)\n");
     printf("\n");
     printf("Usage example:\n");
-    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf usb mass:path/to/filename.iso\n");
+    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso\n");
 }
 
 struct SModule
@@ -67,12 +118,14 @@ struct SModule
     const char *sFileName;
     void *pData;
     off_t iSize;
-    bool bLoaded;
     u32 iFlags;
     u32 eecid;
 };
 #define SMF_IOPCORE  (1 << 2)
-#define SMF_SYSTEM   (1 << 3)
+#define SMF_FIOX     (1 << 3)
+#define SMF_ISO      (1 << 4)
+#define SMF_BDMFS    (1 << 5)
+#define SMF_EECORE   (1 << 6)
 #define SMF_D_ATA    (1 << 10)
 #define SMF_D_USB    (1 << 11)
 #define SMF_D_UDPBD  (1 << 12)
@@ -80,29 +133,63 @@ struct SModule
 #define SMF_D_ILINK  (1 << 14)
 // clang-format off
 struct SModule mod[] = {
-    {"",        "udnl.irx"             , NULL, 0, false, SMF_IOPCORE  , OPL_MODULE_ID_UDNL},
-    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, false, SMF_IOPCORE  , 0},
-    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, false, SMF_IOPCORE  , 0},
-    {"EESYNC",  "eesync.irx"           , NULL, 0, false, SMF_IOPCORE  , 0},
-    {"",        "imgdrv.irx"           , NULL, 0, false, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
-    {"",        "resetspu.irx"         , NULL, 0, false, SMF_IOPCORE  , OPL_MODULE_ID_RESETSPU},
-    {"",        "iomanX.irx"           , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "fileXio.irx"          , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "isofs.irx"            , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "bdm.irx"              , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "bdmfs_fatfs.irx"      , NULL, 0, false, SMF_SYSTEM   , 0},
-    {"",        "usbd_mini.irx"        , NULL, 0, false, SMF_D_USB    , 0},
-    {"",        "usbmass_bd_mini.irx"  , NULL, 0, false, SMF_D_USB    , 0},
-    {"",        "mx4sio_bd_mini.irx"   , NULL, 0, false, SMF_D_MX4SIO , 0},
-    {"",        "ps2dev9.irx"          , NULL, 0, false, SMF_D_ATA|SMF_D_UDPBD, 0},
-    {"",        "ata_bd.irx"           , NULL, 0, false, SMF_D_ATA    , 0},
-    {"",        "smap.irx"             , NULL, 0, false, SMF_D_UDPBD  , 0},
-    {"",        "iLinkman.irx"         , NULL, 0, false, SMF_D_ILINK  , 0},
-    {"",        "IEEE1394_bd_mini.irx" , NULL, 0, false, SMF_D_ILINK  , 0},
+    {"",        "udnl.irx"             , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_UDNL},
+    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, SMF_IOPCORE  , 0},
+    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , 0},
+    {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , 0},
+    {"",        "imgdrv.irx"           , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
+    {"",        "resetspu.irx"         , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_RESETSPU},
+    {"",        "iomanX.irx"           , NULL, 0, SMF_FIOX     , 0},
+    {"",        "fileXio.irx"          , NULL, 0, SMF_FIOX     , 0},
+    {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},
+    {"",        "bdm.irx"              , NULL, 0, SMF_BDMFS    , 0},
+    {"",        "bdmfs_fatfs.irx"      , NULL, 0, SMF_BDMFS    , 0},
+    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB    , 0},
+    {"",        "usbmass_bd_mini.irx"  , NULL, 0, SMF_D_USB    , 0},
+    {"",        "mx4sio_bd_mini.irx"   , NULL, 0, SMF_D_MX4SIO , 0},
+    {"",        "ps2dev9.irx"          , NULL, 0, SMF_D_ATA|SMF_D_UDPBD, 0},
+    {"",        "ata_bd.irx"           , NULL, 0, SMF_D_ATA    , 0},
+    {"",        "smap.irx"             , NULL, 0, SMF_D_UDPBD  , 0},
+    {"",        "iLinkman.irx"         , NULL, 0, SMF_D_ILINK  , 0},
+    {"",        "IEEE1394_bd_mini.irx" , NULL, 0, SMF_D_ILINK  , 0},
+    {"",        "ee_core.elf"          , NULL, 0, SMF_EECORE   , 0},
     {NULL, NULL, 0, 0}
 };
 // clang-format on
-struct SModule *mod_cdvdman = &mod[1];
+struct SModule *mod_cdvdman;
+
+#define INIT_MOD(nr,name) \
+    mod[nr].pData = (void *)name##_irx; \
+    mod[nr].iSize = size_##name##_irx
+
+#define INIT_ELF(nr,name) \
+    mod[nr].pData = (void *)name##_elf; \
+    mod[nr].iSize = size_##name##_elf
+
+void mod_init()
+{
+    mod_cdvdman = &mod[1];
+    INIT_MOD( 0, udnl);
+    INIT_MOD( 1, bdm_cdvdman);
+    INIT_MOD( 2, cdvdfsv);
+    INIT_MOD( 3, eesync);
+    INIT_MOD( 4, imgdrv);
+    INIT_MOD( 5, resetspu);
+    INIT_MOD( 6, iomanX);
+    INIT_MOD( 7, fileXio);
+    INIT_MOD( 8, isofs);
+    INIT_MOD( 9, bdm);
+    INIT_MOD(10, bdmfs_fatfs);
+    INIT_MOD(11, usbd_mini);
+    INIT_MOD(12, usbmass_bd_mini);
+    INIT_MOD(13, mx4sio_bd_mini);
+    INIT_MOD(14, ps2dev9);
+    INIT_MOD(15, ata_bd);
+    INIT_MOD(16, smap);
+    INIT_MOD(17, iLinkman);
+    INIT_MOD(18, IEEE1394_bd_mini);
+    INIT_ELF(19, ee_core);
+}
 
 #define MAX_FILENAME 128
 int load_module(struct SModule *mod)
@@ -111,7 +198,7 @@ int load_module(struct SModule *mod)
 
     //printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
 
-    if (mod->bLoaded == true) {
+    if (mod->pData != NULL) {
         //printf("WARNING: Module already loaded: %s\n", mod->sFileName);
         return 0;
     }
@@ -139,8 +226,20 @@ int load_module(struct SModule *mod)
     // Close module
     close(fd);
 
-    mod->bLoaded = true;
     return 0;
+}
+
+struct SModule *get_module_name(const char *name)
+{
+    int modid;
+
+    for (modid = 0; mod[modid].sFileName != NULL; modid++) {
+        if (strcmp(mod[modid].sFileName, name) == 0) {
+            return &mod[modid];
+        }
+    }
+
+    return NULL;
 }
 
 struct SModule *load_module_name(const char *name)
@@ -191,7 +290,7 @@ struct SModule *load_module_udnlname(const char *name)
 
 int start_module(struct SModule *mod)
 {
-    if (mod->bLoaded == false) {
+    if (mod->pData == NULL) {
         int rv = load_module(mod);
         if (rv < 0)
             return rv;
@@ -344,25 +443,34 @@ int main(int argc, char *argv[])
     int iMode;
     int iDrivers;
 
+    mod_init();
+
     printf("----------------------------\n");
     printf("- Neutrino PS2 Game Loader -\n");
     printf("-       By Maximus32       -\n");
     printf("----------------------------\n");
 
-    // printf("argc = %d\n", argc);
-    // for (int i=0; i<argc; i++)
-    //     printf("argv[%d] = %s\n", i, argv[i]);
-
-    if (argc != 3) {
-        printf("ERROR: argc = %d, should be 3\n", argc);
-        print_usage();
-        return -1;
+    const char *sDriver = NULL;
+    const char *sFileName = NULL;
+    int iNoReboot = 0;
+    for (i=1; i<argc; i++) {
+        //printf("argv[%d] = %s\n", i, argv[i]);
+        if (!strncmp(argv[i], "-drv=", 5))
+            sDriver = &argv[i][5];
+        else if (!strncmp(argv[i], "-iso=", 5))
+            sFileName = &argv[i][5];
+        else if (!strncmp(argv[i], "-nR", 3))
+            iNoReboot = 1;
+        else {
+            printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
+            print_usage();
+            return -1;
+        }
     }
 
     /*
      * Figure out what drivers we need
      */
-    const char *sDriver = argv[1];
     if (!strncmp(sDriver, "ata", 3)) {
         printf("Loading ATA drivers\n");
         iMode = BDM_ATA_MODE;
@@ -388,47 +496,38 @@ int main(int argc, char *argv[])
         print_usage();
         return -1;
     }
+    iDrivers |= SMF_BDMFS;
+    iDrivers |= SMF_FIOX;
+    iDrivers |= SMF_ISO;
 
     /*
      * Load drivers before rebooting the IOP
      */
-    if (load_modules(SMF_SYSTEM|SMF_IOPCORE|iDrivers) < 0)
+    if (load_modules(iDrivers|SMF_EECORE|SMF_IOPCORE) < 0)
         return -1;
 
-    /*
-     * Load EECORE before rebooting the IOP
-     */
-    fd = open("modules/ee_core.elf", O_RDONLY);
-    if (fd < 0) {
-        printf("Unable to open %s\n", "modules/ee_core.elf");
-        return -1;
+    if (iNoReboot == 0) {
+        /*
+        * Reboot the IOP
+        */
+        //fileXioExit();
+        SifExitIopHeap();
+        SifLoadFileExit();
+        SifExitRpc();
+        SifInitRpc(0);
+        while(!SifIopReset(NULL, 0)){};
+        while(!SifIopSync()) {};
+        SifInitRpc(0);
+        SifInitIopHeap();
+        SifLoadFileInit();
+        sbv_patch_enable_lmb();
+        sbv_patch_disable_prefix_check();
     }
-    size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    void *ee_core = malloc(size);
-    read(fd, ee_core, size);
-    close(fd);
 
     /*
-     * Reboot the IOP
+     * Start system drivers
      */
-    //fileXioExit();
-    SifExitIopHeap();
-    SifLoadFileExit();
-    SifExitRpc();
-    SifInitRpc(0);
-    while(!SifIopReset(NULL, 0)){};
-    while(!SifIopSync()) {};
-    SifInitRpc(0);
-    SifInitIopHeap();
-    SifLoadFileInit();
-    sbv_patch_enable_lmb();
-    sbv_patch_disable_prefix_check();
-
-    /*
-     * Load system drivers
-     */
-    if (start_modules(SMF_SYSTEM|iDrivers))
+    if (start_modules(iDrivers))
         return -1;
     fileXioInit();
 
@@ -436,7 +535,6 @@ int main(int argc, char *argv[])
      * Check if file exists
      * Give low level drivers 10s to start
      */
-    const char *sFileName = argv[2];
     printf("Loading %s...\n", sFileName);
     for (i = 0; i < 10; i++) {
         fd = open(sFileName, O_RDONLY);
@@ -633,7 +731,7 @@ int main(int argc, char *argv[])
     //
     // Load EECORE ELF sections
     //
-    u8 *boot_elf = (u8 *)ee_core;
+    u8 *boot_elf = (u8 *)get_module_name("ee_core.elf")->pData;
     elf_header_t *eh = (elf_header_t *)boot_elf;
     elf_pheader_t *eph = (elf_pheader_t *)(boot_elf + eh->phoff);
     for (i = 0; i < eh->phnum; i++) {
@@ -646,7 +744,6 @@ int main(int argc, char *argv[])
         if (eph[i].memsz > eph[i].filesz)
             memset((u8 *)eph[i].vaddr + eph[i].filesz, 0, eph[i].memsz - eph[i].filesz);
     }
-    free(ee_core);
 
     //
     // Patch PS2 to:

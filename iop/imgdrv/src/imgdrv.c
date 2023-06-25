@@ -26,27 +26,6 @@ int read_fs(iop_file_t *fd, void *buffer, int size)
     return size;
 }
 
-typedef struct _iop_device_tm
-{
-    const char *name;
-    unsigned int type;
-    unsigned int version; /* Not so sure about this one.  */
-    const char *desc;
-    struct _iop_device_ops_tm *ops;
-} iop_device_tm_t;
-
-typedef struct _iop_device_ops_tm
-{
-    int (*init)(iop_device_t *);
-    int (*deinit)(iop_device_t *);
-    int (*format)(iop_file_t *);
-    int (*open)(iop_file_t *, const char *, int);
-    int (*close)(iop_file_t *);
-    int (*read)(iop_file_t *, void *, int);
-    int (*write)(iop_file_t *, void *, int);
-    int (*lseek)(iop_file_t *, unsigned long, int);
-} iop_device_ops_tm_t;
-
 iop_device_ops_t my_device_ops =
     {
         dummy_fs, // init

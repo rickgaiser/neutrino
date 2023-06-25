@@ -42,7 +42,7 @@ static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u3
 static int cdrom_ioctl2(iop_file_t *f, int cmd, void *args, unsigned int arglen, void *buf, unsigned int buflen);
 
 // driver ops func tab
-static struct _iop_ext_device_ops cdrom_ops = {
+static iop_ext_device_ops_t cdrom_ops = {
     &cdrom_init,
     &cdrom_deinit,
     (void *)&cdrom_dummy,

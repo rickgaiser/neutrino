@@ -8,6 +8,13 @@ IOP_CFLAGS += -DBDM_DRIVER
 IOP_LIBS += -L$(PS2SDK)/iop/lib -lbdm
 endif
 
+ifeq ($(USE_FILE),1)
+IOP_BIN  = file_cdvdman.irx
+IOP_OBJS_DIR = obj.file/
+IOP_OBJS += device-file.o
+IOP_CFLAGS += -DFILE_DRIVER
+endif
+
 IOP_INCS += -I../common
 
 ifeq ($(DEBUG),1)
