@@ -78,6 +78,7 @@ IRX_DRIVER_DEFINE(IEEE1394_bd_mini);
 
 ELF_DEFINE(ee_core);
 
+#define IP_ADDR(a, b, c, d) ((a << 24) | (b << 16) | (c << 8) | d)
 
 #define OPL_MOD_STORAGE 0x00097000 //(default) Address of the module storage region
 /*
@@ -106,6 +107,7 @@ void print_usage()
     printf("Options:\n");
     printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio, udpbd and ilink\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
+    printf("  -ip=<ip>          Set IP adres for udpbd, default: 192.168.1.10\n");
     printf("  -nR               No reboot before loading the iso (faster)\n");
     printf("  -eC               Enable eecore debug colors\n");
     printf("\n");
@@ -157,7 +159,6 @@ struct SModule mod[] = {
     {NULL, NULL, 0, 0}
 };
 // clang-format on
-struct SModule *mod_cdvdman;
 
 #define INIT_MOD(nr,name) \
     mod[nr].pData = (void *)name##_irx; \
@@ -169,7 +170,6 @@ struct SModule *mod_cdvdman;
 
 void mod_init()
 {
-    mod_cdvdman = &mod[1];
     INIT_MOD( 0, udnl);
     INIT_MOD( 1, bdm_cdvdman);
     INIT_MOD( 2, cdvdfsv);
@@ -429,6 +429,33 @@ static const struct ioprp_img ioprp_img_base = {
         "SyncEE"
     }};
 
+u32 parse_ip(const char *sIP)
+{
+    int cp = 0;
+    u32 part[4] = {0,0,0,0};
+
+    while(*sIP != 0) {
+        printf("%s\n", sIP);
+        if(*sIP == '.') {
+            cp++;
+            if (cp >= 4)
+                return 0; // Too many dots
+        } else if(*sIP >= '0' && *sIP <= '9') {
+            part[cp] = (part[cp] * 10) + (*sIP - '0');
+            if (part[cp] > 255)
+                return 0; // Too big number
+        } else {
+            return 0; // Invalid character
+        }
+        sIP++;
+    }
+
+    if (cp != 3)
+        return 0; // Too little dots
+
+    return IP_ADDR(part[0], part[1], part[2], part[3]);
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -437,9 +464,7 @@ int main(int argc, char *argv[])
     u8 *irxptr;
     int fd;
     int i;
-    off_t size;
     void *eeloadCopy, *initUserMemory;
-    struct cdvdman_settings_bdm *settings;
     const char *sConfigName;
     int iMode;
     int iDrivers;
@@ -453,6 +478,8 @@ int main(int argc, char *argv[])
 
     const char *sDriver = NULL;
     const char *sFileName = NULL;
+    const char *sIP = NULL;
+    u32 iIP = 0;
     int iNoReboot = 0;
     int iEnableDebugColors = 0;
     for (i=1; i<argc; i++) {
@@ -461,12 +488,23 @@ int main(int argc, char *argv[])
             sDriver = &argv[i][5];
         else if (!strncmp(argv[i], "-iso=", 5))
             sFileName = &argv[i][5];
+        else if (!strncmp(argv[i], "-ip=", 4))
+            sIP = &argv[i][4];
         else if (!strncmp(argv[i], "-nR", 3))
             iNoReboot = 1;
         else if (!strncmp(argv[i], "-eC", 3))
             iEnableDebugColors = 1;
         else {
             printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
+            print_usage();
+            return -1;
+        }
+    }
+
+    if (sIP != NULL) {
+        iIP = parse_ip(sIP);
+        if (iIP == 0) {
+            printf("ERROR: cannot parse IP\n");
             print_usage();
             return -1;
         }
@@ -554,7 +592,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     // Get ISO file size
-    size = lseek64(fd, 0, SEEK_END);
+    off_t iso_size = lseek64(fd, 0, SEEK_END);
     char buffer[6];
     // Validate this is an ISO
     lseek64(fd, 16 * 2048, SEEK_SET);
@@ -582,7 +620,7 @@ int main(int argc, char *argv[])
             printf("- DVD-DL detected\n");
         }
     }
-    printf("- size = %lldMiB\n", size / (1024 * 1024));
+    printf("- size = %lldMiB\n", iso_size / (1024 * 1024));
 
     /*
      * Mount as ISO so we can get some information
@@ -611,6 +649,69 @@ int main(int argc, char *argv[])
     close(fd_config);
     fileXioUmount("iso:");
 
+    //
+    // Locate and set cdvdman settings
+    //
+    struct SModule *mod_cdvdman = get_module_name("bdm_cdvdman.irx");
+    struct cdvdman_settings_bdm *settings = NULL;
+    for (i = 0; i < mod_cdvdman->iSize; i += 4) {
+        if (!memcmp((void *)((u8 *)mod_cdvdman->pData + i), &cdvdman_settings_common_sample, sizeof(cdvdman_settings_common_sample))) {
+            settings = (struct cdvdman_settings_bdm *)((u8 *)mod_cdvdman->pData + i);
+            break;
+        }
+    }
+    if (settings == NULL) {
+        printf("ERROR: unable to locate cdvdman settings\n");
+        return -1;
+    }
+    memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
+    settings->common.NumParts = 1;
+    settings->common.media = SCECdPS2DVD;
+    //settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
+    settings->common.layer1_start = layer1_lba_start;
+    // settings->common.DiscID[5];
+    // settings->common.padding[2];
+    settings->common.fakemodule_flags = 0;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDFSV;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDSTM;
+
+    //
+    // Add ISO as fragfile[0] to fragment list
+    //
+    struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
+    iso_frag->frag_start = 0;
+    iso_frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
+    iso_frag->size       = iso_size;
+    printf("ISO fragments: start=%d, count=%d\n", iso_frag->frag_start, iso_frag->frag_count);
+    for (i=0; i<iso_frag->frag_count; i++) {
+        printf("- frag[%d] start=%lld, count=%d\n", i, settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
+    }
+    if ((iso_frag->frag_start + iso_frag->frag_count) > BDM_MAX_FRAGS) {
+        printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
+        return -1;
+    }
+    close(fd);
+
+    //
+    // Locate and set smap settings
+    //
+    struct SModule *mod_smap = get_module_name("smap.irx");
+    if (iIP != 0 && mod_smap->pData != NULL) {
+        uint32_t ip_default = IP_ADDR(192, 168, 1, 10);
+        uint32_t *ip_smap = NULL;
+        for (i = 0; i < mod_smap->iSize; i += 4) {
+            if (!memcmp((void *)((u8 *)mod_smap->pData + i), &ip_default, sizeof(ip_default))) {
+                ip_smap = (uint32_t *)((u8 *)mod_smap->pData + i);
+                break;
+            }
+        }
+        if (ip_smap == NULL) {
+            printf("ERROR: unable to locate smap IP\n");
+            return -1;
+        }
+        *ip_smap = iIP;
+    }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
@@ -631,54 +732,17 @@ int main(int argc, char *argv[])
     irxtable->count++;
 
     //
-    // Locate and set cdvdman settings
-    //
-    load_module(mod_cdvdman);
-    for (i = 0, settings = NULL; i < mod_cdvdman->iSize; i += 4) {
-        if (!memcmp((void *)((u8 *)mod_cdvdman->pData + i), &cdvdman_settings_common_sample, sizeof(cdvdman_settings_common_sample))) {
-            settings = (struct cdvdman_settings_bdm *)((u8 *)mod_cdvdman->pData + i);
-            break;
-        }
-    }
-    if (i >= mod_cdvdman->iSize) {
-        printf("ERROR: unable to locate cdvdman settings\n");
-        return -1;
-    }
-    memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
-    settings->common.NumParts = 1;
-    settings->common.media = SCECdPS2DVD;
-    //settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
-    settings->common.layer1_start = layer1_lba_start;
-    // settings->common.DiscID[5];
-    // settings->common.padding[2];
-    settings->common.fakemodule_flags = 0;
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDFSV;
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDSTM;
-
-    //
-    // Add ISO as fragfile[0] to fragment list
-    //
-    struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
-    iso_frag->frag_start = 0;
-    iso_frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[0], sizeof(bd_fragment_t) * BDM_MAX_FRAGS);
-    if (iso_frag->frag_count > BDM_MAX_FRAGS) {
-        printf("Too many fragments (%d)\n", iso_frag->frag_count);
-        return -1;
-    }
-    close(fd);
-
-    //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
     //
     //printf("IOPRP.img (old):\n");
     //print_romdir(ioprp_img_base.romdir);
-    size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
+    unsigned int ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
     //printf("IOPRP.img (new):\n");
     //print_romdir((struct romdir_entry *)irxptr);
-    irxptr_tab->info = size | SET_OPL_MOD_ID(OPL_MODULE_ID_IOPRP);
+    irxptr_tab->info = ioprp_size | SET_OPL_MOD_ID(OPL_MODULE_ID_IOPRP);
     irxptr_tab->ptr = irxptr;
     irxptr_tab++;
-    irxptr += size;
+    irxptr += ioprp_size;
     irxtable->count++;
 
     //

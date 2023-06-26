@@ -3,8 +3,8 @@ EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
 
 # Configuration options
-BUILTIN_COMMON = 0
-BUILTIN_DRIVERS = 0
+BUILTIN_COMMON ?= 1
+BUILTIN_DRIVERS ?= 1
 
 # Add embedded files
 ifeq ($(BUILTIN_COMMON),1)
@@ -93,7 +93,7 @@ GAME = 'SCUS_974.81.God of War II.iso'
 #GAME = 'SCUS_973.28.Gran Turismo 4.iso'
 #GAME = 'SCUS_973.53.Ratchet Clank - Up Your Arsenal.iso'
 run: all copy
-	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -drv=usb -iso=mass:DVD/$(GAME) -nR
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -drv=udpbd -iso=mass:DVD/$(GAME) -ip=192.168.1.22
 
 reset: clean
 	ps2client -h 192.168.1.10 reset

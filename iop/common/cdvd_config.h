@@ -33,12 +33,13 @@ struct cdvdman_settings_common
 } __attribute__((packed));
 
 #define BDM_MAX_FILES 1  // ISO
-#define BDM_MAX_FRAGS 64 // 64 * 8bytes = 512bytes
+#define BDM_MAX_FRAGS 64 // 64 * 12bytes = 768bytes
 
 struct cdvdman_fragfile
 {
     u8 frag_start; /// First fragment in the fragment table
-    u8 frag_count; /// Munber of fragments in the fragment table
+    u8 frag_count; /// Number of fragments in the fragment table
+    u32 size;      /// Size of the file in bytes
 } __attribute__((packed));
 
 struct cdvdman_settings_bdm

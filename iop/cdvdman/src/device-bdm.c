@@ -104,17 +104,19 @@ void DeviceUnmount(void)
     DPRINTF("%s\n", __func__);
 }
 
-int DeviceReadSectors(u32 lsn, void *buffer, unsigned int sectors)
+int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
 {
     int rv = SCECdErNO;
+    u32 fid = vlsn >> 23;
+    u32 lsn = vlsn & ((1<<23)-1);
 
-    // DPRINTF("%s(%u, 0x%p, %u)\n", __func__, (unsigned int)lsn, buffer, sectors);
+    // DPRINTF("%s(%u-%u, 0x%p, %u)\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
 
     if (g_bd == NULL)
         return SCECdErTRMOPN;
 
     WaitSema(bdm_io_sema);
-    if (bd_defrag(g_bd, cdvdman_settings.fragfile[0].frag_count, &cdvdman_settings.frags[cdvdman_settings.fragfile[0].frag_start], lsn * 4, buffer, sectors * 4) != (sectors * 4))
+    if (bd_defrag(g_bd, cdvdman_settings.fragfile[fid].frag_count, &cdvdman_settings.frags[cdvdman_settings.fragfile[fid].frag_start], lsn * 4, buffer, sectors * 4) != (sectors * 4))
         rv = SCECdErREAD;
     SignalSema(bdm_io_sema);
 

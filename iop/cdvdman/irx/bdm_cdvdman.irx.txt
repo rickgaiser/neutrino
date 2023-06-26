@@ -1,10 +1,10 @@
-iopmod id addr		0x44c4
+iopmod id addr		0x44f8
 iopmod id name		cdvd_driver
 iopmod id version	0x0101
 iopmod entry addr	0xa58
-iopmod unknown addr	0x93e0
-iopmod text size	16176
-iopmod data size	1088
+iopmod unknown addr	0x9420
+iopmod text size	16224
+iopmod data size	1104
 iopmod bss size		19952
 iopmod version		0x0000
 iopmod name		
