@@ -435,7 +435,7 @@ u32 parse_ip(const char *sIP)
     u32 part[4] = {0,0,0,0};
 
     while(*sIP != 0) {
-        printf("%s\n", sIP);
+        //printf("%s\n", sIP);
         if(*sIP == '.') {
             cp++;
             if (cp >= 4)
