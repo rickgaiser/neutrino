@@ -105,7 +105,7 @@ void print_usage()
     printf("Usage: neutrino.elf -drv=<driver> -iso=<path>\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio, udpbd and ilink\n");
+    printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio(sdc), udpbd(udp) and ilink(sd)\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
     printf("  -ip=<ip>          Set IP adres for udpbd, default: 192.168.1.10\n");
     printf("  -nR               No reboot before loading the iso (faster)\n");
@@ -521,15 +521,15 @@ int main(int argc, char *argv[])
         printf("Loading USB drivers\n");
         iMode = BDM_USB_MODE;
         iDrivers = SMF_D_USB;
-    } else if (!strncmp(sDriver, "udpbd", 5)) {
+    } else if (!strncmp(sDriver, "udpbd", 5) || !strncmp(sDriver, "udp", 3)) {
         printf("Loading UDPBD drivers\n");
         iMode = BDM_UDP_MODE;
         iDrivers = SMF_D_UDPBD;
-    } else if (!strncmp(sDriver, "mx4sio", 6)) {
+    } else if (!strncmp(sDriver, "mx4sio", 6) || !strncmp(sDriver, "sdc", 3)) {
         printf("Loading MX4SIO drivers\n");
         iMode = BDM_M4S_MODE;
         iDrivers = SMF_D_MX4SIO;
-    } else if (!strncmp(sDriver, "ilink", 5)) {
+    } else if (!strncmp(sDriver, "ilink", 5) || !strncmp(sDriver, "sd", 2)) {
         printf("Loading iLink drivers\n");
         iMode = BDM_ILK_MODE;
         iDrivers = SMF_D_ILINK;
