@@ -107,6 +107,7 @@ void print_usage()
     printf("Options:\n");
     printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio(sdc), udpbd(udp) and ilink(sd)\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
+    printf("  -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
     printf("  -ip=<ip>          Set IP adres for udpbd, default: 192.168.1.10\n");
     printf("  -nR               No reboot before loading the iso (faster)\n");
     printf("  -eC               Enable eecore debug colors\n");
@@ -479,7 +480,9 @@ int main(int argc, char *argv[])
     const char *sDriver = NULL;
     const char *sFileName = NULL;
     const char *sIP = NULL;
+    const char *sMediaType = NULL;
     u32 iIP = 0;
+    enum SCECdvdMediaType eMediaType = SCECdNODISC;
     int iNoReboot = 0;
     int iEnableDebugColors = 0;
     for (i=1; i<argc; i++) {
@@ -490,6 +493,8 @@ int main(int argc, char *argv[])
             sFileName = &argv[i][5];
         else if (!strncmp(argv[i], "-ip=", 4))
             sIP = &argv[i][4];
+        else if (!strncmp(argv[i], "-mt=", 4))
+            sMediaType = &argv[i][4];
         else if (!strncmp(argv[i], "-nR", 3))
             iNoReboot = 1;
         else if (!strncmp(argv[i], "-eC", 3))
@@ -505,6 +510,20 @@ int main(int argc, char *argv[])
         iIP = parse_ip(sIP);
         if (iIP == 0) {
             printf("ERROR: cannot parse IP\n");
+            print_usage();
+            return -1;
+        }
+    }
+
+    if (sMediaType != NULL) {
+        if (!strncmp(sMediaType, "cdda", 4)) {
+            eMediaType = SCECdPS2CD;
+        } else if (!strncmp(sMediaType, "cd", 2)) {
+            eMediaType = SCECdPS2CDDA;
+        } else if (!strncmp(sMediaType, "dvd", 3)) {
+            eMediaType = SCECdPS2DVD;
+        } else {
+            printf("ERROR: media type %s not supported\n", sMediaType);
             print_usage();
             return -1;
         }
@@ -622,6 +641,10 @@ int main(int argc, char *argv[])
     }
     printf("- size = %lldMiB\n", iso_size / (1024 * 1024));
 
+    if (eMediaType == SCECdNODISC)
+        eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
+    printf("- media = %s\n", eMediaType == SCECdPS2DVD ? "DVD" : "CD");
+
     /*
      * Mount as ISO so we can get some information
      */
@@ -666,7 +689,7 @@ int main(int argc, char *argv[])
     }
     memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
     settings->common.NumParts = 1;
-    settings->common.media = SCECdPS2DVD;
+    settings->common.media = eMediaType;
     //settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
     settings->common.layer1_start = layer1_lba_start;
     // settings->common.DiscID[5];
