@@ -7,7 +7,7 @@
 # Review ps2sdk README & LICENSE files for further details.
 
 IOP_BIN_DIR ?= irx/
-IOP_OBJS_DIR ?= .
+IOP_OBJS_DIR ?= obj/
 
 IOP_BIN ?= $(shell basename $(CURDIR)).irx
 IOP_BIN := $(IOP_BIN:%=$(IOP_BIN_DIR)%)
