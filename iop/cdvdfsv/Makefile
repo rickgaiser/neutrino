@@ -6,6 +6,7 @@ ifeq ($(DEBUG),1)
 IOP_CFLAGS += -DDEBUG
 endif
 
-include ../Defs.make
+
+include $(PS2SDK)/Defs.make
 include ../Rules.bin.make
-include ../Rules.make
+include $(PS2SDK)/samples/Makefile.iopglobal
