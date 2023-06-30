@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - 'v*'
+    paths-ignore:
+      - '**.MD'
+      - '**.gitkeep'
+      - '**.gitignore'
+  workflow_dispatch:
+    inputs:
+      make_opts:
+        description: 'pass extra parameters to make'
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ps2dev/ps2dev:latest
+    steps:
+
+      - name: Install dependencies
+        run: |
+          apk add make git p7zip
+
+      - uses: actions/checkout@v3
+      - run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git fetch --prune --unshallow
+
+      - name: Compile
+        run: |
+          make clean all ${{ inputs.make_opts }}
+
+      - name: pack release
+        run: |
+          CSH=${GITHUB_SHA::7}
+          DATE=$(date "+%d-%m-%Y")
+          TARGET="Neutrino[$DATE]-[$CSH]"
+          cd ee/loader
+          mkdir $TARGET
+          cp *.elf $TARGET/
+          7z a -t7z Neutrino.7z $TARGET/*
+
+      - name: Upload artifacts
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: PS2BBL
+          path: |
+            ee/loader/*.7z
+
+      - name: Create release
+        if: github.ref == 'refs/heads/main'
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          title: "Latest development build"
+          files: |
+            ee/loader/*.7z
