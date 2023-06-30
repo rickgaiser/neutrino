@@ -3,6 +3,6 @@
 *.irx
 *.IRX
 *.map
-
+*.irx.txt
 .vscode/
 ee/loader/irx/*

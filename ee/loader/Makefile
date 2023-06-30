@@ -50,9 +50,10 @@ vpath %.irx ../../iop/imgdrv/irx/
 vpath %.irx ../../iop/isofs/irx/
 vpath %.irx ../../iop/resetspu/irx/
 vpath %.elf ../ee_core/
+vpath %.irx ../../iop/$(wildcard *)/irx/
 vpath %.irx $(PS2SDK)/iop/irx/
-
 # Rule to generate them
+
 %_irx.o: %.irx
 	bin2c $< $*_irx.c $*_irx
 	mips64r5900el-ps2-elf-gcc -c $*_irx.c -o $*_irx.o
