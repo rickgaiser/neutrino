@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apk add make git p7zip
+          apk add build-base git p7zip
 
       - uses: actions/checkout@v3
       - run: |
