@@ -6,13 +6,9 @@
 # Licenced under Academic Free License version 2.0
 # Review ps2sdk README & LICENSE files for further details.
 
-IOP_BIN_DIR ?= irx/
-IOP_OBJS_DIR ?= obj/
-
 IOP_BIN ?= $(shell basename $(CURDIR)).irx
-IOP_BIN := $(IOP_BIN:%=$(IOP_BIN_DIR)%)
 
-all:: $(IOP_BIN)
+all: $(IOP_BIN)
 
-clean::
+clean:
 	rm -f -r $(IOP_OBJS_DIR) $(IOP_BIN_DIR)
