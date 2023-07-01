@@ -77,7 +77,7 @@ jobs:
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
-          name: Neutrino-${{ env.BRANCH }}-${{ env.SHA8 }}
+          name: Neutrino${{ env.BRANCH }}-${{ env.SHA8 }}
           path: |
             ee/loader/*.7z
 
