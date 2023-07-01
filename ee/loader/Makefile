@@ -50,7 +50,6 @@ vpath %.irx ../../iop/imgdrv/irx/
 vpath %.irx ../../iop/isofs/irx/
 vpath %.irx ../../iop/resetspu/irx/
 vpath %.elf ../ee_core/
-vpath %.irx ../../iop/$(wildcard *)/irx/
 vpath %.irx $(PS2SDK)/iop/irx/
 # Rule to generate them
 
