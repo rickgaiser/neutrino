@@ -26,8 +26,8 @@
 #include <fileXio_rpc.h>
 #include <io_common.h>
 
-//DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
-//DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
+DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
+DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
 
 #ifdef BUILTIN_COMMON
     #define IRX_COMMON_DEFINE(mod)        \
@@ -582,7 +582,6 @@ int main(int argc, char *argv[])
         SifInitIopHeap();
         SifLoadFileInit();
         sbv_patch_enable_lmb();
-        sbv_patch_disable_prefix_check();
     }
 
     /*
@@ -603,8 +602,7 @@ int main(int argc, char *argv[])
             break;
 
         // Give low level drivers some time to init
-        struct timespec tv = {0, 1000 * 1000};
-        nanosleep(&tv, NULL);
+        nopdelay();
     }
     if (fd < 0) {
         printf("Unable to open %s\n", sFileName);
