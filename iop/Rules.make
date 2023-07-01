@@ -37,7 +37,7 @@ ifeq ($(DEBUG),1)
 IOP_CFLAGS += -DDEBUG
 endif
 # Linker flags
-IOP_LDFLAGS := -Wl,--gpsize=0 -Wl,-G0 -Wl,--nmagic -Wl,--orphan-handling=error -Wl,--discard-all -Wl,--emit-relocs -nostdlib -Wl,-z,max-page-size=128 -Wl,--no-relax $(IOP_LDFLAGS)
+IOP_LDFLAGS := -nostdlib -s $(IOP_LDFLAGS)
 
 # Additional C compiler flags for GCC >=v5.3.0
 # -msoft-float is to "remind" GCC/Binutils that the soft-float ABI is to be used. This is due to a bug, which
@@ -66,14 +66,7 @@ endif
 # Assembler flags
 IOP_ASFLAGS := $(ASFLAGS_TARGET) -EL -G0 $(IOP_ASFLAGS)
 
-# Default link file
-ifeq ($(IOP_LINKFILE),)
-IOP_LINKFILE := $(PS2SDKSRC)/iop/startup/src/linkfile
-endif
-
 IOP_OBJS := $(IOP_OBJS:%=$(IOP_OBJS_DIR)%)
-
-IOP_BIN_ELF := $(IOP_BIN:.irx=.notiopmod.elf)
 
 # Externally defined variables: IOP_BIN, IOP_OBJS, IOP_LIB
 
@@ -97,36 +90,35 @@ $(IOP_OBJS_DIR)%.o: $(IOP_SRC_DIR)%.s
 
 .INTERMEDIATE: $(IOP_OBJS_DIR)build-imports.c $(IOP_OBJS_DIR)build-exports.c
 
-$(PS2SDKSRC)/tools/ps2-irxgen/bin/ps2-irxgen: $(PS2SDKSRC)/tools/ps2-irxgen
-	$(MAKEREC) $<
-
-# Rules to build imports.lst.
-$(IOP_OBJS_DIR)build-imports.c: $(IOP_SRC_DIR)imports.lst
+$(IOP_OBJS_DIR)template-imports.h:
 	$(DIR_GUARD)
 	$(ECHO) "#include \"irx_imports.h\"" > $@
-	cat $< >> $@
+
+# Rules to build imports.lst.
+$(IOP_OBJS_DIR)build-imports.c: $(IOP_OBJS_DIR)template-imports.h $(IOP_SRC_DIR)imports.lst
+	$(DIR_GUARD)
+	cat $^ > $@
 
 $(IOP_OBJS_DIR)imports.o: $(IOP_OBJS_DIR)build-imports.c
 	$(DIR_GUARD)
 	$(IOP_C_COMPILE) $(IOP_IETABLE_CFLAGS) -c $< -o $@
 
-# Rules to build exports.tab.
-$(IOP_OBJS_DIR)build-exports.c: $(IOP_SRC_DIR)exports.tab
+$(IOP_OBJS_DIR)template-exports.h:
 	$(DIR_GUARD)
 	$(ECHO) "#include \"irx.h\"" > $@
-	cat $< >> $@
+
+# Rules to build exports.tab.
+$(IOP_OBJS_DIR)build-exports.c: $(IOP_OBJS_DIR)template-exports.h $(IOP_SRC_DIR)exports.tab
+	$(DIR_GUARD)
+	cat $^ > $@
 
 $(IOP_OBJS_DIR)exports.o: $(IOP_OBJS_DIR)build-exports.c
 	$(DIR_GUARD)
 	$(IOP_C_COMPILE) $(IOP_IETABLE_CFLAGS) -c $< -o $@
 
-$(IOP_BIN_ELF): $(IOP_OBJS)
+$(IOP_BIN): $(IOP_OBJS) $(IOP_LIB_ARCHIVES) $(IOP_ADDITIONAL_DEPS)
 	$(DIR_GUARD)
-	$(IOP_C_COMPILE) -T$(IOP_LINKFILE) $(IOP_OPTFLAGS) -o $@ $(IOP_OBJS) $(IOP_LDFLAGS) $(IOP_LIBS)
-
-$(IOP_BIN): $(IOP_BIN_ELF) $(PS2SDKSRC)/tools/ps2-irxgen/bin/ps2-irxgen
-	$(PS2SDKSRC)/tools/ps2-irxgen/bin/ps2-irxgen $< $@
-	iopmod-info $@ > $@.txt
+	$(IOP_C_COMPILE) $(IOP_OPTFLAGS) -o $(IOP_BIN) $(IOP_OBJS) $(IOP_LDFLAGS) $(IOP_LIB_ARCHIVES) $(IOP_LIBS)
 
 $(IOP_LIB): $(IOP_OBJS)
 	$(DIR_GUARD)

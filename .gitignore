@@ -5,5 +5,8 @@
 *.map
 *.7z
 
+obj/
+obj.*/
+
 .vscode/
 ee/loader/irx/*
