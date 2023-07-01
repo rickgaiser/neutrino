@@ -43,6 +43,22 @@ jobs:
           cd ee/loader
           mkdir $TARGET
           cp *.elf $TARGET/
+          7z a -t7z Neutrino_full.7z $TARGET/*
+
+      - name: Compile again
+        run: |
+          make clean --silent
+          make clean all ${{ inputs.make_opts }} BUILTIN_COMMON=0 BUILTIN_DRIVERS=0
+  
+      - name: pack release
+        run: |
+          CSH=${GITHUB_SHA::7}
+          DATE=$(date "+%d-%m-%Y")
+          TARGET="Neutrino[$DATE]-[$CSH]"
+          cd ee/loader
+          mkdir $TARGET
+          cp *.elf $TARGET/
+          cp -r modules/ $TARGET/modules/
           7z a -t7z Neutrino.7z $TARGET/*
 
       - name: Upload artifacts
