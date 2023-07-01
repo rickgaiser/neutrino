@@ -31,6 +31,17 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git fetch --prune --unshallow
 
+      - name: Get short SHA
+        id: slug
+        run: | 
+          echo "SHA8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
+
+      - name: Get branch
+        if: github.ref != 'refs/heads/main'
+        id: brnch
+        run: | 
+          echo "BRANCH=$(echo -${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+
       - name: Compile
         run: |
           make clean all ${{ inputs.make_opts }}
@@ -39,7 +50,7 @@ jobs:
         run: |
           CSH=${GITHUB_SHA::7}
           DATE=$(date "+%d-%m-%Y")
-          TARGET="Neutrino[$DATE]-[$CSH]"
+          TARGET="Neutrino_full[$DATE]-[$CSH]"
           cd ee/loader
           mkdir $TARGET
           cp *.elf $TARGET/
@@ -65,7 +76,7 @@ jobs:
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
-          name: PS2BBL
+          name: Neutrino-${{ env.BRANCH }}-${{ env.SHA8 }}
           path: |
             ee/loader/*.7z
 
