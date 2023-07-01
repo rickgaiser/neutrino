@@ -67,6 +67,7 @@ jobs:
           DATE=$(date "+%d-%m-%Y")
           TARGET="Neutrino[$DATE]-[$CSH]"
           cd ee/loader
+          make copy
           mkdir $TARGET
           cp *.elf $TARGET/
           cp -r modules/ $TARGET/modules/
