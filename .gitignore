@@ -4,5 +4,6 @@
 *.IRX
 *.map
 *.irx.txt
+*.7z
 .vscode/
 ee/loader/irx/*

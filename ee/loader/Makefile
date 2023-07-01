@@ -95,9 +95,6 @@ GAME = 'SCUS_974.81.God of War II.iso'
 run: all copy
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -drv=udpbd -iso=mass:DVD/$(GAME) -ip=192.168.1.22
 
-reset: clean
-	ps2client -h 192.168.1.10 reset
-
 clean:
 	rm -rf $(EE_OBJS) *_irx.o *_elf.o
 	rm -rf $(EE_BIN) $(EE_BIN_STRIPPED) $(EE_BIN_PACKED)
