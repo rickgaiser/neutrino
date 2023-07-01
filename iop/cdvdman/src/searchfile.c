@@ -54,7 +54,7 @@ static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLen
     struct dirTocEntry *tocEntryPointer;
 
 lbl_startlocate:
-    DPRINTF("cdvdman_locatefile start locating %s, layer=%d\n", name, layer);
+    //DPRINTF("cdvdman_locatefile start locating %s, layer=%d\n", name, layer);
 
     while (*p == '/')
         p++;
@@ -99,7 +99,7 @@ lbl_startlocate:
         if (sceCdRead(tocLBA, 1, cdvdman_buf, NULL) == 0)
             return NULL;
         sceCdSync(0);
-        DPRINTF("cdvdman_locatefile tocLBA read done\n");
+        //DPRINTF("cdvdman_locatefile tocLBA read done\n");
 
         tocLength -= 2048;
         tocLBA++;
@@ -116,11 +116,11 @@ lbl_startlocate:
                 strncpy(cdvdman_curdir, tocEntryPointer->filename, filename_len); // copy filename
                 cdvdman_curdir[filename_len] = 0;
 
-                DPRINTF("cdvdman_locatefile strcmp %s %s\n", cdvdman_dirname, cdvdman_curdir);
+                //DPRINTF("cdvdman_locatefile strcmp %s %s\n", cdvdman_dirname, cdvdman_curdir);
 
                 r = strncmp(cdvdman_dirname, cdvdman_curdir, 12);
                 if ((!r) && (!slash)) { // we searched a file so it's found
-                    DPRINTF("cdvdman_locatefile found file! LBA=%d size=%d\n", (int)tocEntryPointer->fileLBA, (int)tocEntryPointer->fileSize);
+                    //DPRINTF("cdvdman_locatefile found file! LBA=%d size=%d\n", (int)tocEntryPointer->fileLBA, (int)tocEntryPointer->fileSize);
                     return tocEntryPointer;
                 } else if ((!r) && (tocEntryPointer->fileProperties & 2)) { // we found it but it's a directory
                     tocLBA = tocEntryPointer->fileLBA;
@@ -144,7 +144,7 @@ lbl_startlocate:
         } while (tocPos < 2016);
     }
 
-    DPRINTF("cdvdman_locatefile file not found!!!\n");
+    //DPRINTF("cdvdman_locatefile file not found!!!\n");
 
     return NULL;
 }
