@@ -688,7 +688,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
-    settings->common.NumParts = 1;
     settings->common.media = eMediaType;
     //settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
     settings->common.layer1_start = layer1_lba_start;

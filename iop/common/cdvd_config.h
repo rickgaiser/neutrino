@@ -23,7 +23,7 @@
 
 struct cdvdman_settings_common
 {
-    u8 NumParts;
+    u8 spare;
     u8 media;
     u16 flags;
     u32 layer1_start;
