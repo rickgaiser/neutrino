@@ -67,7 +67,7 @@ void cdvdman_init(void)
 
 int sceCdInit(int init_mode)
 {
-    DPRINTF("%s\n", __FUNCTION__);
+    DPRINTF("%s()\n", __FUNCTION__);
 
     cdvdman_init();
     return 1;
@@ -76,7 +76,7 @@ int sceCdInit(int init_mode)
 //-------------------------------------------------------------------------
 static unsigned int cdvdemu_read_end_cb(void *arg)
 {
-    iSetEventFlag(cdvdman_stat.intr_ef, 0x1000);
+    iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_END);
     return 0;
 }
 
@@ -100,7 +100,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 
             TargetTime.hi = 0;
             TargetTime.lo = 20460 * SectorsToRead; // approximately 2KB/3600KB/s = 555us required per 2048-byte data sector at 3600KB/s, so 555 * 36.864 = 20460 ticks per sector with a 36.864MHz clock.
-            ClearEventFlag(cdvdman_stat.intr_ef, ~0x1000);
+            ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_READ_END);
             SetAlarm(&TargetTime, &cdvdemu_read_end_cb, NULL);
         }
 
@@ -137,7 +137,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 
         if (cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS) {
             // Sleep until the required amount of time has been spent.
-            WaitEventFlag(cdvdman_stat.intr_ef, 0x1000, WEF_AND, NULL);
+            WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_END, WEF_AND, NULL);
         }
     }
 
@@ -161,7 +161,7 @@ static int cdvdman_read(u32 lsn, u32 sectors, void *buf)
 //-------------------------------------------------------------------------
 u32 sceCdGetReadPos(void)
 {
-    //DPRINTF("sceCdGetReadPos\n");
+    DPRINTF("%s() = %d\n", __FUNCTION__, ReadPos);
 
     return ReadPos;
 }
@@ -173,9 +173,9 @@ static int cdvdman_common_lock(int IntrContext)
         return 0;
 
     if (IntrContext)
-        iClearEventFlag(cdvdman_stat.intr_ef, ~1);
+        iClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_MAN_UNLOCKED);
     else
-        ClearEventFlag(cdvdman_stat.intr_ef, ~1);
+        ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_MAN_UNLOCKED);
 
     sync_flag_locked = 1;
 
@@ -230,7 +230,7 @@ int cdvdman_SyncRead(u32 lsn, u32 sectors, void *buf)
 
     cdvdman_cb_event(SCECdFuncRead);
     sync_flag_locked = 0;
-    SetEventFlag(cdvdman_stat.intr_ef, 9);
+    SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_MAN_UNLOCKED);
 
     return 1;
 }
@@ -249,6 +249,8 @@ u32 sceCdPosToInt(sceCdlLOCCD *p)
 {
     register u32 result;
 
+    DPRINTF("%s({%d, %d, %d})\n", __FUNCTION__, p->minute, p->second, p->sector);
+
     result = ((u32)p->minute >> 16) * 10 + ((u32)p->minute & 0xF);
     result *= 60;
     result += ((u32)p->second >> 16) * 10 + ((u32)p->second & 0xF);
@@ -263,6 +265,8 @@ u32 sceCdPosToInt(sceCdlLOCCD *p)
 sceCdlLOCCD *sceCdIntToPos(u32 i, sceCdlLOCCD *p)
 {
     register u32 sc, se, mi;
+
+    DPRINTF("%s(%d)\n", __FUNCTION__, i);
 
     i += 150;
     se = i / 75;
@@ -282,7 +286,7 @@ sceCdCBFunc sceCdCallback(sceCdCBFunc func)
     int oldstate;
     void *old_cb;
 
-    //DPRINTF("sceCdCallback %p\n", func);
+    DPRINTF("%s(0x%X)\n", __FUNCTION__, func);
 
     if (sceCdSync(1))
         return NULL;
@@ -302,7 +306,7 @@ int sceCdSC(int code, int *param)
 {
     int result;
 
-    //DPRINTF("sceCdSC(0x%X, 0x%X)\n", code, *param);
+    DPRINTF("%s(0x%X, 0x%X)\n", __FUNCTION__, code, *param);
 
     switch (code) {
         case CDSC_GET_INTRFLAG:
@@ -445,13 +449,13 @@ static unsigned int event_alarm_cb(void *args)
 static void cdvdman_signal_read_end(void)
 {
     sync_flag_locked = 0;
-    SetEventFlag(cdvdman_stat.intr_ef, 9);
+    SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_MAN_UNLOCKED);
 }
 
 static void cdvdman_signal_read_end_intr(void)
 {
     sync_flag_locked = 0;
-    iSetEventFlag(cdvdman_stat.intr_ef, 9);
+    iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_MAN_UNLOCKED);
 }
 
 static void cdvdman_cdread_Thread(void *args)
@@ -520,7 +524,7 @@ static int intrh_cdrom(void *common)
         if (cdvdman_settings.common.flags & IOPCORE_ENABLE_POFF) {
             CDVDreg_PWOFF = CDL_DATA_END; // Acknowldge power-off request.
         }
-        iSetEventFlag(cdvdman_stat.intr_ef, 0x14); // Notify FILEIO and CDVDFSV of the power-off event.
+        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_FSV_S596|CDVDEF_POWER_OFF); // Notify FILEIO and CDVDFSV of the power-off event.
     } else
         CDVDreg_PWOFF = CDL_DATA_COMPLETE; // Acknowledge interrupt
 

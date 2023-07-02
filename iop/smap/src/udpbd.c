@@ -130,12 +130,12 @@ static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, u
         case 1:
             M_DEBUG("%s(%d, %d): ERROR: timeout\n", __func__, sector, count);
             break;
-        case 2:
-            //M_DEBUG("%s(%d, %d): ERROR: invalid packet order!\n", __func__, sector, count);
-            break;
-        case 3:
-            //M_DEBUG("%s(%d, %d): ERROR: invalid packet size!\n", __func__, sector, count);
-            break;
+        //case 2:
+        //    M_DEBUG("%s(%d, %d): ERROR: invalid packet order!\n", __func__, sector, count);
+        //    break;
+        //case 3:
+        //    M_DEBUG("%s(%d, %d): ERROR: invalid packet size!\n", __func__, sector, count);
+        //    break;
         default:
             M_DEBUG("%s(%d, %d): ERROR: unknown %d\n", __func__, sector, count, g_errno);
             break;

@@ -50,6 +50,13 @@
 #error Unknown driver type. Please check the Makefile.
 #endif
 
+// Event flags
+#define CDVDEF_MAN_UNLOCKED  0x0001
+#define CDVDEF_POWER_OFF     0x0002
+#define CDVDEF_FSV_S596      0x0004
+#define CDVDEF_READ_DONE     0x0008
+#define CDVDEF_READ_END      0x1000 // Accurate reads timing event
+
 struct SteamingData
 {
     unsigned short int StBufmax;

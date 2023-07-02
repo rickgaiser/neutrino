@@ -13,6 +13,8 @@ int sceCdReadClock(sceCdCLOCK *rtc)
 {
     int rc;
 
+    DPRINTF("%s(-)\n", __FUNCTION__);
+
     cdvdman_stat.err = SCECdErNO;
 
     rc = cdvdman_sendSCmd(0x08, NULL, 0, (void *)rtc, 8);
@@ -26,14 +28,15 @@ int sceCdReadClock(sceCdCLOCK *rtc)
 //-------------------------------------------------------------------------
 int sceCdGetDiskType(void)
 {
+    DPRINTF("%s() = %d\n", __FUNCTION__, cdvdman_stat.disc_type_reg);
+
     return cdvdman_stat.disc_type_reg;
 }
 
 //-------------------------------------------------------------------------
 int sceCdGetError(void)
 {
-    if (cdvdman_stat.err != 0)
-        DPRINTF("sceCdGetError %d\n", cdvdman_stat.err);
+    DPRINTF("%s() = %d\n", __FUNCTION__, cdvdman_stat.err);
 
     return cdvdman_stat.err;
 }
@@ -41,7 +44,7 @@ int sceCdGetError(void)
 //-------------------------------------------------------------------------
 int sceCdTrayReq(int mode, u32 *traycnt)
 {
-    DPRINTF("sceCdTrayReq(%d, 0x%lX)\n", mode, *traycnt);
+    DPRINTF("%s(%d, 0x%lX)\n", __FUNCTION__, mode, *traycnt);
 
     if (mode == SCECdTrayCheck) {
         if (traycnt)
@@ -79,7 +82,7 @@ int sceCdTrayReq(int mode, u32 *traycnt)
 //-------------------------------------------------------------------------
 int sceCdApplySCmd(u8 cmd, const void *in, u16 in_size, void *out)
 {
-    //DPRINTF("sceCdApplySCmd\n");
+    DPRINTF("%s(%d, %d)\n", __FUNCTION__, cmd, in_size);
 
     return cdvdman_sendSCmd(cmd & 0xff, in, in_size, out, 16);
 }
@@ -87,7 +90,7 @@ int sceCdApplySCmd(u8 cmd, const void *in, u16 in_size, void *out)
 //-------------------------------------------------------------------------
 int sceCdStatus(void)
 {
-    //DPRINTF("sceCdStatus %d\n", cdvdman_stat.status);
+    DPRINTF("%s() = %d\n", __FUNCTION__, cdvdman_stat.status);
 
     return cdvdman_stat.status;
 }
@@ -95,7 +98,7 @@ int sceCdStatus(void)
 //-------------------------------------------------------------------------
 int sceCdBreak(void)
 {
-    DPRINTF("sceCdBreak\n");
+    DPRINTF("%s() locked = %d\n", __FUNCTION__, sync_flag_locked);
 
     if (sync_flag_locked)
         return 0;
@@ -111,11 +114,13 @@ int sceCdBreak(void)
 //-------------------------------------------------------------------------
 int sceCdPowerOff(u32 *stat)
 {
+    DPRINTF("%s(-)\n", __FUNCTION__);
+
     return cdvdman_sendSCmd(0x0F, NULL, 0, (unsigned char *)stat, 1);
 }
 
 //--------------------------------------------------------------
-int cdvdman_readID(int mode, u8 *buf)
+static int cdvdman_readID(int mode, u8 *buf)
 {
     u8 lbuf[16];
     u32 stat;
@@ -141,18 +146,24 @@ int cdvdman_readID(int mode, u8 *buf)
 //--------------------------------------------------------------
 int sceCdReadGUID(u64 *GUID)
 {
+    DPRINTF("%s(-)\n", __FUNCTION__);
+
     return cdvdman_readID(0, (u8 *)GUID);
 }
 
 //--------------------------------------------------------------
 int sceCdReadModelID(unsigned long int *ModelID)
 {
+    DPRINTF("%s(-)\n", __FUNCTION__);
+
     return cdvdman_readID(1, (u8 *)ModelID);
 }
 
 //-------------------------------------------------------------------------
 int sceCdReadDvdDualInfo(int *on_dual, u32 *layer1_start)
 {
+    DPRINTF("%s(-, -)\n", __FUNCTION__);
+
     if (cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL) {
         // Make layer 1 point to layer 0.
         *layer1_start = 0;
@@ -170,6 +181,8 @@ int sceCdRI(u8 *buf, u32 *stat)
 {
     u8 rdbuf[16];
 
+    DPRINTF("%s(-, -)\n", __FUNCTION__);
+
     cdvdman_sendSCmd(0x12, NULL, 0, rdbuf, 9);
 
     if (stat)
@@ -183,6 +196,8 @@ int sceCdRI(u8 *buf, u32 *stat)
 //-------------------------------------------------------------------------
 int sceCdRC(sceCdCLOCK *rtc)
 {
+    DPRINTF("%s(-)\n", __FUNCTION__);
+
     cdvdman_stat.err = SCECdErNO;
 
     return cdvdman_sendSCmd(0x08, NULL, 0, (void *)rtc, 8);
@@ -211,6 +226,8 @@ int sceCdRM(char *m, u32 *stat)
     register int r;
     u8 rdbuf[16];
     u8 wrbuf[16];
+
+    DPRINTF("%s(-, -)\n", __FUNCTION__);
 
     *stat = 0;
     r = cdvdman_readMechaconVersion(rdbuf, stat);

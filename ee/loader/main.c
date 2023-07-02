@@ -142,7 +142,7 @@ struct SModule mod[] = {
     {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , 0},
     {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , 0},
     {"",        "imgdrv.irx"           , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
-    {"",        "resetspu.irx"         , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_RESETSPU},
+    {"",        "resetspu.irx"         , NULL, 0, SMF_IOPCORE  , 0},
     {"",        "iomanX.irx"           , NULL, 0, SMF_FIOX     , 0},
     {"",        "fileXio.irx"          , NULL, 0, SMF_FIOX     , 0},
     {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},

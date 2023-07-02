@@ -9,7 +9,7 @@
 //-------------------------------------------------------------------------
 int sceCdSync(int mode)
 {
-    //DPRINTF("sceCdSync %d locked = %d\n", mode, sync_flag_locked);
+    DPRINTF("%s(%d) locked = %d\n", __FUNCTION__, mode, sync_flag_locked);
 
     if (!sync_flag_locked)
         return 0; // Completed
@@ -18,7 +18,7 @@ int sceCdSync(int mode)
         return 1; // Not completed
 
     while (sync_flag_locked)
-        WaitEventFlag(cdvdman_stat.intr_ef, 1, WEF_AND, NULL);
+        WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
 
     return 0; // Completed
 }
@@ -30,7 +30,10 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
     static u32 free_prev = 0;
     u32 free;
 
-    //DPRINTF("sceCdRead lsn=%d sectors=%d buf=%08x\n", (int)lsn, (int)sectors, (int)buf);
+    if (mode != NULL)
+        DPRINTF("%s(%d, %d, %08x, {%d, %d, %d}}) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, mode->trycount, mode->spindlctrl, mode->datapattern, QueryIntrContext());
+    else
+        DPRINTF("%s(%d, %d, %08x, NULL) i=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, QueryIntrContext());
 
     if ((!(cdvdman_settings.common.flags & IOPCORE_COMPAT_ALT_READ)) || QueryIntrContext()) {
         result = cdvdman_AsyncRead(lsn, sectors, buf);
@@ -50,12 +53,16 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 //-------------------------------------------------------------------------
 int sceCdReadCdda(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 {
+    DPRINTF("%s(%d, %d, %08x, %08x)\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)mode);
+
     return sceCdRead(lsn, sectors, buf, mode);
 }
 
 //-------------------------------------------------------------------------
 int sceCdGetToc(u8 *toc)
 {
+    DPRINTF("%s(-) !!! function not supported !!!\n", __FUNCTION__);
+
     if (sync_flag_locked)
         return 0;
 
@@ -67,7 +74,7 @@ int sceCdGetToc(u8 *toc)
 //-------------------------------------------------------------------------
 int sceCdSeek(u32 lsn)
 {
-    DPRINTF("sceCdSeek %d\n", (int)lsn);
+    DPRINTF("%s(%d)\n", __FUNCTION__, (int)lsn);
 
     if (sync_flag_locked)
         return 0;
@@ -84,6 +91,8 @@ int sceCdSeek(u32 lsn)
 //-------------------------------------------------------------------------
 int sceCdStandby(void)
 {
+    DPRINTF("%s()\n", __FUNCTION__);
+
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
 
@@ -95,6 +104,8 @@ int sceCdStandby(void)
 //-------------------------------------------------------------------------
 int sceCdStop(void)
 {
+    DPRINTF("%s()\n", __FUNCTION__);
+
     if (sync_flag_locked)
         return 0;
 
@@ -109,7 +120,7 @@ int sceCdStop(void)
 //-------------------------------------------------------------------------
 int sceCdPause(void)
 {
-    DPRINTF("sceCdPause\n");
+    DPRINTF("%s()\n", __FUNCTION__);
 
     if (sync_flag_locked)
         return 0;
@@ -125,13 +136,14 @@ int sceCdPause(void)
 //-------------------------------------------------------------------------
 int sceCdDiskReady(int mode)
 {
-    //DPRINTF("sceCdDiskReady %d locked = %d\n", mode, sync_flag_locked);
+    DPRINTF("%s(%d) locked = %d\n", __FUNCTION__, mode, sync_flag_locked);
+
     cdvdman_stat.err = SCECdErNO;
 
     if (cdvdman_cdinited) {
         if (mode == 0) {
             while (sync_flag_locked)
-                WaitEventFlag(cdvdman_stat.intr_ef, 1, WEF_AND, NULL);
+                WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
         }
 
         if (!sync_flag_locked)
@@ -144,6 +156,8 @@ int sceCdDiskReady(int mode)
 //-------------------------------------------------------------------------
 int sceCdReadDiskID(unsigned int *DiskID)
 {
+    DPRINTF("%s(-)\n", __FUNCTION__);
+
     int i;
     u8 *p = (u8 *)DiskID;
 
