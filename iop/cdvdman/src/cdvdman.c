@@ -23,8 +23,6 @@ extern struct irx_export_table _exp_smsutils;
 // internal functions prototypes
 static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 out_size);
 static unsigned int event_alarm_cb(void *args);
-static void cdvdman_signal_read_end(void);
-static void cdvdman_signal_read_end_intr(void);
 static void cdvdman_startThreads(void);
 static void cdvdman_create_semaphores(void);
 static int cdvdman_read(u32 lsn, u32 sectors, void *buf);
@@ -50,8 +48,8 @@ static iop_sys_clock_t gCallbackSysClock;
 #define CDVDMAN_MODULE_VERSION 0x225
 static int cdvdman_debug_print_flag = 0;
 
-unsigned char sync_flag_locked;
-unsigned char cdvdman_cdinited = 0;
+volatile unsigned char sync_flag_locked;
+volatile unsigned char cdvdman_cdinited = 0;
 static unsigned int ReadPos = 0; /* Current buffer offset in 2048-byte sectors. */
 
 //-------------------------------------------------------------------------
@@ -166,39 +164,44 @@ u32 sceCdGetReadPos(void)
     return ReadPos;
 }
 
-// Must be called from a thread context, with interrupts disabled.
-static int cdvdman_common_lock(int IntrContext)
+int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum ECallSource source)
 {
-    if (sync_flag_locked)
-        return 0;
+    static u32 free_prev = 0;
+    u32 free;
+    int IsIntrContext, OldState;
 
-    if (IntrContext)
+    IsIntrContext = QueryIntrContext();
+
+    if (mode != NULL)
+        DPRINTF("%s(%d, %d, %08x, {%d, %d, %d}, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, mode->trycount, mode->spindlctrl, mode->datapattern, IsIntrContext);
+    else
+        DPRINTF("%s(%d, %d, %08x, NULL, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, IsIntrContext);
+
+    free = QueryTotalFreeMemSize();
+    if (free != free_prev) {
+        free_prev = free;
+        printf("- memory free = %dKiB\n", free / 1024);
+    }
+
+    CpuSuspendIntr(&OldState);
+
+    if (sync_flag_locked) {
+        CpuResumeIntr(OldState);
+        DPRINTF("%s: exiting (sync_flag_locked)...\n", __FUNCTION__);
+        return 0;
+    }
+
+    if (IsIntrContext)
         iClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_MAN_UNLOCKED);
     else
         ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_MAN_UNLOCKED);
 
     sync_flag_locked = 1;
 
-    return 1;
-}
-
-int cdvdman_AsyncRead(u32 lsn, u32 sectors, void *buf)
-{
-    int IsIntrContext, OldState;
-
-    IsIntrContext = QueryIntrContext();
-
-    CpuSuspendIntr(&OldState);
-
-    if (!cdvdman_common_lock(IsIntrContext)) {
-        CpuResumeIntr(OldState);
-        DPRINTF("cdvdman_AsyncRead: exiting (sync_flag_locked)...\n");
-        return 0;
-    }
-
     cdvdman_stat.cdread_lba = lsn;
     cdvdman_stat.cdread_sectors = sectors;
     cdvdman_stat.cdread_buf = buf;
+    cdvdman_stat.source = source;
 
     CpuResumeIntr(OldState);
 
@@ -206,31 +209,6 @@ int cdvdman_AsyncRead(u32 lsn, u32 sectors, void *buf)
         iSignalSema(cdrom_rthread_sema);
     else
         SignalSema(cdrom_rthread_sema);
-
-    return 1;
-}
-
-int cdvdman_SyncRead(u32 lsn, u32 sectors, void *buf)
-{
-    int IsIntrContext, OldState;
-
-    IsIntrContext = QueryIntrContext();
-
-    CpuSuspendIntr(&OldState);
-
-    if (!cdvdman_common_lock(IsIntrContext)) {
-        CpuResumeIntr(OldState);
-        DPRINTF("cdvdman_SyncRead: exiting (sync_flag_locked)...\n");
-        return 0;
-    }
-
-    CpuResumeIntr(OldState);
-
-    cdvdman_read(lsn, sectors, buf);
-
-    cdvdman_cb_event(SCECdFuncRead);
-    sync_flag_locked = 0;
-    SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_MAN_UNLOCKED);
 
     return 1;
 }
@@ -418,65 +396,60 @@ void cdvdman_cb_event(int reason)
     if (cb_data.user_cb != NULL) {
         cb_data.reason = reason;
 
-        //DPRINTF("cdvdman_cb_event reason: %d - setting cb alarm...\n", reason);
-
-        if (QueryIntrContext())
-            iSetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
-        else
-            SetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
-    } else {
-        cdvdman_signal_read_end();
+        ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_CB_DONE);
+        SetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
+        WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
     }
 }
 
+//--------------------------------------------------------------
 static unsigned int event_alarm_cb(void *args)
 {
     struct cdvdman_cb_data *cb_data = args;
 
-    cdvdman_signal_read_end_intr();
     if (cb_data->user_cb != NULL) // This interrupt does not occur immediately, hence check for the callback again here.
         cb_data->user_cb(cb_data->reason);
+
+    iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE);
+
     return 0;
 }
 
-//-------------------------------------------------------------------------
-/* Use these to signal that the reading process is complete.
-   Do not run the user callback after the drive can be deemed ready,
-   as this may break games that were not designed to expect the callback to be run
-   after the drive becomes visibly ready via the libcdvd API.
-   Hence if a user callback is registered, signal completion from
-   within the interrupt handler, before the user callback is run. */
-static void cdvdman_signal_read_end(void)
-{
-    sync_flag_locked = 0;
-    SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_MAN_UNLOCKED);
-}
-
-static void cdvdman_signal_read_end_intr(void)
-{
-    sync_flag_locked = 0;
-    iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_MAN_UNLOCKED);
-}
-
+//--------------------------------------------------------------
 static void cdvdman_cdread_Thread(void *args)
 {
     while (1) {
         WaitSema(cdrom_rthread_sema);
 
+        DPRINTF("%s() [%d, %d, %08x, %d]\n", __FUNCTION__, (int)cdvdman_stat.cdread_lba, (int)cdvdman_stat.cdread_sectors, (int)cdvdman_stat.cdread_buf, (int)cdvdman_stat.source);
+
         cdvdman_read(cdvdman_stat.cdread_lba, cdvdman_stat.cdread_sectors, cdvdman_stat.cdread_buf);
 
-        /* This streaming callback is not compatible with the original SONY stream channel 0 (IOP) callback's design.
-       The original is run from the interrupt handler, but we want it to run
-       from a threaded environment because our interrupt is emulated. */
-        if (Stm0Callback != NULL) {
-            cdvdman_signal_read_end();
+        sync_flag_locked = 0;
+        SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED);
 
-            /* Check that the streaming callback was not cleared, as this pointer may get changed between function calls.
-               As per the original semantics, once it is cleared, then it should not be called. */
-            if (Stm0Callback != NULL)
-                Stm0Callback();
-        } else
-            cdvdman_cb_event(SCECdFuncRead); // Only runs if streaming is not in action.
+        switch (cdvdman_stat.source) {
+            case ECS_EXTERNAL:
+                // Call from external irx (via sceCdRead)
+
+                // Notify external irx that sceCdRead has finished
+                cdvdman_cb_event(SCECdFuncRead);
+                break;
+            case ECS_SEARCHFILE:
+            case ECS_EE_RPC:
+                // Call from searchfile and ioops
+                break;
+            case ECS_STREAMING:
+                // Call from streaming
+
+                // The event will trigger the transmission of data to EE
+                SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE);
+
+                // The callback will trigger a new read (if needed)
+                if (Stm0Callback != NULL)
+                    Stm0Callback();
+                break;
+        }
     }
 }
 
@@ -524,7 +497,7 @@ static int intrh_cdrom(void *common)
         if (cdvdman_settings.common.flags & IOPCORE_ENABLE_POFF) {
             CDVDreg_PWOFF = CDL_DATA_END; // Acknowldge power-off request.
         }
-        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE|CDVDEF_FSV_S596|CDVDEF_POWER_OFF); // Notify FILEIO and CDVDFSV of the power-off event.
+        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE|CDVDEF_FSV_S596|CDVDEF_POWER_OFF); // Notify FILEIO and CDVDFSV of the power-off event.
     } else
         CDVDreg_PWOFF = CDL_DATA_COMPLETE; // Acknowledge interrupt
 

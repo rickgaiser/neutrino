@@ -40,14 +40,14 @@ extern int iop_reboot_count;
 
 extern u32 g_compat_mask;
 
-#define COMPAT_MODE_1 0x01
-#define COMPAT_MODE_2 0x02
-#define COMPAT_MODE_3 0x04
-#define COMPAT_MODE_4 0x08
-#define COMPAT_MODE_5 0x10
-#define COMPAT_MODE_6 0x20
-#define COMPAT_MODE_7 0x40
-#define COMPAT_MODE_8 0x80
+//#define COMPAT_MODE_1 0x01
+//#define COMPAT_MODE_2 0x02
+#define COMPAT_MODE_3 0x04 // Unhook Syscalls
+//#define COMPAT_MODE_4 0x08
+//#define COMPAT_MODE_5 0x10
+//#define COMPAT_MODE_6 0x20 // Disable IGR
+//#define COMPAT_MODE_7 0x40
+//#define COMPAT_MODE_8 0x80
 
 extern char GameID[16];
 extern int GameMode;

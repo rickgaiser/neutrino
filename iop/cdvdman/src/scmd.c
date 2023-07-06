@@ -36,7 +36,8 @@ int sceCdGetDiskType(void)
 //-------------------------------------------------------------------------
 int sceCdGetError(void)
 {
-    DPRINTF("%s() = %d\n", __FUNCTION__, cdvdman_stat.err);
+    if (cdvdman_stat.err != 0)
+        DPRINTF("%s() = %d\n", __FUNCTION__, cdvdman_stat.err);
 
     return cdvdman_stat.err;
 }
@@ -96,7 +97,7 @@ int sceCdStatus(void)
 }
 
 //-------------------------------------------------------------------------
-int sceCdBreak(void)
+int sceCdBreak_internal(enum ECallSource source)
 {
     DPRINTF("%s() locked = %d\n", __FUNCTION__, sync_flag_locked);
 
@@ -106,9 +107,16 @@ int sceCdBreak(void)
     cdvdman_stat.status = SCECdStatPause;
 
     cdvdman_stat.err = SCECdErABRT;
-    cdvdman_cb_event(SCECdFuncBreak);
+
+    // Notify external irx that sceCdBreak has finished
+    if (source == ECS_EXTERNAL)
+        cdvdman_cb_event(SCECdFuncBreak);
 
     return 1;
+}
+int sceCdBreak(void)
+{
+    return sceCdBreak_internal(ECS_EXTERNAL);
 }
 
 //-------------------------------------------------------------------------

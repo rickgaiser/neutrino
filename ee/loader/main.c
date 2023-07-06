@@ -651,9 +651,9 @@ int main(int argc, char *argv[])
         printf("ERROR: Unable to mount %s as iso\n", sFileName);
         return -1;
     }
-    int fd_config = open("iso:/SYSTEM.CNF;1", O_RDONLY);
+    int fd_config = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
     if (fd_config < 0) {
-        printf("ERROR: Unable to open %s\n", "iso:/SYSTEM.CNF;1");
+        printf("ERROR: Unable to open %s\n", "iso:\\SYSTEM.CNF;1");
         return -1;
     }
     char config_data[128];
@@ -687,7 +687,8 @@ int main(int argc, char *argv[])
     }
     memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
     settings->common.media = eMediaType;
-    //settings->common.flags = IOPCORE_COMPAT_ACCU_READS;
+    //settings->common.flags = IOPCORE_COMPAT_ACCU_READS; // MODE1
+    //settings->common.flags = IOPCORE_COMPAT_ALT_READ; // MODE2
     settings->common.layer1_start = layer1_lba_start;
     // settings->common.DiscID[5];
     // settings->common.padding[2];

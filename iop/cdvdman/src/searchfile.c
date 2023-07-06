@@ -96,7 +96,7 @@ lbl_startlocate:
     }
 
     while (tocLength > 0) {
-        if (sceCdRead(tocLBA, 1, cdvdman_buf, NULL) == 0)
+        if (sceCdRead_internal(tocLBA, 1, cdvdman_buf, NULL, ECS_SEARCHFILE) == 0)
             return NULL;
         sceCdSync(0);
         //DPRINTF("cdvdman_locatefile tocLBA read done\n");
@@ -191,13 +191,7 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
     }
 
     pcdfile->lsn = lsn;
-    // Skip Videos: Apply 0 (zero) filesize to PSS videos
-    if ((cdvdman_settings.common.flags & IOPCORE_COMPAT_0_SKIP_VIDEOS) &&
-        ((!strncmp(&cdvdman_filepath[strlen(cdvdman_filepath) - 6], ".PSS", 4)) ||
-         (!strncmp(&cdvdman_filepath[strlen(cdvdman_filepath) - 6], ".pss", 4))))
-        pcdfile->size = 0;
-    else
-        pcdfile->size = tocEntryPointer->fileSize;
+    pcdfile->size = tocEntryPointer->fileSize;
 
     strcpy(pcdfile->name, strrchr(name, '\\') + 1);
 
@@ -227,7 +221,7 @@ int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
 void cdvdman_searchfile_init(void)
 {
     // Read the volume descriptor
-    sceCdRead(16, 1, cdvdman_buf, NULL);
+    sceCdRead_internal(16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
     sceCdSync(0);
 
     struct dirTocEntry *tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
@@ -240,7 +234,7 @@ void cdvdman_searchfile_init(void)
         u32 layer1_start;
         sceCdReadDvdDualInfo(&on_dual, &layer1_start);
         if (on_dual) {
-            sceCdRead(layer1_start + 16, 1, cdvdman_buf, NULL);
+            sceCdRead_internal(layer1_start + 16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
             sceCdSync(0);
             tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
             layer_info[1].rootDirtocLBA = layer1_start + tocEntryPointer->fileLBA;

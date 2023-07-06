@@ -5,19 +5,19 @@
 #include <usbhdfsd-common.h>
 
 // flags
-#define IOPCORE_COMPAT_ALT_READ      0x0001
-#define IOPCORE_COMPAT_0_SKIP_VIDEOS 0x0002
-#define IOPCORE_COMPAT_EMU_DVDDL     0x0004
-#define IOPCORE_COMPAT_ACCU_READS    0x0008
-#define IOPCORE_ENABLE_POFF          0x0100
+#define IOPCORE_COMPAT_ALT_READ      0x0001 // MODE2
+//#define IOPCORE_COMPAT_0_SKIP_VIDEOS 0x0002 // MODE4
+#define IOPCORE_COMPAT_EMU_DVDDL     0x0004 // MODE5
+#define IOPCORE_COMPAT_ACCU_READS    0x0008 // MODE1
+#define IOPCORE_ENABLE_POFF          0x0100 // MODE6
 
 // fakemodule_flags
-#define FAKE_MODULE_FLAG_DEV9    (1 << 0) // not used, compiled in
-#define FAKE_MODULE_FLAG_USBD    (1 << 1) // Used with BDM-USB or PADEMU
-#define FAKE_MODULE_FLAG_SMAP    (1 << 2) // not used, compiled in
-#define FAKE_MODULE_FLAG_ATAD    (1 << 3) // not used, compiled in
-#define FAKE_MODULE_FLAG_CDVDSTM (1 << 4) // not used, compiled in
-#define FAKE_MODULE_FLAG_CDVDFSV (1 << 5) // not used, compiled in
+#define FAKE_MODULE_FLAG_DEV9    (1 << 0)
+#define FAKE_MODULE_FLAG_USBD    (1 << 1)
+#define FAKE_MODULE_FLAG_SMAP    (1 << 2)
+#define FAKE_MODULE_FLAG_ATAD    (1 << 3)
+#define FAKE_MODULE_FLAG_CDVDSTM (1 << 4)
+#define FAKE_MODULE_FLAG_CDVDFSV (1 << 5)
 
 #define ISO_MAX_PARTS 10
 

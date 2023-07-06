@@ -71,7 +71,7 @@ static int StFillStreamBuffer(void)
 
     if (result == 0) {
         // iDPRINTF("Stream fill buffer: Stream lsn 0x%08x - %u sectors:%p\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr);
-        if (cdvdman_AsyncRead(cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr) == 0) {
+        if (sceCdRead_internal(cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr, NULL, ECS_STREAMING) == 0) {
             // Failed to start reading.
             cdvdman_stat.StreamingData.StIsReading = 0;
             result = -1;
@@ -402,10 +402,10 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
 
     cdvdman_stat.err = SCECdErNO;
     if (cdvdman_stat.StreamingData.StStat) {
-        SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE);
+        SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE);
         for (SectorsToRead = sectors, result = 0, SectorsRead = 0, ptr = (void *)((u32)buffer & ~0x80000000); result < sectors; SectorsToRead -= SectorsRead, ptr += SectorsRead * 2048) {
-            WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_DONE, WEF_AND, NULL);
-            ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_READ_DONE);
+            WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE, WEF_AND, NULL);
+            ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_STM_DONE);
 
             //		DPRINTF("Sectors: %u:%p, mode: %lu", SectorsToRead, ptr, mode);
             if ((u32)buffer & 0x80000000)

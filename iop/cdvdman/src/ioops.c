@@ -264,7 +264,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
             nbytes = 2048 - offset;
             if (size < nbytes)
                 nbytes = size;
-            while (sceCdRead(fh->lsn + (fh->position / 2048), 1, cdvdman_fs_buf, NULL) == 0)
+            while (sceCdRead_internal(fh->lsn + (fh->position / 2048), 1, cdvdman_fs_buf, NULL, ECS_EE_RPC) == 0)
                 DelayThread(10000);
 
             fh->position += nbytes;
@@ -280,7 +280,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
         if ((nsectors = size / 2048) > 0) {
             nbytes = nsectors * 2048;
 
-            while (sceCdRead(fh->lsn + (fh->position / 2048), nsectors, buf, NULL) == 0)
+            while (sceCdRead_internal(fh->lsn + (fh->position / 2048), nsectors, buf, NULL, ECS_EE_RPC) == 0)
                 DelayThread(10000);
 
             buf += nbytes;
@@ -293,7 +293,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
 
         // Phase 3: read any remaining data that isn't divisible by 2048.
         if ((nbytes = size) > 0) {
-            while (sceCdRead(fh->lsn + (fh->position / 2048), 1, cdvdman_fs_buf, NULL) == 0)
+            while (sceCdRead_internal(fh->lsn + (fh->position / 2048), 1, cdvdman_fs_buf, NULL, ECS_EE_RPC) == 0)
                 DelayThread(10000);
 
             fh->position += nbytes;
@@ -378,7 +378,7 @@ static int cdrom_dread(iop_file_t *f, iox_dirent_t *dirent)
     DPRINTF("cdrom_dread fh->lsn=%lu\n", fh->lsn);
 
     sceCdDiskReady(0);
-    if ((r = sceCdRead(fh->lsn, 1, cdvdman_fs_buf, NULL)) == 1) {
+    if ((r = sceCdRead_internal(fh->lsn, 1, cdvdman_fs_buf, NULL, ECS_EE_RPC)) == 1) {
         sceCdSync(0);
 
         do {
@@ -476,7 +476,7 @@ static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u3
             result = sceCdStInit(((u32 *)args)[0], ((u32 *)args)[1], (void *)((u32 *)args)[2]);
             break;
         case CDIOC_BREAK:
-            result = sceCdBreak();
+            result = sceCdBreak_internal(ECS_EE_RPC);
             if (result != 1)
                 result = -EIO;
             sceCdSync(0);
@@ -489,25 +489,25 @@ static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u3
             result = 0;
             break;
         case CDIOC_STANDBY:
-            result = sceCdStandby();
+            result = sceCdStandby_internal(ECS_EE_RPC);
             if (result != 1)
                 result = -EIO;
             sceCdSync(0);
             break;
         case CDIOC_STOP:
-            result = sceCdStop();
+            result = sceCdStop_internal(ECS_EE_RPC);
             if (result != 1)
                 result = -EIO;
             sceCdSync(0);
             break;
         case CDIOC_PAUSE:
-            result = sceCdPause();
+            result = sceCdPause_internal(ECS_EE_RPC);
             if (result != 1)
                 result = -EIO;
             sceCdSync(0);
             break;
         case CDIOC_GETTOC:
-            result = sceCdGetToc(buf);
+            result = sceCdGetToc_internal(buf, ECS_EE_RPC);
             if (result != 1)
                 result = -EIO;
             break;

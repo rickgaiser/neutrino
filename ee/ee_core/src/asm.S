@@ -14,7 +14,6 @@
 #include "as_reg_compat.h"
 
 #define COMPAT_MODE_3     0x04 // Unhook Syscalls
-#define COMPAT_MODE_6     0x20 // Disable IGR
 
 .set push
 .set noreorder

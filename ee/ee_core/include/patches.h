@@ -11,8 +11,6 @@
 #ifndef PATCHES_H
 #define PATCHES_H
 
-#define COMPAT_MODE_4 0x08 // Skip Videos
-
 void apply_patches(const char *path);
 
 #endif /* PATCHES */

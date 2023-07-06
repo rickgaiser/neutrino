@@ -54,8 +54,9 @@
 #define CDVDEF_MAN_UNLOCKED  0x0001
 #define CDVDEF_POWER_OFF     0x0002
 #define CDVDEF_FSV_S596      0x0004
-#define CDVDEF_READ_DONE     0x0008
+#define CDVDEF_STM_DONE      0x0008 // Streaming read done
 #define CDVDEF_READ_END      0x1000 // Accurate reads timing event
+#define CDVDEF_CB_DONE       0x2000
 
 struct SteamingData
 {
@@ -71,6 +72,13 @@ struct SteamingData
     u32 Stlsn;
 };
 
+enum ECallSource {
+    ECS_EXTERNAL = 0,
+    ECS_SEARCHFILE,
+    ECS_STREAMING,
+    ECS_EE_RPC
+};
+
 typedef struct
 {
     int err;
@@ -81,6 +89,7 @@ typedef struct
     u32 cdread_lba;
     u32 cdread_sectors;
     void *cdread_buf;
+    enum ECallSource source;
 } cdvdman_status_t;
 
 struct dirTocEntry
@@ -102,8 +111,15 @@ typedef void (*StmCallback_t)(void);
 
 // Internal (common) function prototypes
 extern void SetStm0Callback(StmCallback_t callback);
-extern int cdvdman_AsyncRead(u32 lsn, u32 sectors, void *buf);
-extern int cdvdman_SyncRead(u32 lsn, u32 sectors, void *buf);
+
+extern int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum ECallSource source);
+extern int sceCdGetToc_internal(u8 *toc, enum ECallSource source);
+extern int sceCdSeek_internal(u32 lsn, enum ECallSource source);
+extern int sceCdStandby_internal(enum ECallSource source);
+extern int sceCdStop_internal(enum ECallSource source);
+extern int sceCdPause_internal(enum ECallSource source);
+extern int sceCdBreak_internal(enum ECallSource source);
+
 extern int cdvdman_sendSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 out_size);
 extern void cdvdman_cb_event(int reason);
 
@@ -119,7 +135,7 @@ extern int cdvdman_searchfilesema;
 
 extern cdvdman_status_t cdvdman_stat;
 
-extern unsigned char sync_flag_locked;
-extern unsigned char cdvdman_cdinited;
+extern volatile unsigned char sync_flag_locked;
+extern volatile unsigned char cdvdman_cdinited;
 
 #endif
