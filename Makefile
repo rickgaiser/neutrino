@@ -10,6 +10,9 @@ all:
 	$(MAKE) -C ee/ee_core   all
 	$(MAKE) -C ee/loader    all
 
+copy:
+	$(MAKE) -C ee/loader    copy
+
 format:
 	find . -type f -a \( -iname \*.h -o -iname \*.c \) | xargs clang-format -i
 
