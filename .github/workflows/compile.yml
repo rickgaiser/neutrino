@@ -1,0 +1,53 @@
+name: CI-compile
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ps2dev/ps2dev:latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          apk add build-base git p7zip
+
+      - name: Compile
+        run: |
+          make clean all
+
+      - name: Define target name
+        id: slug
+        run: |
+          echo "TARGET=neutrino-$(date "+%Y%m%d")-${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Pack release
+        run: |
+          TARGET=${{ env.TARGET }}
+          cd ee/loader
+          make copy
+          mkdir $TARGET
+          cp *.elf $TARGET/
+          cp -r modules/ $TARGET/modules/
+          7z a -t7z $TARGET.7z $TARGET/*
+
+      - name: Upload release as artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.TARGET }}
+          path: |
+            ee/loader/*.7z
+
+      - name: Create latest release
+        if: github.ref == 'refs/heads/master'
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          title: "Latest development build"
+          files: |
+            ee/loader/*.7z
