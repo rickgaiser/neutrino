@@ -2,6 +2,9 @@ EE_OBJS = main.o compat.o patch.o ee_core_config.o ioprp.o
 EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
 
+EE_NEWLIB_NANO = 1
+EE_COMPACT_EXECUTABLE = 1
+
 # Configuration options
 BUILTIN_COMMON ?= 0
 BUILTIN_DRIVERS ?= 0
@@ -65,13 +68,9 @@ vpath %.irx $(PS2SDK)/iop/irx/
 
 EE_BIN_NAME = neutrino$(EE_BIN_NAME_SUFFIX)
 EE_BIN = $(EE_BIN_NAME).elf
-EE_BIN_STRIPPED = $(EE_BIN_NAME)_stripped.elf
 EE_BIN_PACKED = $(EE_BIN_NAME)_packed.elf
 
-$(EE_BIN_STRIPPED): $(EE_BIN)
-	$(EE_STRIP) -o $@ $<
-
-$(EE_BIN_PACKED): $(EE_BIN_STRIPPED)
+$(EE_BIN_PACKED): $(EE_BIN)
 	ps2-packer $< $@ > /dev/null
 
 all: $(EE_BIN_PACKED)
@@ -86,17 +85,11 @@ all: $(EE_BIN_PACKED)
 
 # NOT WORKING!
 #GAME ='DVD/Jak 3 (E).iso'
-GAME ='DVD/Prince of Persia Two Thrones (U).iso'
+#GAME ='DVD/Prince of Persia Two Thrones (U).iso'
 #GAME = 'CD/Quake III Revolution (E).iso'
 
-# USB
-#GAME = 'DVD/SCUS_974.81.God of War II.iso'
-#GAME = 'DVD/SCES_550.19.Ratchet Clank - Size Matters.iso'
-#GAME = 'DVD/SCUS_971.13.ICO.iso'
-#GAME = 'DVD/SCUS_971.24.Jak and Daxter - The Precursor Legacy.iso'
-
 # UDPBD
-#GAME = 'CD/ICO (U).iso'
+GAME = 'CD/ICO (U).iso'
 #GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
 #GAME = 'DVD/Gun (U).iso'
 #GAME = 'DVD/Jackie Chan Adventures (E).iso'
@@ -106,7 +99,7 @@ run: all copy
 
 clean:
 	rm -rf $(EE_OBJS) *_irx.o *_elf.o
-	rm -rf $(EE_BIN) $(EE_BIN_STRIPPED) $(EE_BIN_PACKED)
+	rm -rf $(EE_BIN) $(EE_BIN_PACKED)
 	rm -rf modules
 
 copy:
@@ -133,5 +126,5 @@ copy:
 	cp $(PS2SDK)/iop/irx/iLinkman.irx         modules
 	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx modules
 
-include $(PS2SDK)/samples/Makefile.pref
-include $(PS2SDK)/samples/Makefile.eeglobal_cpp
+include ../../Defs.make
+include ../Rules.make

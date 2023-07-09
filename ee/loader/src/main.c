@@ -5,9 +5,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <malloc.h>
+_off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be defined in unistd.h ???
 
 // PS2SDK
 #include <kernel.h>
+#include <ps2sdkapi.h>
 #include <tamtypes.h>
 #include <loadfile.h>
 #include <iopcontrol.h>
@@ -21,7 +23,7 @@
 #include "modules.h"
 #include "ee_core_config.h"
 #include "ioprp.h"
-#include "../../iop/common/cdvd_config.h"
+#include "../../../iop/common/cdvd_config.h"
 
 #define NEWLIB_PORT_AWARE
 #include <fileXio_rpc.h>
@@ -29,6 +31,7 @@
 
 DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
 DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
+PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
 
 #ifdef BUILTIN_COMMON
     #define IRX_COMMON_DEFINE(mod)        \
@@ -300,14 +303,17 @@ struct SModule *load_module_udnlname(const char *name)
 
 int start_module(struct SModule *mod)
 {
+    int rv;
+
     if (mod->pData == NULL) {
         int rv = load_module(mod);
         if (rv < 0)
             return rv;
     }
 
-    if (SifExecModuleBuffer(mod->pData, mod->iSize, 0, NULL, NULL) < 0) {
-        printf("ERROR: Could not load %s\n", mod->sFileName);
+    rv = SifExecModuleBuffer(mod->pData, mod->iSize, 0, NULL, NULL);
+    if (rv < 0) {
+        printf("ERROR: Could not load %s (%d)\n", mod->sFileName, rv);
         return -1;
     }
 
@@ -671,7 +677,7 @@ int main(int argc, char *argv[])
             printf("- DVD-DL detected\n");
         }
     }
-    printf("- size = %lldMiB\n", iso_size / (1024 * 1024));
+    printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
 
     if (eMediaType == SCECdNODISC)
         eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;

@@ -21,6 +21,6 @@ ifeq ($(DEBUG),1)
 IOP_CFLAGS += -DDEBUG
 endif
 
-include ../Defs.make
+include ../../Defs.make
 include ../Rules.bin.make
 include ../Rules.make
