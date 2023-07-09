@@ -16,6 +16,7 @@
 
 // Other
 #include "elf.h"
+#include "compat.h"
 #include "patch.h"
 #include "modules.h"
 #include "ee_core_config.h"
@@ -108,6 +109,13 @@ void print_usage()
     printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio(sdc), udpbd(udp) and ilink(sd)\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
     printf("  -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
+    printf("  -gc=<compat>      Game compatibility modes, supperted are:\n");
+    printf("                    - 0: Disable builtin compat flags\n");
+    printf("                    - 1: IOP: Accurate reads (sceCdRead)\n");
+    printf("                    - 2: IOP: Sync reads (sceCdRead)\n");
+    printf("                    - 3: EE : Unhook syscalls\n");
+    printf("                    - 5: IOP: Emulate DVD-DL\n");
+    printf("                    Multiple options possible, for example -cp=26\n");
     printf("  -ip=<ip>          Set IP adres for udpbd, default: 192.168.1.10\n");
     printf("  -nR               No reboot before loading the iso (faster)\n");
     printf("  -eC               Enable eecore debug colors\n");
@@ -481,7 +489,9 @@ int main(int argc, char *argv[])
     const char *sFileName = NULL;
     const char *sIP = NULL;
     const char *sMediaType = NULL;
+    const char *sCompat = NULL;
     u32 iIP = 0;
+    u32 iCompat = 0;
     enum SCECdvdMediaType eMediaType = SCECdNODISC;
     int iNoReboot = 0;
     int iEnableDebugColors = 0;
@@ -495,21 +505,14 @@ int main(int argc, char *argv[])
             sIP = &argv[i][4];
         else if (!strncmp(argv[i], "-mt=", 4))
             sMediaType = &argv[i][4];
+        else if (!strncmp(argv[i], "-gc", 3))
+            sCompat = &argv[i][4];
         else if (!strncmp(argv[i], "-nR", 3))
             iNoReboot = 1;
         else if (!strncmp(argv[i], "-eC", 3))
             iEnableDebugColors = 1;
         else {
             printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
-            print_usage();
-            return -1;
-        }
-    }
-
-    if (sIP != NULL) {
-        iIP = parse_ip(sIP);
-        if (iIP == 0) {
-            printf("ERROR: cannot parse IP\n");
             print_usage();
             return -1;
         }
@@ -524,6 +527,37 @@ int main(int argc, char *argv[])
             eMediaType = SCECdPS2DVD;
         } else {
             printf("ERROR: media type %s not supported\n", sMediaType);
+            print_usage();
+            return -1;
+        }
+    }
+
+    if (sCompat != NULL) {
+        while (*sCompat != 0) {
+            char c = *sCompat;
+            switch (c) {
+                case '0':
+                    iCompat |= 1 << 31; // Set dummy flag
+                    break;
+                case '1':
+                case '2':
+                case '3':
+                case '5':
+                    iCompat |= 1 << (c - '1');
+                    break;
+                default:
+                    printf("ERROR: compat flag %c not supported\n", c);
+                    print_usage();
+                    return -1;
+            }
+            sCompat++;
+        }
+    }
+
+    if (sIP != NULL) {
+        iIP = parse_ip(sIP);
+        if (iIP == 0) {
+            printf("ERROR: cannot parse IP\n");
             print_usage();
             return -1;
         }
@@ -687,14 +721,25 @@ int main(int argc, char *argv[])
     }
     memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
     settings->common.media = eMediaType;
-    //settings->common.flags = IOPCORE_COMPAT_ACCU_READS; // MODE1
-    //settings->common.flags = IOPCORE_COMPAT_ALT_READ; // MODE2
     settings->common.layer1_start = layer1_lba_start;
     // settings->common.DiscID[5];
     // settings->common.padding[2];
     settings->common.fakemodule_flags = 0;
     settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDFSV;
     settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_CDVDSTM;
+
+    // If no compatibility options are set on the command line
+    // see if the game is in our builtin database
+    if (iCompat == 0)
+        iCompat = get_compat(sConfigName);
+    iCompat &= ~(1<<31); // Clear dummy flag
+    if (iCompat & COMPAT_MODE_1)
+        settings->common.flags |= IOPCORE_COMPAT_ACCU_READS;
+    if (iCompat & COMPAT_MODE_2)
+        settings->common.flags |= IOPCORE_COMPAT_ALT_READ;
+    if (iCompat & COMPAT_MODE_5)
+        settings->common.flags |= IOPCORE_COMPAT_EMU_DVDDL;
+    printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, settings->common.flags);
 
     //
     // Add ISO as fragfile[0] to fragment list
@@ -847,10 +892,11 @@ int main(int argc, char *argv[])
     // Set arguments, and start EECORE
     //
     eecc_init(&eeconf);
-    eecc_setGameMode(&eeconf, (enum GAME_MODE)iMode);
+    eecc_setGameMode(&eeconf, iMode);
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
     eecc_setFileName(&eeconf, sConfigName);
+    eecc_setCompatFlags(&eeconf, iCompat);
     eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
     printf("Starting ee_core with following arguments:\n");
     eecc_print(&eeconf);

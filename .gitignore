@@ -3,10 +3,12 @@
 *.irx
 *.IRX
 *.map
-*.7z
 
 obj/
 obj.*/
 
 .vscode/
-ee/loader/irx/*
+ee/loader/irx/
+iop/patches/
+iop/fileio/
+releases/

@@ -1,10 +1,10 @@
-EE_OBJS = main.o patch.o ee_core_config.o ioprp.o
+EE_OBJS = main.o compat.o patch.o ee_core_config.o ioprp.o
 EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
 
 # Configuration options
-BUILTIN_COMMON ?= 1
-BUILTIN_DRIVERS ?= 1
+BUILTIN_COMMON ?= 0
+BUILTIN_DRIVERS ?= 0
 
 # Add embedded files
 ifeq ($(BUILTIN_COMMON),1)
@@ -77,23 +77,32 @@ $(EE_BIN_PACKED): $(EE_BIN_STRIPPED)
 all: $(EE_BIN_PACKED)
 
 
-# USB
-GAME = 'SCUS_974.81.God of War II.iso'
-#GAME = 'SCES_550.19.Ratchet Clank - Size Matters.iso'
-#GAME = 'SCUS_971.13.ICO.iso'
-#GAME = 'SCUS_971.24.Jak and Daxter - The Precursor Legacy.iso'
+# MODE2 games ?
+#GAME ='DVD/Jackie Chan Adventures (E).iso'
+#GAME ='DVD/MotorStorm Arctic Edge (E).iso'
+#GAME ='DVD/Need for Speed Pro Street (E).iso'
+#GAME ='DVD/Ratchet Clank - Going Commando (E).iso'
+#GAME ='DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 
-#GAME = 'SCES_516.07.Ratchet Clank - Going Commando.iso'
-#GAME = 'SCES_520.04.Killzone.iso'
-#GAME = 'SCES_524.24.Ace Combat Squadron Leader.iso'
-#GAME = 'SCES_524.60.Jak 3.iso'
-#GAME = 'SCES_532.85.Ratchet Gladiator.iso'
-#GAME = 'SCES_533.26.Shadow of the Colossus.iso'
-#GAME = 'SCES_555.73.MotorStorm Arctic Edge.iso'
-#GAME = 'SCUS_973.28.Gran Turismo 4.iso'
-#GAME = 'SCUS_973.53.Ratchet Clank - Up Your Arsenal.iso'
+# NOT WORKING!
+#GAME ='DVD/Jak 3 (E).iso'
+GAME ='DVD/Prince of Persia Two Thrones (U).iso'
+#GAME = 'CD/Quake III Revolution (E).iso'
+
+# USB
+#GAME = 'DVD/SCUS_974.81.God of War II.iso'
+#GAME = 'DVD/SCES_550.19.Ratchet Clank - Size Matters.iso'
+#GAME = 'DVD/SCUS_971.13.ICO.iso'
+#GAME = 'DVD/SCUS_971.24.Jak and Daxter - The Precursor Legacy.iso'
+
+# UDPBD
+#GAME = 'CD/ICO (U).iso'
+#GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
+#GAME = 'DVD/Gun (U).iso'
+#GAME = 'DVD/Jackie Chan Adventures (E).iso'
+#GAME = 'DVD/Jak 3 (E).iso'
 run: all copy
-	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -drv=udpbd -iso=mass:DVD/$(GAME) -ip=192.168.1.22
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -drv=udpbd -iso=mass:$(GAME)
 
 clean:
 	rm -rf $(EE_OBJS) *_irx.o *_elf.o

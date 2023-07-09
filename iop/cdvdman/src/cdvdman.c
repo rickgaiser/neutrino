@@ -493,10 +493,6 @@ static int intrh_cdrom(void *common)
         CDVDreg_PWOFF = CDL_DATA_RDY;
 
     if (CDVDreg_PWOFF & CDL_DATA_END) {
-        // If IGR is enabled: Do not acknowledge the interrupt here. The EE-side IGR code will monitor and acknowledge it.
-        if (cdvdman_settings.common.flags & IOPCORE_ENABLE_POFF) {
-            CDVDreg_PWOFF = CDL_DATA_END; // Acknowldge power-off request.
-        }
         iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE|CDVDEF_FSV_S596|CDVDEF_POWER_OFF); // Notify FILEIO and CDVDFSV of the power-off event.
     } else
         CDVDreg_PWOFF = CDL_DATA_COMPLETE; // Acknowledge interrupt

@@ -5,7 +5,7 @@
 
 void eecc_init(struct SEECoreConfig *eecc)
 {
-    eecc_setGameMode(eecc, INVALID_MODE);
+    eecc_setGameMode(eecc, 0);
     eecc_setKernelConfig(eecc, 0, 0);
     eecc_setModStorageConfig(eecc, 0, 0);
     eecc_setCompatFlags(eecc, 0);
@@ -23,9 +23,9 @@ void eecc_init(struct SEECoreConfig *eecc)
     eecc->_argc = 0;
 }
 
-void eecc_setGameMode(struct SEECoreConfig *eecc, enum GAME_MODE mode)
+void eecc_setGameMode(struct SEECoreConfig *eecc, u32 gameMode)
 {
-    eecc->_mode = mode;
+    eecc->_gameMode = gameMode;
 }
 
 void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory)
@@ -87,7 +87,7 @@ void eecc_setHDDSpindown(struct SEECoreConfig *eecc, u32 minutes)
 
 bool eecc_valid(struct SEECoreConfig *eecc)
 {
-    if (eecc->_mode == INVALID_MODE)
+    if (eecc->_gameMode == 0)
         return false;
 
     if (eecc->_eeloadCopy == 0x0)
@@ -194,7 +194,7 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
 
 const char *eecc_getGameModeString(struct SEECoreConfig *eecc)
 {
-    switch (eecc->_mode) {
+    switch (eecc->_gameMode) {
         case BDM_ILK_MODE:
             return "BDM_ILK_MODE";
         case BDM_M4S_MODE:
@@ -205,10 +205,6 @@ const char *eecc_getGameModeString(struct SEECoreConfig *eecc)
             return "BDM_UDP_MODE";
         case BDM_ATA_MODE:
             return "BDM_ATA_MODE";
-        case ETH_MODE:
-            return "ETH_MODE";
-        case HDD_MODE:
-            return "HDD_MODE";
         default:
             return "INVALID_MODE";
     }

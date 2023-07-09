@@ -13,7 +13,7 @@
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
 
-#define COMPAT_MODE_3     0x04 // Unhook Syscalls
+#define COMPAT_MODE_3     0x04 // Unhook syscalls
 
 .set push
 .set noreorder

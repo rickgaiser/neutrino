@@ -5,11 +5,11 @@
 #include <usbhdfsd-common.h>
 
 // flags
-#define IOPCORE_COMPAT_ALT_READ      0x0001 // MODE2
-//#define IOPCORE_COMPAT_0_SKIP_VIDEOS 0x0002 // MODE4
-#define IOPCORE_COMPAT_EMU_DVDDL     0x0004 // MODE5
-#define IOPCORE_COMPAT_ACCU_READS    0x0008 // MODE1
-#define IOPCORE_ENABLE_POFF          0x0100 // MODE6
+#define IOPCORE_COMPAT_ACCU_READS    0x0008 // MODE_1
+#define IOPCORE_COMPAT_ALT_READ      0x0001 // MODE_2
+//#define IOPCORE_COMPAT_0_SKIP_VIDEOS 0x0002 // MODE_4 - not supported!
+#define IOPCORE_COMPAT_EMU_DVDDL     0x0004 // MODE_5
+//#define IOPCORE_ENABLE_POFF          0x0100 // MODE_6 - not supported!
 
 // fakemodule_flags
 #define FAKE_MODULE_FLAG_DEV9    (1 << 0)

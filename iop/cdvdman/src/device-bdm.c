@@ -116,8 +116,13 @@ int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
         return SCECdErTRMOPN;
 
     WaitSema(bdm_io_sema);
-    if (bd_defrag(g_bd, cdvdman_settings.fragfile[fid].frag_count, &cdvdman_settings.frags[cdvdman_settings.fragfile[fid].frag_start], lsn * 4, buffer, sectors * 4) != (sectors * 4))
+    if (bd_defrag(g_bd, cdvdman_settings.fragfile[fid].frag_count, &cdvdman_settings.frags[cdvdman_settings.fragfile[fid].frag_start], lsn * 4, buffer, sectors * 4) != (sectors * 4)) {
+#ifdef DEBUG
+        DPRINTF("%s(%u-%u, 0x%p, %u) FAILED!\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
+        while(1){}
+#endif
         rv = SCECdErREAD;
+    }
     SignalSema(bdm_io_sema);
 
     return rv;

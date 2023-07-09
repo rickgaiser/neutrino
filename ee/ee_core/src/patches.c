@@ -13,8 +13,22 @@
 #include "modules.h"
 #include "modmgr.h"
 
-#define ALL_MODE -1
-#define BDM_MODE -2
+#define ALL_MODE (0xffffffff)
+#define BDM_MODE (BDM_USB_MODE|BDM_M4S_MODE) // Only USB-like slow devices?
+#define ETH_MODE (BDM_UDP_MODE)
+#define HDD_MODE (BDM_ATA_MODE)
+
+// This patch needs apemodpatch.irx loaded
+// Currently not supported by neutrino, fix later
+//#define APEMOD_PATCH
+
+// This patch needs f2techioppatch.irx loaded
+// Currently not supported by neutrino, fix later
+//#define F2TECH_PATCH
+
+// This patch needs iremsndpatch.irx loaded
+// Currently not supported by neutrino, fix later
+//#define IREMSSND_PATCH
 
 typedef struct
 {
@@ -26,7 +40,7 @@ typedef struct
 typedef struct
 {
     char *game;
-    int mode;
+    u32 mode;
     game_patch_t patch;
 } patchlist_t;
 
@@ -427,6 +441,7 @@ static void DotHack_patches(const char *path)
     }
 }
 
+#ifdef IREMSSND_PATCH // for SOS
 static int SOS_SifLoadModuleHook(const char *path, int arg_len, const char *args, int *modres, int fno)
 {
     int (*_pSifLoadModule)(const char *path, int arg_len, const char *args, int *modres, int fno);
@@ -515,6 +530,7 @@ static void SOSPatch(int region)
             break;
     }
 }
+#endif
 
 static void VirtuaQuest_patches(void)
 {
@@ -536,6 +552,7 @@ static void VirtuaQuest_patches(void)
     _sw(0x3463f000, 0x000c566c); // ori $v1, $v1, 0xf000
 }
 
+#ifdef APEMOD_PATCH // for UltProPinball
 enum ULTPROPINBALL_ELF {
     ULTPROPINBALL_ELF_MAIN,
     ULTPROPINBALL_ELF_BR,
@@ -634,6 +651,7 @@ static void UltProPinballPatch(const char *path)
         g_mode = ULTPROPINBALL_ELF_TS;
     }
 }
+#endif
 
 static void EutechnyxWakeupTIDPatch(u32 addr)
 { // Eutechnyx games have the main thread ID hardcoded for a call to WakeupThread().
@@ -675,6 +693,7 @@ static void ProSnowboarderPatch(void)
     }
 }
 
+#ifdef F2TECH_PATCH // for ShadowMan2
 static int ShadowMan2_SifLoadModuleHook(const char *path, int arg_len, const char *args)
 {
     // int (*pSifLoadModule)(const char *path, int arg_len, const char *args);
@@ -756,6 +775,7 @@ static void ShadowMan2Patch(int region)
             break;
     }
 }
+#endif
 
 static void HarvestMoonAWLPatch(int region)
 {
@@ -792,16 +812,10 @@ static void HarvestMoonAWLPatch(int region)
 void apply_patches(const char *path)
 {
     const patchlist_t *p;
-    int mode;
-
-    if ((GameMode == HDD_MODE) || (GameMode == ETH_MODE))
-        mode = GameMode;
-    else
-        mode = BDM_MODE;
 
     // if there are patches matching game name/mode then fill the patch table
     for (p = patch_list; p->game; p++) {
-        if ((!_strcmp(GameID, p->game)) && ((p->mode == ALL_MODE) || (mode == p->mode))) {
+        if ((!_strcmp(GameID, p->game)) && (p->mode & GameMode)) {
             switch (p->patch.addr) {
                 case PATCH_GENERIC_NIS:
                     NIS_generic_patches();
@@ -831,13 +845,17 @@ void apply_patches(const char *path)
                     DotHack_patches(path);
                     break;
                 case PATCH_SOS:
+#ifdef IREMSSND_PATCH
                     SOSPatch(p->patch.val);
+#endif
                     break;
                 case PATCH_VIRTUA_QUEST:
                     VirtuaQuest_patches();
                     break;
                 case PATCH_ULT_PRO_PINBALL:
+#ifdef APEMOD_PATCH
                     UltProPinballPatch(path);
+#endif
                     break;
                 case PATCH_EUTECHNYX_WU_TID:
                     EutechnyxWakeupTIDPatch(p->patch.val);
@@ -846,7 +864,9 @@ void apply_patches(const char *path)
                     ProSnowboarderPatch();
                     break;
                 case PATCH_SHADOW_MAN_2:
+#ifdef F2TECH_PATCH
                     ShadowMan2Patch(p->patch.val);
+#endif
                     break;
                 case PATCH_HARVEST_MOON_AWL:
                     HarvestMoonAWLPatch(p->patch.val);

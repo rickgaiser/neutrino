@@ -40,27 +40,20 @@ extern int iop_reboot_count;
 
 extern u32 g_compat_mask;
 
-//#define COMPAT_MODE_1 0x01
-//#define COMPAT_MODE_2 0x02
-#define COMPAT_MODE_3 0x04 // Unhook Syscalls
-//#define COMPAT_MODE_4 0x08
-//#define COMPAT_MODE_5 0x10
-//#define COMPAT_MODE_6 0x20 // Disable IGR
-//#define COMPAT_MODE_7 0x40
-//#define COMPAT_MODE_8 0x80
+#define COMPAT_MODE_1 0x01 // Accurate reads (sceCdRead)
+#define COMPAT_MODE_2 0x02 // Sync reads (sceCdRead)
+#define COMPAT_MODE_3 0x04 // Unhook syscalls
+//#define COMPAT_MODE_4 0x08 // Skip videos - not supported!
+#define COMPAT_MODE_5 0x10 // Emulate DVD-DL
+//#define COMPAT_MODE_6 0x20 // Disable IGR - not supported!
 
 extern char GameID[16];
 extern int GameMode;
-enum GAME_MODE {
-    INVALID_MODE = 0,
-    BDM_ILK_MODE,
-    BDM_M4S_MODE,
-    BDM_USB_MODE,
-    BDM_UDP_MODE,
-    BDM_ATA_MODE,
-    ETH_MODE,
-    HDD_MODE,
-};
+#define BDM_ILK_MODE (1<<0)
+#define BDM_M4S_MODE (1<<1)
+#define BDM_USB_MODE (1<<2)
+#define BDM_UDP_MODE (1<<3)
+#define BDM_ATA_MODE (1<<4)
 
 extern int EnableDebug;
 #define GS_BGCOLOUR *((volatile unsigned long int *)0x120000E0)

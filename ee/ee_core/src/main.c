@@ -42,10 +42,6 @@ static void set_args_drv(const char *arg)
         GameMode = BDM_UDP_MODE;
     else if (!_strncmp(arg, "BDM_ATA_MODE", 12))
         GameMode = BDM_ATA_MODE;
-    else if (!_strncmp(arg, "ETH_MODE", 8))
-        GameMode = ETH_MODE;
-    else if (!_strncmp(arg, "HDD_MODE", 8))
-        GameMode = HDD_MODE;
     DPRINTF("Game Mode = %d\n", GameMode);
 }
 
