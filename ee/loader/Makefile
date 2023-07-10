@@ -1,4 +1,4 @@
-EE_OBJS = main.o compat.o patch.o ee_core_config.o ioprp.o
+EE_OBJS = main.o compat.o xparam.o patch.o ee_core_config.o ioprp.o
 EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
 

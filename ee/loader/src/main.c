@@ -23,6 +23,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "modules.h"
 #include "ee_core_config.h"
 #include "ioprp.h"
+#include "xparam.h"
 #include "../../../iop/common/cdvd_config.h"
 
 #define NEWLIB_PORT_AWARE
@@ -709,6 +710,9 @@ int main(int argc, char *argv[])
     printf("config name: %s\n", sConfigName);
     close(fd_config);
     fileXioUmount("iso:");
+
+    ResetDeckardXParams();
+    ApplyDeckardXParam(sConfigName);
 
     //
     // Locate and set cdvdman settings
