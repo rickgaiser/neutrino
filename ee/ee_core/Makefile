@@ -18,7 +18,7 @@ EE_OBJS = main.o syshook.o iopmgr.o modmgr.o util.o patches.o patches_asm.o \
 MAPFILE = ee_core.map
 
 EE_INCS := -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -Iinclude -I.
-EE_CFLAGS = -D_EE -Os -G0 -Wall $(EE_INCS)
+EE_CFLAGS = -D_EE -Os -G0 -Wall -fdata-sections -ffunction-sections $(EE_INCS)
 
 ifeq ($(EESIO_DEBUG),1)
 EE_CFLAGS += -D__EESIO_DEBUG
@@ -37,7 +37,7 @@ endif
 
 EE_OBJS := $(EE_OBJS:%=$(EE_OBJS_DIR)%)
 
-EE_LDFLAGS = -nostartfiles -nostdlib -Tlinkfile -L$(PS2SDK)/ee/lib -s -Wl,-Map,$(MAPFILE)
+EE_LDFLAGS = -nostartfiles -nostdlib -Tlinkfile -L$(PS2SDK)/ee/lib -s -Wl,-Map,$(MAPFILE) -Wl,-zmax-page-size=128 -Wl,--gc-sections
 EE_LIBS += -lpatches
 
 EE_LIBS += -lkernel -lgcc
