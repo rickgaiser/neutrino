@@ -76,14 +76,9 @@ $(EE_BIN_PACKED): $(EE_BIN)
 all: $(EE_BIN_PACKED)
 
 
-GAME = 'DVD/007 - Agent Under Fire (E).iso'
-
 # NOT WORKING! - stuck while loading, cause: reading out of bounds
 #GAME ='DVD/Jak 3 (E).iso'
 #GAME ='DVD/Prince of Persia Two Thrones (U).iso'
-
-# NOT WORKING! - stuck while loading
-#GAME = 'CD/Quake III Revolution (E).iso'
 
 # NOT WORKING! - random crashes (on OPL too)
 #GAME = 'DVD/Gun (U).iso'
@@ -93,12 +88,14 @@ GAME = 'DVD/007 - Agent Under Fire (E).iso'
 #GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
 #GAME = 'DVD/PES 2023 (E).iso'
 #GAME = 'DVD/Sonic Unleashed (E).iso'
+#GAME = 'DVD/007 - Agent Under Fire (E).iso'
 
 # Tested, working - MODE2 games working without MODE2 ???
 #GAME ='DVD/MotorStorm Arctic Edge (E).iso'
 #GAME ='DVD/Need for Speed Pro Street (E).iso'
 #GAME ='DVD/Ratchet Clank - Going Commando (E).iso'
 #GAME ='DVD/Ratchet Clank - Up Your Arsenal (U).iso'
+GAME = 'CD/Quake III Revolution (E).iso'
 
 # Tested, working - MODE2 games
 #GAME ='DVD/Jackie Chan Adventures (E).iso'
