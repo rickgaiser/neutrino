@@ -173,11 +173,20 @@ static inline void cdvd_readee(void *buf)
                 return;
             }
 
-            if (sectors_to_read < CDVDMAN_FS_SECTORS)
-                nsectors = sectors_to_read;
-            else
-                nsectors = CDVDMAN_FS_SECTORS;
-            temp = nsectors;
+            if (flag_64b == 0) { // not 64 bytes aligned buf
+                // The data of the last sector of the chunk will be used to correct buffer alignment.
+                if (sectors_to_read < CDVDMAN_FS_SECTORS - 1)
+                    nsectors = sectors_to_read;
+                else
+                    nsectors = CDVDMAN_FS_SECTORS - 1;
+                temp = nsectors + 1;
+            } else { // 64 bytes aligned buf
+                if (sectors_to_read < CDVDMAN_FS_SECTORS)
+                    nsectors = sectors_to_read;
+                else
+                    nsectors = CDVDMAN_FS_SECTORS;
+                temp = nsectors;
+            }
 
             if (sceCdRead(r->lsn, temp, (void *)fsvRbuf, NULL) == 0) {
                 if (sceCdGetError() == SCECdErNO) {
