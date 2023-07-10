@@ -61,6 +61,8 @@ void DeviceInit(void)
     smp.attr = SA_THPRI;
     bdm_io_sema = CreateSema(&smp);
 
+    mediaLsnCount = (cdvdman_settings.fragfile[0].size + 2047) / 2048;
+
     RegisterLibraryEntries(&_exp_bdm);
 }
 
