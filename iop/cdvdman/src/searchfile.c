@@ -10,6 +10,9 @@ static void cdvdman_trimspaces(char *str);
 static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLength, int layer);
 static int cdvdman_findfile(sceCdlFILE *pcd_file, const char *name, int layer);
 
+// The max lsn/sectors available based on value retrieved from iso. Used for out of bounds checking. Only check if value non zero.
+u32 mediaLsnCount;
+
 u8 cdvdman_buf[2048];
 
 typedef struct
@@ -218,6 +221,7 @@ int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
     return cdvdman_findfile(fp, name, layer);
 }
 
+//-------------------------------------------------------------------------
 void cdvdman_searchfile_init(void)
 {
     // Read the volume descriptor
@@ -226,7 +230,11 @@ void cdvdman_searchfile_init(void)
 
     struct dirTocEntry *tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
     layer_info[0].rootDirtocLBA = tocEntryPointer->fileLBA;
-    layer_info[0].rootDirtocLength = tocEntryPointer->length;
+    layer_info[0].rootDirtocLength = tocEntryPointer->fileSize;
+
+    // PVD Volume Space Size field
+    mediaLsnCount = *(u32 *)&cdvdman_buf[0x50];
+    DPRINTF("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
 
     // DVD DL support
     if (!(cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
@@ -234,11 +242,20 @@ void cdvdman_searchfile_init(void)
         u32 layer1_start;
         sceCdReadDvdDualInfo(&on_dual, &layer1_start);
         if (on_dual) {
+            u32 lsn0 = mediaLsnCount;
+            // So that CdRead below can read more than first layer.
+            mediaLsnCount = 0;
             sceCdRead_internal(layer1_start + 16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
             sceCdSync(0);
             tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
             layer_info[1].rootDirtocLBA = layer1_start + tocEntryPointer->fileLBA;
-            layer_info[1].rootDirtocLength = tocEntryPointer->length;
+            layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
+
+            u32 lsn1 = *(u32 *)&cdvdman_buf[0x50];
+            DPRINTF("cdvdman_searchfile_init DVD9 L0 mediaLsnCount=%d \n", lsn0);
+            DPRINTF("cdvdman_searchfile_init DVD9 L1 mediaLsnCount=%d \n", lsn1);
+            mediaLsnCount = lsn0 + lsn1 - 16;
+            DPRINTF("cdvdman_searchfile_init DVD9 mediaLsnCount=%d\n", mediaLsnCount);
         }
     }
 }

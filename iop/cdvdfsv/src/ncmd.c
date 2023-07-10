@@ -109,7 +109,7 @@ static inline void cdvd_readee(void *buf)
     cdvdfsv_readee_t readee;
     RpcCdvd_t *r = (RpcCdvd_t *)buf;
 
-    //PRINTF("%s %d %d @0x%X -> 0x%X / 0x%X)\n", __FUNCTION__, r->lsn, r->sectors, r->buf, r->eeaddr1, r->eeaddr2);
+    //DPRINTF("%s %d %d @0x%X -> 0x%X / 0x%X)\n", __FUNCTION__, r->lsn, r->sectors, r->buf, r->eeaddr1, r->eeaddr2);
 
     if (r->sectors == 0) {
         *(int *)buf = 0;
@@ -173,20 +173,11 @@ static inline void cdvd_readee(void *buf)
                 return;
             }
 
-            if (flag_64b == 0) { // not 64 bytes aligned buf
-                // The data of the last sector of the chunk will be used to correct buffer alignment.
-                if (sectors_to_read < CDVDMAN_FS_SECTORS - 1)
-                    nsectors = sectors_to_read;
-                else
-                    nsectors = CDVDMAN_FS_SECTORS - 1;
-                temp = nsectors + 1;
-            } else { // 64 bytes aligned buf
-                if (sectors_to_read < CDVDMAN_FS_SECTORS)
-                    nsectors = sectors_to_read;
-                else
-                    nsectors = CDVDMAN_FS_SECTORS;
-                temp = nsectors;
-            }
+            if (sectors_to_read < CDVDMAN_FS_SECTORS)
+                nsectors = sectors_to_read;
+            else
+                nsectors = CDVDMAN_FS_SECTORS;
+            temp = nsectors;
 
             if (sceCdRead(r->lsn, temp, (void *)fsvRbuf, NULL) == 0) {
                 if (sceCdGetError() == SCECdErNO) {
@@ -239,7 +230,7 @@ static inline void cdvdSt_read(void *buf)
     int r, rpos, remaining;
     void *ee_addr;
 
-    //PRINTF("%s\n", __FUNCTION__);
+    //DPRINTF("%s\n", __FUNCTION__);
 
     for (rpos = 0, ee_addr = St->buf, remaining = St->sectors; remaining > 0; ee_addr += r * 2048, rpos += r, remaining -= r) {
         if ((r = sceCdStRead(remaining, (void *)((u32)ee_addr | 0x80000000), 0, &err)) < 1)
@@ -254,7 +245,7 @@ static inline void cdvd_Stsubcmdcall(void *buf)
 { // call a Stream Sub function (below) depending on stream cmd sent
     RpcCdvdStream_t *St = (RpcCdvdStream_t *)buf;
 
-    //PRINTF("%s\n", __FUNCTION__);
+    //DPRINTF("%s\n", __FUNCTION__);
 
     switch (St->cmd) {
         case CDVD_ST_CMD_START:
@@ -295,7 +286,7 @@ static inline void cdvd_readiopm(void *buf)
     int r, fsverror;
     u32 readpos;
 
-    PRINTF("%s\n", __FUNCTION__);
+    DPRINTF("%s\n", __FUNCTION__);
 
     r = sceCdRead(((RpcCdvd_t *)buf)->lsn, ((RpcCdvd_t *)buf)->sectors, ((RpcCdvd_t *)buf)->buf, NULL);
     while (sceCdSync(1)) {
@@ -320,7 +311,7 @@ static inline void cdvd_readchain(void *buf)
 
     RpcCdvdchain_t *ch = (RpcCdvdchain_t *)buf;
 
-    PRINTF("%s\n", __FUNCTION__);
+    DPRINTF("%s\n", __FUNCTION__);
 
     for (i = 0, readpos = 0; i < 64; i++, ch++) {
 
@@ -377,7 +368,7 @@ static inline void rpcNCmd_cdreadDiskID(void *buf)
 {
     u8 *p = (u8 *)buf;
 
-    PRINTF("%s\n", __FUNCTION__);
+    DPRINTF("%s\n", __FUNCTION__);
 
     memset(p, 0, 10);
     *(int *)buf = sceCdReadDiskID((unsigned int *)&p[4]);
@@ -386,7 +377,7 @@ static inline void rpcNCmd_cdreadDiskID(void *buf)
 //-------------------------------------------------------------------------
 static inline void rpcNCmd_cdgetdisktype(void *buf)
 {
-    PRINTF("%s\n", __FUNCTION__);
+    DPRINTF("%s\n", __FUNCTION__);
 
     u8 *p = (u8 *)buf;
     *(int *)&p[4] = sceCdGetDiskType();
@@ -398,7 +389,7 @@ static void *cbrpc_cdvdNcmds(int fno, void *buf, int size)
 { // CD NCMD RPC callback
     int sc_param;
 
-    //PRINTF("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
+    //DPRINTF("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
 
     sceCdSC(CDSC_IO_SEMA, &fno);
 
@@ -409,7 +400,14 @@ static void *cbrpc_cdvdNcmds(int fno, void *buf, int size)
             cdvd_readee(buf);
             break;
         case CD_NCMD_GETTOC:
-            *(int *)buf = 1;
+            u32 eeaddr = *(u32 *)buf;
+            DPRINTF("cbrpc_cdvdNcmds GetToc eeaddr=%08x\n", (int)eeaddr);
+            u8 toc[2064];
+            memset(toc, 0, 2064);
+            int result = sceCdGetToc(toc);
+            *(int *)buf = result;
+            if (result)
+                sysmemSendEE(toc, (void *)eeaddr, 2064);
             break;
         case CD_NCMD_SEEK:
             *(int *)buf = sceCdSeek(*(u32 *)buf);
@@ -442,6 +440,7 @@ static void *cbrpc_cdvdNcmds(int fno, void *buf, int size)
             rpcNCmd_cdgetdisktype(buf);
             break;
         default:
+            DPRINTF("%s(%d, 0x%X, %d) unknown fno\n", __FUNCTION__, fno, buf, size);
             *(int *)buf = 0;
             break;
     }

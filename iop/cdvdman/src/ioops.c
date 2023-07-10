@@ -151,13 +151,30 @@ static int cdvdman_open(iop_file_t *f, const char *filename, int mode)
     return r;
 }
 
+// SCE does this too, hence assuming that the version suffix will be either totally there or absent. The only version supported is 1.
+// Instead of using strcat like the original, append the version suffix manually for efficiency.
 static int cdrom_purifyPath(char *path)
 {
     int len;
 
     len = strlen(path);
-    if ((len >= 3) && (path[len - 1] != '1' || path[len - 2] != ';')) // SCE does this too, hence assuming that the version suffix will be either totally there or absent. The only version supported is 1.
-    {                                                                 // Instead of using strcat like the original, append the version suffix manually for efficiency.
+
+    // Adjusted to better handle cases. Was adding ;1 on every case no matter what.
+
+    if (len >= 3) {
+        // Path is already valid.
+        if ((path[len - 2] == ';') && (path[len - 1] == '1')) {
+            return 1;
+        }
+
+        // Path is missing only version.
+        if (path[len - 1] == ';') {
+            path[len] = '1';
+            path[len + 1] = '\0';
+            return 0;
+        }
+
+        // Path has no terminator or version at all.
         path[len] = ';';
         path[len + 1] = '1';
         path[len + 2] = '\0';
@@ -510,6 +527,7 @@ static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u3
             result = sceCdGetToc_internal(buf, ECS_EE_RPC);
             if (result != 1)
                 result = -EIO;
+            sceCdSync(0);
             break;
         case CDIOC_GETINTREVENTFLG:
             *(int *)buf = cdvdman_stat.intr_ef;

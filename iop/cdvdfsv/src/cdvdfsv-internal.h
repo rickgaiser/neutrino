@@ -23,9 +23,11 @@
 #include "smsutils.h"
 
 #ifdef DEBUG
-  #define PRINTF(args...) printf(args)
+#define DPRINTF(args...)  printf(args)
+#define iDPRINTF(args...) Kprintf(args)
 #else
-  #define PRINTF(args...)
+#define DPRINTF(args...)
+#define iDPRINTF(args...)
 #endif
 
 extern void cdvdfsv_register_scmd_rpc(SifRpcDataQueue_t *rpc_DQ);

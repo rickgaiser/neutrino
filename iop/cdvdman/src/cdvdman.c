@@ -80,14 +80,33 @@ static unsigned int cdvdemu_read_end_cb(void *arg)
 
 static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 {
-    unsigned int SectorsToRead, remaining;
+    unsigned int remaining;
     void *ptr;
+    int endOfMedia = 0;
 
     //DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
+    if (mediaLsnCount) {
+
+        // If lsn to read is already bigger error already.
+        if (lsn >= mediaLsnCount) {
+            DPRINTF("cdvdman_read eom lsn=%d sectors=%d leftsectors=%d MaxLsn=%d \n", lsn, sectors, mediaLsnCount - lsn, mediaLsnCount);
+            cdvdman_stat.err = SCECdErIPI;
+            return 1;
+        }
+
+        // As per PS2 mecha code continue to read what you can and then signal end of media error.
+        if ((lsn + sectors) > mediaLsnCount) {
+            DPRINTF("cdvdman_read eom lsn=%d sectors=%d leftsectors=%d MaxLsn=%d \n", lsn, sectors, mediaLsnCount - lsn, mediaLsnCount);
+            endOfMedia = 1;
+            // Limit how much sectors we can read.
+            sectors = mediaLsnCount - lsn;
+        }
+    }
+
     cdvdman_stat.err = SCECdErNO;
     for (ptr = buf, remaining = sectors; remaining > 0;) {
-        SectorsToRead = remaining;
+        unsigned int SectorsToRead = remaining;
 
         if (cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS) {
             // Limit transfers to a maximum length of 8, with a restricted transfer rate.
@@ -97,7 +116,10 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
                 SectorsToRead = 8;
 
             TargetTime.hi = 0;
-            TargetTime.lo = 20460 * SectorsToRead; // approximately 2KB/3600KB/s = 555us required per 2048-byte data sector at 3600KB/s, so 555 * 36.864 = 20460 ticks per sector with a 36.864MHz clock.
+            TargetTime.lo = (cdvdman_settings.common.media == 0x12 ? 81920 : 33512) * SectorsToRead;
+            // SP193: approximately 2KB/3600KB/s = 555us required per 2048-byte data sector at 3600KB/s, so 555 * 36.864 = 20460 ticks per sector with a 36.864MHz clock.
+            /* AKuHAK: 3600KB/s is too fast, it is CD 24x - theoretical maximum on CD
+               However, when setting SCECdSpinMax we will get 900KB/s (81920) for CD, and 2200KB/s (33512) for DVD */
             ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_READ_END);
             SetAlarm(&TargetTime, &cdvdemu_read_end_cb, NULL);
         }
@@ -137,6 +159,11 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
             // Sleep until the required amount of time has been spent.
             WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_END, WEF_AND, NULL);
         }
+    }
+
+    // If we had a read that went past the end of media, after reading what we can, set the end of media error.
+    if (endOfMedia) {
+        cdvdman_stat.err = SCECdErEOM;
     }
 
     return (cdvdman_stat.err == SCECdErNO ? 0 : 1);
