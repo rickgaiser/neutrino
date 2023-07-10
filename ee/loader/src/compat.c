@@ -6,7 +6,7 @@
 #include "ee_core.h"
 
 
-/*
+/****************************************************************************
  * Compatibility options:
  * #define COMPAT_MODE_1 0x01 // Accurate reads (sceCdRead)
  * #define COMPAT_MODE_2 0x02 // Sync reads (sceCdRead)
@@ -25,6 +25,8 @@ typedef struct
 
 static const gamecompat_t default_game_compat[] = {
     {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures (APEMOD)
+    {"SLES_541.61", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
+    {"SLUS_214.42", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
     {NULL, 0},
 };
 
@@ -45,11 +47,46 @@ static const gamecompat_t default_game_compat[] = {
 
 u32 get_compat(const char *id)
 {
-    const gamecompat_t *gc = &default_game_compat[0];
-    while (gc->game != NULL) {
-        if (strcmp(id, gc->game) == 0)
-            return gc->flags;
-        gc++;
+    const gamecompat_t *p = &default_game_compat[0];
+    while (p->game != NULL) {
+        if (strcmp(id, p->game) == 0)
+            return p->flags;
+        p++;
     }
     return 0;
+}
+
+
+/****************************************************************************
+ * Module storage location
+ *
+ * For most games it is safe to use the bios memory area between:
+ * - 0x084000 - 0x100000 = 496KiB
+ *
+ * However, some games use a part of this memory area. Use this list to
+ * relocate the module storage to another location. Note that ee_core needs
+ * per-game changes for this to work also.
+ */
+
+typedef struct
+{
+    char *game;
+    void *addr;
+} modstorage_t;
+
+static const modstorage_t mod_storage_location_list[] = {
+    {"SLUS_209.77", (void *)0x01fc7000}, // Virtua Quest
+    {"SLPM_656.32", (void *)0x01fc7000}, // Virtua Fighter Cyber Generation: Judgment Six No Yabou
+    {NULL, NULL},                        // Terminator
+};
+
+void *get_modstorage(const char *id)
+{
+    const modstorage_t *p = &mod_storage_location_list[0];
+    while (p->game != NULL) {
+        if (!strcmp(p->game, id))
+            return p->addr;
+        p++;
+    }
+    return NULL;
 }

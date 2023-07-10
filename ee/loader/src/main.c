@@ -481,7 +481,7 @@ int main(int argc, char *argv[])
     int fd;
     int i;
     void *eeloadCopy, *initUserMemory;
-    const char *sConfigName;
+    const char *sGameID;
     int iMode;
     int iDrivers;
 
@@ -705,14 +705,14 @@ int main(int argc, char *argv[])
         printf("ERROR: file name not found in SYSTEM.CNF\n");
         return -1;
     }
-    sConfigName = &fname_start[8];
+    sGameID = &fname_start[8];
     fname_end[0] = '\0';
-    printf("config name: %s\n", sConfigName);
+    printf("config name: %s\n", sGameID);
     close(fd_config);
     fileXioUmount("iso:");
 
     ResetDeckardXParams();
-    ApplyDeckardXParam(sConfigName);
+    ApplyDeckardXParam(sGameID);
 
     //
     // Locate and set cdvdman settings
@@ -741,7 +741,7 @@ int main(int argc, char *argv[])
     // If no compatibility options are set on the command line
     // see if the game is in our builtin database
     if (iCompat == 0)
-        iCompat = get_compat(sConfigName);
+        iCompat = get_compat(sGameID);
     iCompat &= ~(1<<31); // Clear dummy flag
     if (iCompat & COMPAT_MODE_1)
         settings->common.flags |= IOPCORE_COMPAT_ACCU_READS;
@@ -794,7 +794,9 @@ int main(int argc, char *argv[])
     memset((void *)0x00084000, 0, 0x00100000 - 0x00084000);
 #pragma GCC diagnostic pop
 
-    irxtable = (irxtab_t *)OPL_MOD_STORAGE;
+    irxtable = (irxtab_t *)get_modstorage(sGameID);
+    if (irxtable == NULL)
+        irxtable = (irxtab_t *)OPL_MOD_STORAGE;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
     irxptr = (u8 *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * 20 /* MAX number of modules !!! */) + 0xF) & ~0xF);
 
@@ -905,7 +907,7 @@ int main(int argc, char *argv[])
     eecc_setGameMode(&eeconf, iMode);
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
-    eecc_setFileName(&eeconf, sConfigName);
+    eecc_setFileName(&eeconf, sGameID);
     eecc_setCompatFlags(&eeconf, iCompat);
     eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
     printf("Starting ee_core with following arguments:\n");
