@@ -81,5 +81,6 @@ I_PollEventFlag
 thevent_IMPORTS_end
 
 sifman_IMPORTS_start
-I_sceSifSetDmaIntr
+I_sceSifSetDma
+I_sceSifDmaStat
 sifman_IMPORTS_end

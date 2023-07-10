@@ -10,7 +10,6 @@ static int AllocBank(void **pointer);
 static int ReadSectors(int maxcount, void *buffer);
 static int StFillStreamBuffer(void);
 static void StStartFillStreamBuffer(void);
-static int ef;
 
 static unsigned int StmScheduleCb(void *arg)
 {
@@ -103,18 +102,12 @@ static void StStartFillStreamBuffer(void)
 int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
 {
     int OldState;
-    iop_event_t event;
 
     DPRINTF("%s(%lu, %lu, 0x%X)\n", __FUNCTION__, bufmax, bankmax, iop_bufaddr);
 
     //DPRINTF("%s bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", __FUNCTION__, cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
 
     cdvdman_stat.err = SCECdErNO;
-
-    event.attr = EA_SINGLE;
-    event.option = 0;
-    event.bits = 0;
-    ef = CreateEventFlag(&event);
 
     CancelAlarm(&StmScheduleCb, &cdvdman_stat.StreamingData);
 
@@ -152,7 +145,6 @@ static int AllocBank(void **pointer)
     return result;
 }
 
-static void ReadSectorsEE_complete() { iSetEventFlag(ef, 1); }
 static int ReadSectorsEE(int maxcount, void *buffer)
 {
     int OldState, result, dmat_id, dmat_count;
@@ -207,15 +199,15 @@ static int ReadSectorsEE(int maxcount, void *buffer)
     }
 
     if (dmat_count > 0)
-        while ((dmat_id = sceSifSetDmaIntr(dmat, dmat_count, ReadSectorsEE_complete, NULL)) == 0) {
+        while ((dmat_id = sceSifSetDma(dmat, dmat_count)) == 0) {
         };
 
     CpuResumeIntr(OldState);
 
     if (dmat_count > 0) // Only if there is data to copy
     {
-        u32 bits;
-        WaitEventFlag(ef, 1, WEF_OR | WEF_CLEAR, &bits);
+        while (sceSifDmaStat(dmat_id) >= 0) {
+        };
 
         // Finally, update variables.
         CpuSuspendIntr(&OldState);
