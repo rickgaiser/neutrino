@@ -758,9 +758,9 @@ int main(int argc, char *argv[])
     iso_frag->frag_start = 0;
     iso_frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
     iso_frag->size       = iso_size;
-    printf("ISO fragments: start=%d, count=%d\n", iso_frag->frag_start, iso_frag->frag_count);
+    printf("ISO fragments: start=%u, count=%u\n", iso_frag->frag_start, iso_frag->frag_count);
     for (i=0; i<iso_frag->frag_count; i++) {
-        printf("- frag[%d] start=%lld, count=%d\n", i, settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
+        printf("- frag[%d] start=%u, count=%u\n", i, (u32)settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
     }
     if ((iso_frag->frag_start + iso_frag->frag_count) > BDM_MAX_FRAGS) {
         printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
