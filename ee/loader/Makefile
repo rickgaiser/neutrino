@@ -76,6 +76,8 @@ $(EE_BIN_PACKED): $(EE_BIN)
 all: $(EE_BIN_PACKED)
 
 
+GAME = 'DVD/Power Rangers - Super Legends (E).iso'
+
 # NOT WORKING! - stuck while loading, cause: reading out of bounds
 #GAME ='DVD/Jak 3 (E).iso'
 #GAME ='DVD/Prince of Persia Two Thrones (U).iso'
@@ -95,7 +97,7 @@ all: $(EE_BIN_PACKED)
 #GAME ='DVD/Need for Speed Pro Street (E).iso'
 #GAME ='DVD/Ratchet Clank - Going Commando (E).iso'
 #GAME ='DVD/Ratchet Clank - Up Your Arsenal (U).iso'
-GAME = 'CD/Quake III Revolution (E).iso'
+#GAME = 'CD/Quake III Revolution (E).iso'
 
 # Tested, working - MODE2 games
 #GAME ='DVD/Jackie Chan Adventures (E).iso'
