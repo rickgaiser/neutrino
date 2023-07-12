@@ -133,7 +133,6 @@ int New_Reset_Iop(const char *arg, int arglen)
 
     iop_reboot_count++;
 
-#if 1
     // Fast IOP reboot:
     // - 1 IOP reboot to desired state
     SifInitRpc(0);
@@ -151,36 +150,6 @@ int New_Reset_Iop(const char *arg, int arglen)
     }
     if (EnableDebug)
         GS_BGCOLOUR = 0x00FFFF; // Yellow
-#else
-    // Legacy IOP reboot:
-    // - 1 IOP reboot to BIOS state
-    // - 2 IOP reboot to emulated cdrom state
-    // - 3 IOP reboot to emulated cdrom state with game IOPRP (optional)
-    SifInitRpc(0);
-
-    // Reseting IOP.
-    while (!Reset_Iop("", 0)) {
-        ;
-    }
-    while (!SifIopSync()) {
-        ;
-    }
-
-    SifInitRpc(0);
-    SifInitIopHeap();
-    LoadFileInit();
-    sbv_patch_enable_lmb();
-
-    ResetIopSpecial(NULL, 0);
-    if (EnableDebug)
-        GS_BGCOLOUR = 0x00A5FF; // Orange
-
-    if (arglen > 0) {
-        ResetIopSpecial(&arg[10], arglen - 10);
-        if (EnableDebug)
-            GS_BGCOLOUR = 0x00FFFF; // Yellow
-    }
-#endif
 
     DPRINTF("Exiting services...\n");
     SifExitIopHeap();
@@ -194,63 +163,6 @@ int New_Reset_Iop(const char *arg, int arglen)
 
     if (EnableDebug)
         GS_BGCOLOUR = 0x000000; // Black
-
-    return 1;
-}
-
-/*----------------------------------------------------------------------------------------*/
-/* Reset IOP. This function replaces SifIopReset from the PS2SDK                          */
-/*----------------------------------------------------------------------------------------*/
-int Reset_Iop(const char *arg, int mode)
-{
-    static SifCmdResetData_t reset_pkt __attribute__((aligned(64)));
-    struct t_SifDmaTransfer dmat;
-    int arglen;
-
-    _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
-
-    /*    SifStopDma();        For the sake of IGR (Which uses this function), don't disable SIF0 (IOP -> EE)
-                because some games will be still spamming DMA transfers across SIF0 when IGR is invoked.
-                SCE documents that DMA transfers should be stopped before IOP resets, but has neglected
-                to explain the effects of not doing so.
-                So far, it seems like the SIF (at least SIF0) will stop functioning properly.
-
-                2 commits before this one, OPL appears to have worked around this problem by preventing
-                the SIF BOOTEND flag from being set,
-                which allowed SifInitCmd() to run ASAP (Even before the IOP finishes rebooting.
-                That caused SifSetDChain() to be run ASAP, which re-enables SIF0.
-                I don't find that a good workaround because it may result in a timing problem.    */
-
-    for (arglen = 0; arg[arglen] != '\0'; arglen++)
-        reset_pkt.arg[arglen] = arg[arglen];
-
-    reset_pkt.header.psize = sizeof reset_pkt; // dsize is not initialized (and not processed, even on the IOP).
-    reset_pkt.header.cid = SIF_CMD_RESET_CMD;
-    reset_pkt.arglen = arglen;
-    reset_pkt.mode = mode;
-
-    dmat.src = &reset_pkt;
-    dmat.dest = (void *)SifGetReg(SIF_SYSREG_SUBADDR);
-    dmat.size = sizeof(reset_pkt);
-    dmat.attr = SIF_DMA_ERT | SIF_DMA_INT_O;
-    SifWriteBackDCache(&reset_pkt, sizeof(reset_pkt));
-
-    DIntr();
-    ee_kmode_enter();
-    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
-
-    if (!Old_SifSetDma(&dmat, 1)) {
-        ee_kmode_exit();
-        EIntr();
-        return 0;
-    }
-
-    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_SIFINIT);
-    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_CMDINIT);
-    Old_SifSetReg(SIF_SYSREG_RPCINIT, 0);
-    Old_SifSetReg(SIF_SYSREG_SUBADDR, (int)NULL);
-    ee_kmode_exit();
-    EIntr();
 
     return 1;
 }

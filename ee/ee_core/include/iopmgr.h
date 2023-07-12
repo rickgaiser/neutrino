@@ -11,6 +11,5 @@
 #define IOPMGR_H
 
 int New_Reset_Iop(const char *arg, int arglen);
-int Reset_Iop(const char *arg, int flag);
 
 #endif /* IOPMGR */
