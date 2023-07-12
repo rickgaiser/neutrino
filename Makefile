@@ -8,7 +8,7 @@ all:
 	$(MAKE) -C iop/isofs    all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/resetspu all DEBUG=$(DEBUG)
 	$(MAKE) -C ee/ee_core   all
-	$(MAKE) -C ee/loader    all
+	$(MAKE) -C ee/loader    all DEBUG=$(DEBUG)
 
 copy:
 	$(MAKE) -C ee/loader    copy

@@ -601,6 +601,9 @@ int main(int argc, char *argv[])
     iDrivers |= SMF_BDMFS;
     iDrivers |= SMF_FIOX;
     iDrivers |= SMF_ISO;
+#ifdef DEBUG
+    iDrivers |= SMF_D_UDPBD;
+#endif
 
     /*
      * Load drivers before rebooting the IOP
@@ -831,13 +834,15 @@ int main(int argc, char *argv[])
     irxptr += load_file_mod("resetspu.irx", irxptr, irxptr_tab++);
     irxtable->count++;
 
+#ifdef DEBUG
     // For debugging (udptty) and also udpbd
-    //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
-    //irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
-    //irxtable->count++;
-    //settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
-    //irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
-    //irxtable->count++;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+    irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
+    irxtable->count++;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
+    irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
+    irxtable->count++;
+#endif
 
     switch (iMode) {
         case BDM_ATA_MODE:
@@ -856,12 +861,14 @@ int main(int argc, char *argv[])
             irxtable->count++;
             break;
         case BDM_UDP_MODE:
+#ifndef DEBUG
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
             irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
             irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
             irxtable->count++;
+#endif
             break;
         case BDM_M4S_MODE:
             irxptr += load_file_mod("mx4sio_bd_mini.irx", irxptr, irxptr_tab++);
