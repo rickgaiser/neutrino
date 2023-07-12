@@ -81,15 +81,20 @@ enum ECallSource {
 
 typedef struct
 {
+    u32 lba;
+    u32 sectors;
+    void *buf;
+    enum ECallSource source;
+} cdvdman_read_t;
+
+typedef struct
+{
     int err;
     int status;
     struct SteamingData StreamingData;
     int intr_ef;
     int disc_type_reg;
-    u32 cdread_lba;
-    u32 cdread_sectors;
-    void *cdread_buf;
-    enum ECallSource source;
+    cdvdman_read_t req; // Next requested read
 } cdvdman_status_t;
 
 struct dirTocEntry

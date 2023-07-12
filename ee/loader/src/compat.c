@@ -24,11 +24,11 @@ typedef struct
 } gamecompat_t;
 
 static const gamecompat_t default_game_compat[] = {
-    {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures (APEMOD)
-    {"SLES_541.61", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
-    {"SLUS_214.42", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
-    {"SLES_548.35", COMPAT_MODE_2              }, // Power Rangers - Super Legends (IOPRP300) <-- not needed on OPL ?
-    {"SLUS_216.79", COMPAT_MODE_2              }, // Power Rangers - Super Legends (IOPRP300) <-- not needed on OPL ?
+    //{"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures (APEMOD)
+    //{"SLES_541.61", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
+    //{"SLUS_214.42", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
+    //{"SLES_548.35", COMPAT_MODE_2              }, // Power Rangers - Super Legends (IOPRP300) <-- not needed on OPL ?
+    //{"SLUS_216.79", COMPAT_MODE_2              }, // Power Rangers - Super Legends (IOPRP300) <-- not needed on OPL ?
     {NULL, 0},
 };
 

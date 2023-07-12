@@ -100,8 +100,25 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
 
     DPRINTF("Loading extra IOP modules...\n");
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
+    // Skip the first 4 modules
+    // FIXME: magic number!
     for (i = 4; i < irxtable->count; i++) {
-        LoadMemModule(0, irxtable->modules[i].ptr, GET_OPL_MOD_SIZE(irxtable->modules[i].info), 0, NULL);
+        irxptr_t p = irxtable->modules[i];
+        // Modules that emulate the sceCdRead function must operate at a higher
+        // priority than the highest possible game priority.
+        //
+        // If the priority is lower (higher number) then some games will wait in
+        // and endless loop for data, but the waiting thread will then cause the
+        // data to never be processed.
+        //
+        // This causes some games to 'need' MODE2 (sync reads) to work.
+        switch (GET_OPL_MOD_ID(p.info)) {
+            case OPL_MODULE_ID_USBD:
+                LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 11, "thpri=7,8");
+                break;
+            default:
+                LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 0, NULL);
+        }
     }
 }
 

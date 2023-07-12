@@ -160,7 +160,7 @@ struct SModule mod[] = {
     {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},
     {"",        "bdm.irx"              , NULL, 0, SMF_BDMFS    , 0},
     {"",        "bdmfs_fatfs.irx"      , NULL, 0, SMF_BDMFS    , 0},
-    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB    , 0},
+    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB    , OPL_MODULE_ID_USBD},
     {"",        "usbmass_bd_mini.irx"  , NULL, 0, SMF_D_USB    , 0},
     {"",        "mx4sio_bd_mini.irx"   , NULL, 0, SMF_D_MX4SIO , 0},
     {"",        "ps2dev9.irx"          , NULL, 0, SMF_D_ATA|SMF_D_UDPBD, 0},

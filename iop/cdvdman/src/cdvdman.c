@@ -225,10 +225,10 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
 
     sync_flag_locked = 1;
 
-    cdvdman_stat.cdread_lba = lsn;
-    cdvdman_stat.cdread_sectors = sectors;
-    cdvdman_stat.cdread_buf = buf;
-    cdvdman_stat.source = source;
+    cdvdman_stat.req.lba = lsn;
+    cdvdman_stat.req.sectors = sectors;
+    cdvdman_stat.req.buf = buf;
+    cdvdman_stat.req.source = source;
 
     CpuResumeIntr(OldState);
 
@@ -445,17 +445,20 @@ static unsigned int event_alarm_cb(void *args)
 //--------------------------------------------------------------
 static void cdvdman_cdread_Thread(void *args)
 {
+    cdvdman_read_t req;
+
     while (1) {
         WaitSema(cdrom_rthread_sema);
+        memcpy(&req, &cdvdman_stat.req, sizeof(req));
 
-        DPRINTF("%s() [%d, %d, %08x, %d]\n", __FUNCTION__, (int)cdvdman_stat.cdread_lba, (int)cdvdman_stat.cdread_sectors, (int)cdvdman_stat.cdread_buf, (int)cdvdman_stat.source);
+        DPRINTF("%s() [%d, %d, %08x, %d]\n", __FUNCTION__, (int)req.lba, (int)req.sectors, (int)req.buf, (int)req.source);
 
-        cdvdman_read(cdvdman_stat.cdread_lba, cdvdman_stat.cdread_sectors, cdvdman_stat.cdread_buf);
+        cdvdman_read(req.lba, req.sectors, req.buf);
 
         sync_flag_locked = 0;
         SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED);
 
-        switch (cdvdman_stat.source) {
+        switch (req.source) {
             case ECS_EXTERNAL:
                 // Call from external irx (via sceCdRead)
 
@@ -477,6 +480,8 @@ static void cdvdman_cdread_Thread(void *args)
                     Stm0Callback();
                 break;
         }
+
+        DPRINTF("%s() done\n", __FUNCTION__);
     }
 }
 
@@ -490,7 +495,7 @@ static void cdvdman_startThreads(void)
 
     thread_param.thread = &cdvdman_cdread_Thread;
     thread_param.stacksize = 0x1000;
-    thread_param.priority = 0x0f;
+    thread_param.priority = 8;
     thread_param.attr = TH_C;
     thread_param.option = 0xABCD0000;
 
