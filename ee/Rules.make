@@ -58,7 +58,7 @@ EE_SAMPLES := $(EE_SAMPLES:%=$(EE_SAMPLE_DIR)%)
 
 EE_OBJS := $(EE_OBJS:%=$(EE_OBJS_DIR)%)
 
-EE_LINKFILE ?= $(PS2SDKSRC)/ee/startup/src/linkfile
+EE_LINKFILE ?= $(PS2SDK)/ee/startup/linkfile
 
 EE_BIN_MAPFILE ?= $(shell basename $(CURDIR)).map
 
@@ -80,8 +80,6 @@ EE_CXX_COMPILE = $(EE_CXX) $(EE_CXXFLAGS)
 # Command for ensuring the output directory for the rule exists.
 DIR_GUARD = @$(MKDIR) -p $(@D)
 
-PS2SDK_CRT0 = $(PS2SDKSRC)/ee/startup/obj/crt0.o
-
 $(EE_OBJS_DIR)%.o: $(EE_SRC_DIR)%.c
 	$(DIR_GUARD)
 	$(EE_C_COMPILE) $(EE_FATLTOFLAGS) -c $< -o $@
@@ -98,7 +96,7 @@ $(EE_OBJS_DIR)%.o: $(EE_SRC_DIR)%.s
 	$(DIR_GUARD)
 	$(EE_AS) $(EE_ASFLAGS) $< -o $@
 
-$(EE_BIN): $(EE_OBJS) $(EE_LIB_ARCHIVES) $(EE_ADDITIONAL_DEPS) $(PS2SDK_CRT0)
+$(EE_BIN): $(EE_OBJS) $(EE_LIB_ARCHIVES) $(EE_ADDITIONAL_DEPS)
 	$(DIR_GUARD)
 	$(EE_CC) -Wl,-Map,$(EE_BIN_MAPFILE) $(EE_OPTFLAGS) -o $(EE_BIN) $(EE_OBJS) $(EE_LDFLAGS) $(EE_LIB_ARCHIVES) $(EE_LIBS)
 
