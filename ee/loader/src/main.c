@@ -304,7 +304,7 @@ struct SModule *load_module_udnlname(const char *name)
 
 int start_module(struct SModule *mod)
 {
-    int rv;
+    int rv, IRX_ID;
 
     if (mod->pData == NULL) {
         int rv = load_module(mod);
@@ -312,9 +312,9 @@ int start_module(struct SModule *mod)
             return rv;
     }
 
-    rv = SifExecModuleBuffer(mod->pData, mod->iSize, 0, NULL, NULL);
-    if (rv < 0) {
-        printf("ERROR: Could not load %s (%d)\n", mod->sFileName, rv);
+    IRX_ID = SifExecModuleBuffer(mod->pData, mod->iSize, 0, NULL, &rv);
+    if (IRX_ID < 0 || rv == 1) {
+        printf("ERROR: Could not load %s (ID+%d, rv=%d)\n", mod->sFileName, IRX_ID, rv);
         return -1;
     }
 
