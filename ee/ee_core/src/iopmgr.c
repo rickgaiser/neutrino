@@ -114,7 +114,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
         // This causes some games to 'need' MODE2 (sync reads) to work.
         switch (GET_OPL_MOD_ID(p.info)) {
             case OPL_MODULE_ID_USBD:
-                LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 11, "thpri=7,8");
+                LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 10, "thpri=7,8");
                 break;
             default:
                 LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 0, NULL);
