@@ -24,28 +24,9 @@ typedef struct
 } gamecompat_t;
 
 static const gamecompat_t default_game_compat[] = {
-    //{"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures (APEMOD)
-    //{"SLES_541.61", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
-    //{"SLUS_214.42", COMPAT_MODE_2              }, // Super Dragon Ball Z - untested
-    //{"SLES_548.35", COMPAT_MODE_2              }, // Power Rangers - Super Legends (IOPRP300) <-- not needed on OPL ?
-    //{"SLUS_216.79", COMPAT_MODE_2              }, // Power Rangers - Super Legends (IOPRP300) <-- not needed on OPL ?
+    {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures - only needed for USB ?
     {NULL, 0},
 };
-
-/*
-   Games NOT working, even WITH compatibility modes:
-    {"SCES_524.60", COMPAT_MODE_2|COMPAT_MODE_3}, // Jak 3 (IOPRP271)
-    {"SLUS_212.87", COMPAT_MODE_2              }, // Prince of Persia Two Thrones (IOPRP300)
-
-   Games working without compatibility modes:
-    {"SCES_555.73", 0                          }, // MotorStorm Arctic Edge (IOPRP310)
-    {"SLES_550.02", 0                          }, // Need for Speed Pro Street (IOPRP280)
-    {"SCES_516.07", 0                          }, // Ratchet Clank - Going Commando (IOPRP255)
-    {"SCUS_973.53", 0                          }, // Ratchet Clank - Up Your Arsenal (IOPRP300)
-    {"SCUS_971.13", 0                          }, // ICO (CD)
-    {"SLES_549.45", 0                          }, // DragonBall Z Budokai Tenkaichi 3 (IOPRP300)
-    {"SLES_501.26", 0                          }, // Quake III Revolution (CD, IOPRP205)
- */
 
 u32 get_compat(const char *id)
 {
