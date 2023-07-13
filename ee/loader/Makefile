@@ -76,14 +76,28 @@ $(EE_BIN_PACKED): $(EE_BIN)
 all: $(EE_BIN_PACKED)
 
 
-GAME = 'DVD/Power Rangers - Super Legends (E).iso'
+# USB  : BSOD
+# UDPBD: works
+#GAME = 'CD/Super Bust-A-Move (U).iso'
 
-# NOT WORKING! - stuck while loading, cause: reading out of bounds
+# USB  : works only with mode2
+# UDPBD: works
+#GAME = 'DVD/Jackie Chan Adventures (E).iso'
+
+# ALL  : NOT WORKING! - stuck while loading, cause: reading out of bounds
 #GAME ='DVD/Jak 3 (E).iso'
 #GAME ='DVD/Prince of Persia Two Thrones (U).iso'
 
-# NOT WORKING! - random crashes (on OPL too)
+# ALL  : NOT WORKING! - random crashes (on OPL too)
 #GAME = 'DVD/Gun (U).iso'
+
+# ALL  : works
+# This game uses a high priority IOP thread to wait for sceCdRead to complete
+# is a storage device uses a lower priority thread, this will never get executed
+# resulting in the game to freeze.
+# mode2 can 'fix' this, but the proper fix is to make sure sceCdRead executes
+# at a priority <9.
+#GAME = 'DVD/Power Rangers - Super Legends (E).iso'
 
 # Tested, working
 #GAME = 'CD/ICO (U).iso'
@@ -91,16 +105,12 @@ GAME = 'DVD/Power Rangers - Super Legends (E).iso'
 #GAME = 'DVD/PES 2023 (E).iso'
 #GAME = 'DVD/Sonic Unleashed (E).iso'
 #GAME = 'DVD/007 - Agent Under Fire (E).iso'
-
-# Tested, working - MODE2 games working without MODE2 ???
-#GAME ='DVD/MotorStorm Arctic Edge (E).iso'
-#GAME ='DVD/Need for Speed Pro Street (E).iso'
-#GAME ='DVD/Ratchet Clank - Going Commando (E).iso'
-#GAME ='DVD/Ratchet Clank - Up Your Arsenal (U).iso'
+#GAME = 'DVD/MotorStorm Arctic Edge (E).iso'
+#GAME = 'DVD/Need for Speed Pro Street (E).iso'
+#GAME = 'DVD/Ratchet Clank - Going Commando (E).iso'
+#GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'CD/Quake III Revolution (E).iso'
-
-# Tested, working - MODE2 games
-#GAME ='DVD/Jackie Chan Adventures (E).iso'
+GAME = 'DVD/Super Dragon Ball Z (E).iso'
 
 
 run: all copy
