@@ -50,7 +50,9 @@ stdio_IMPORTS_end
 #endif
 
 loadcore_IMPORTS_start
+I_GetLoadcoreInternalData
 I_RegisterLibraryEntries
+I_ReleaseLibraryEntries
 loadcore_IMPORTS_end
 
 sifcmd_IMPORTS_start
@@ -72,6 +74,7 @@ smsutils_IMPORTS_end
 
 thbase_IMPORTS_start
 I_CreateThread
+I_DeleteThread
 I_StartThread
 I_DelayThread
 I_ExitDeleteThread

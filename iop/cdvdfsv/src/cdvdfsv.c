@@ -51,9 +51,39 @@ static int rpc0_thread_id, rpc1_thread_id, rpc2_thread_id, rpc_sd_thread_id;
 extern struct irx_export_table _exp_cdvdfsv;
 
 //-------------------------------------------------------------------------
-int _start(int argc, char *argv[])
+iop_library_t *ioplib_getByName(const char *name)
 {
+    iop_library_t *libptr;
+    int i;
+
+    // Get first loaded library
+    libptr = GetLoadcoreInternalData()->let_next;
+    // Loop through all loaded libraries
+    while (libptr != NULL) {
+        // Compare library name only
+        for (i = 0; i < 8; i++) {
+            if (libptr->name[i] != name[i])
+                break;
+        }
+
+        // Return if match
+        if (i == 8)
+            return libptr;
+
+        // Next library
+        libptr = libptr->prev;
+    }
+
+    return NULL;
+}
+
+//-------------------------------------------------------------------------
+int module_start(int argc, char *argv[])
+{
+    iop_library_t *lib_modload;
     iop_thread_t thread_param;
+
+    DPRINTF("%s\n", __FUNCTION__);
 
     RegisterLibraryEntries(&_exp_cdvdfsv);
 
@@ -65,7 +95,43 @@ int _start(int argc, char *argv[])
 
     StartThread(CreateThread(&thread_param), NULL);
 
+    lib_modload = ioplib_getByName("modload");
+    if (lib_modload != NULL) {
+        DPRINTF("modload 0x%x detected\n", lib_modload->version);
+        // Newer modload versions allow modules to be unloaded
+        // Let modload know we support unloading
+        if (lib_modload->version > 0x102)
+            return MODULE_REMOVABLE_END;
+    } else {
+        DPRINTF("modload not detected!\n");
+    }
+
     return MODULE_RESIDENT_END;
+}
+
+//-------------------------------------------------------------------------
+int module_stop(int argc, char *argv[])
+{
+    DPRINTF("%s\n", __FUNCTION__);
+
+    DeleteThread(rpc_sd_thread_id);
+    DeleteThread(rpc0_thread_id);
+    DeleteThread(rpc2_thread_id);
+    DeleteThread(rpc1_thread_id);
+    ReleaseLibraryEntries(&_exp_cdvdfsv);
+
+    return MODULE_NO_RESIDENT_END;
+}
+
+//-------------------------------------------------------------------------
+int _start(int argc, char *argv[])
+{
+    DPRINTF("%s\n", __FUNCTION__);
+
+    if (argc >= 0)
+        return module_start(argc, argv);
+    else
+        return module_stop(-argc, argv);
 }
 
 //-------------------------------------------------------------------------
