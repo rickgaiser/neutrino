@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
      * Give low level drivers 10s to start
      */
     printf("Loading %s...\n", sFileName);
-    for (i = 0; i < 10000; i++) {
+    for (i = 0; i < 1000; i++) {
         fd = open(sFileName, O_RDONLY);
         if (fd >= 0)
             break;
