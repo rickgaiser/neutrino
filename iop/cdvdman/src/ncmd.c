@@ -54,9 +54,28 @@ static void lba_to_msf(s32 lba, u8 *m, u8 *s, u8 *f)
 }
 
 //-------------------------------------------------------------------------
+typedef struct {
+    u8 addr_ctrl;
+    u8 track_no;
+    u8 index_no;
+    u8 reserved[3];
+    u8 zero;
+    u8 abs_min;
+    u8 abs_sec;
+    u8 abs_frm;
+} __attribute__((packed)) toc_point_t;
+
+typedef struct {
+    toc_point_t a0;
+    toc_point_t a1;
+    toc_point_t a2;
+    toc_point_t track[99];
+    u32 filler;
+} __attribute__((packed)) toc_t;
+
+//-------------------------------------------------------------------------
 static int cdvdman_fill_toc(u8 *tocBuff)
 {
-
     u8 discType = cdvdman_stat.disc_type_reg & 0xFF;
 
     DPRINTF("cdvdman_fill_toc tocBuff=%08x discType=%02X\n", (int)tocBuff, discType);
@@ -68,30 +87,37 @@ static int cdvdman_fill_toc(u8 *tocBuff)
     switch (discType) {
         case 0x12: // SCECdPS2CD
         case 0x13: // SCECdPS2CDDA
-            u8 min;
-            u8 sec;
-            u8 frm;
-            tocBuff[0] = 0x41;
-            tocBuff[1] = 0x00;
+            toc_t *t = (toc_t *)tocBuff;
+            u8 min, sec, frm;
 
             memset(tocBuff, 0, 1024);
 
             // Number of FirstTrack,
             // Always 1 until PS2CCDA support get's added.
-            tocBuff[2] = 0xA0;
-            tocBuff[7] = itob(1);
+            t->a0.addr_ctrl = 0x41; // ???
+            t->a0.track_no = 0x00;
+            t->a0.index_no = 0xA0; // ???
+            t->a0.abs_min = itob(1);
+            t->a0.abs_min = itob(0);
+            t->a0.abs_min = itob(0);
 
             // Number of LastTrack
             // Always 1 until PS2CCDA support get's added.
-            tocBuff[12] = 0xA1;
-            tocBuff[17] = itob(1);
+            t->a1.addr_ctrl = 0x00;
+            t->a1.track_no = 0x00;
+            t->a1.index_no = 0xA1; // ???
+            t->a1.abs_min = itob(1);
+            t->a1.abs_min = itob(0);
+            t->a1.abs_min = itob(0);
 
             // DiskLength
             lba_to_msf(mediaLsnCount, &min, &sec, &frm);
-            tocBuff[22] = 0xA2;
-            tocBuff[27] = itob(min);
-            tocBuff[28] = itob(sec);
-            tocBuff[29] = itob(frm);
+            t->a2.addr_ctrl = 0x00;
+            t->a2.track_no = 0x00;
+            t->a2.index_no = 0xA2; // ???
+            t->a2.abs_min = itob(min);
+            t->a2.abs_sec = itob(sec);
+            t->a2.abs_frm = itob(frm);
 
             // Later when PS2CCDA is added the tracks need to get filled in toc too.
             break;
