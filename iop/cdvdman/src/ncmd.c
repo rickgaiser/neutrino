@@ -78,7 +78,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 {
     u8 discType = cdvdman_stat.disc_type_reg & 0xFF;
 
-    DPRINTF("cdvdman_fill_toc tocBuff=%08x discType=%02X\n", (int)tocBuff, discType);
+    DPRINTF("cdvdman_fill_toc tocBuff=0x%08x discType=0x%02X\n", (int)tocBuff, discType);
 
     if (tocBuff == NULL) {
         return 0;
@@ -94,7 +94,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 
             // Number of FirstTrack,
             // Always 1 until PS2CCDA support get's added.
-            t->a0.addr_ctrl = 0x41; // ???
+            t->a0.addr_ctrl = 0x00;
             t->a0.track_no = 0x00;
             t->a0.index_no = 0xA0; // ???
             t->a0.abs_min = itob(1);
