@@ -18,7 +18,6 @@ EE_IRX_FILES += \
 	bdm_cdvdman.irx \
 	imgdrv.irx \
 	isofs.irx \
-	resetspu.irx \
 	eesync.irx \
 	iomanX.irx \
 	fileXio.irx \
@@ -50,7 +49,6 @@ vpath %.irx ../../iop/cdvdman/irx/
 vpath %.irx ../../iop/smap/irx/
 vpath %.irx ../../iop/imgdrv/irx/
 vpath %.irx ../../iop/isofs/irx/
-vpath %.irx ../../iop/resetspu/irx/
 vpath %.elf ../ee_core/
 vpath %.irx $(PS2SDK)/iop/irx/
 
@@ -143,7 +141,6 @@ copy:
 	cp ../../iop/smap/irx/smap.irx            modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx        modules
 	cp ../../iop/isofs/irx/isofs.irx          modules
-	cp ../../iop/resetspu/irx/resetspu.irx    modules
 	cp ../ee_core/ee_core.elf                 modules
 	cp $(PS2SDK)/iop/irx/eesync.irx           modules
 	cp $(PS2SDK)/iop/irx/iomanX.irx           modules

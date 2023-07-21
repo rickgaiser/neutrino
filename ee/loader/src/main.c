@@ -64,7 +64,6 @@ IRX_COMMON_DEFINE(cdvdfsv);
 IRX_COMMON_DEFINE(bdm_cdvdman);
 IRX_COMMON_DEFINE(imgdrv);
 IRX_COMMON_DEFINE(isofs);
-IRX_COMMON_DEFINE(resetspu);
 IRX_COMMON_DEFINE(eesync);
 IRX_COMMON_DEFINE(iomanX);
 IRX_COMMON_DEFINE(fileXio);
@@ -94,7 +93,6 @@ OPL Module Storage Memory Map:
     - cdvdfsv.irx
     - eesync.irx
     imgdrv.irx
-    resetspu.irx
     <extra modules>
 */
 
@@ -151,7 +149,6 @@ struct SModule mod[] = {
     {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , 0},
     {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , 0},
     {"",        "imgdrv.irx"           , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
-    {"",        "resetspu.irx"         , NULL, 0, SMF_IOPCORE  , 0},
     {"",        "iomanX.irx"           , NULL, 0, SMF_FIOX     , 0},
     {"",        "fileXio.irx"          , NULL, 0, SMF_FIOX     , 0},
     {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},
@@ -184,21 +181,20 @@ void mod_init()
     INIT_MOD( 1, cdvdfsv);
     INIT_MOD( 2, eesync);
     INIT_MOD( 3, imgdrv);
-    INIT_MOD( 4, resetspu);
-    INIT_MOD( 5, iomanX);
-    INIT_MOD( 6, fileXio);
-    INIT_MOD( 7, isofs);
-    INIT_MOD( 8, bdm);
-    INIT_MOD( 9, bdmfs_fatfs);
-    INIT_MOD(10, usbd_mini);
-    INIT_MOD(11, usbmass_bd_mini);
-    INIT_MOD(12, mx4sio_bd_mini);
-    INIT_MOD(13, ps2dev9);
-    INIT_MOD(14, ata_bd);
-    INIT_MOD(15, smap);
-    INIT_MOD(16, iLinkman);
-    INIT_MOD(17, IEEE1394_bd_mini);
-    INIT_ELF(18, ee_core);
+    INIT_MOD( 4, iomanX);
+    INIT_MOD( 5, fileXio);
+    INIT_MOD( 6, isofs);
+    INIT_MOD( 7, bdm);
+    INIT_MOD( 8, bdmfs_fatfs);
+    INIT_MOD( 9, usbd_mini);
+    INIT_MOD(10, usbmass_bd_mini);
+    INIT_MOD(11, mx4sio_bd_mini);
+    INIT_MOD(12, ps2dev9);
+    INIT_MOD(13, ata_bd);
+    INIT_MOD(14, smap);
+    INIT_MOD(15, iLinkman);
+    INIT_MOD(16, IEEE1394_bd_mini);
+    INIT_ELF(17, ee_core);
 }
 
 #define MAX_FILENAME 128
@@ -820,8 +816,6 @@ int main(int argc, char *argv[])
     // Load other modules into place
     //
     irxptr += load_file_mod("imgdrv.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
-    irxptr += load_file_mod("resetspu.irx", irxptr, irxptr_tab++);
     irxtable->count++;
 
 #ifdef DEBUG

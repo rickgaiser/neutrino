@@ -6,7 +6,6 @@ all:
 	$(MAKE) -C iop/smap     all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/imgdrv   all DEBUG=$(DEBUG)
 	$(MAKE) -C iop/isofs    all DEBUG=$(DEBUG)
-	$(MAKE) -C iop/resetspu all DEBUG=$(DEBUG)
 	$(MAKE) -C ee/ee_core   all
 	$(MAKE) -C ee/loader    all DEBUG=$(DEBUG)
 
@@ -22,7 +21,6 @@ clean:
 	$(MAKE) -C iop/smap      clean
 	$(MAKE) -C iop/imgdrv    clean
 	$(MAKE) -C iop/isofs     clean
-	$(MAKE) -C iop/resetspu  clean
 	$(MAKE) -C ee/ee_core    clean
 	$(MAKE) -C ee/loader     clean
 

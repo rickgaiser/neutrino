@@ -100,9 +100,9 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
 
     DPRINTF("Loading extra IOP modules...\n");
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
-    // Skip the first 3 modules: IOPRP.IMG, imgdrv.irx and resetspu.irx
+    // Skip the first 2 modules: IOPRP.IMG and imgdrv.irx
     // FIXME: magic number!
-    for (i = 3; i < irxtable->count; i++) {
+    for (i = 2; i < irxtable->count; i++) {
         irxptr_t p = irxtable->modules[i];
         // Modules that emulate the sceCdRead function must operate at a higher
         // priority than the highest possible game priority.
