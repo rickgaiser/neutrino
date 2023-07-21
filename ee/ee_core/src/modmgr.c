@@ -48,9 +48,9 @@ void LoadFileExit()
 
 
 /*----------------------------------------------------------------------------------------*/
-/* Load an irx module from path with waiting.                                             */
+/* Load an irx module from path.                                                          */
 /*----------------------------------------------------------------------------------------*/
-int LoadModule(const char *path, int arg_len, const char *args)
+int LoadModule(const char *path, int mode, int arg_len, const char *args)
 {
     struct _lf_module_load_arg arg;
 
@@ -68,14 +68,14 @@ int LoadModule(const char *path, int arg_len, const char *args)
     } else
         arg.p.arg_len = 0;
 
-    if (SifCallRpc(&_lf_cd, LF_F_MOD_LOAD, 0x0, &arg, sizeof(arg), &arg, 8, NULL, NULL) < 0)
+    if (SifCallRpc(&_lf_cd, LF_F_MOD_LOAD, mode, &arg, sizeof(arg), &arg, 8, NULL, NULL) < 0)
         return -SCE_ECALLMISS;
 
     return arg.p.result;
 }
 
 /*----------------------------------------------------------------------------------------*/
-/* Load an irx module from path without waiting.                                          */
+/* Load an irx module from path.                                                          */
 /*----------------------------------------------------------------------------------------*/
 int LoadMemModule(int mode, void *modptr, unsigned int modsize, int arg_len, const char *args)
 {

@@ -66,7 +66,6 @@ IRX_COMMON_DEFINE(imgdrv);
 IRX_COMMON_DEFINE(isofs);
 IRX_COMMON_DEFINE(resetspu);
 IRX_COMMON_DEFINE(eesync);
-IRX_COMMON_DEFINE(udnl);
 IRX_COMMON_DEFINE(iomanX);
 IRX_COMMON_DEFINE(fileXio);
 IRX_COMMON_DEFINE(bdm);
@@ -90,7 +89,6 @@ ELF_DEFINE(ee_core);
 OPL Module Storage Memory Map:
     struct irxtab_t;
     struct irxptr_tab[modcount];
-    udnl.irx
     IOPRP.img, containing:
     - cdvdman.irx
     - cdvdfsv.irx
@@ -149,7 +147,6 @@ struct SModule
 #define SMF_D_ILINK  (1 << 14)
 // clang-format off
 struct SModule mod[] = {
-    {"",        "udnl.irx"             , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_UDNL},
     {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, SMF_IOPCORE  , 0},
     {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , 0},
     {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , 0},
@@ -183,26 +180,25 @@ struct SModule mod[] = {
 
 void mod_init()
 {
-    INIT_MOD( 0, udnl);
-    INIT_MOD( 1, bdm_cdvdman);
-    INIT_MOD( 2, cdvdfsv);
-    INIT_MOD( 3, eesync);
-    INIT_MOD( 4, imgdrv);
-    INIT_MOD( 5, resetspu);
-    INIT_MOD( 6, iomanX);
-    INIT_MOD( 7, fileXio);
-    INIT_MOD( 8, isofs);
-    INIT_MOD( 9, bdm);
-    INIT_MOD(10, bdmfs_fatfs);
-    INIT_MOD(11, usbd_mini);
-    INIT_MOD(12, usbmass_bd_mini);
-    INIT_MOD(13, mx4sio_bd_mini);
-    INIT_MOD(14, ps2dev9);
-    INIT_MOD(15, ata_bd);
-    INIT_MOD(16, smap);
-    INIT_MOD(17, iLinkman);
-    INIT_MOD(18, IEEE1394_bd_mini);
-    INIT_ELF(19, ee_core);
+    INIT_MOD( 0, bdm_cdvdman);
+    INIT_MOD( 1, cdvdfsv);
+    INIT_MOD( 2, eesync);
+    INIT_MOD( 3, imgdrv);
+    INIT_MOD( 4, resetspu);
+    INIT_MOD( 5, iomanX);
+    INIT_MOD( 6, fileXio);
+    INIT_MOD( 7, isofs);
+    INIT_MOD( 8, bdm);
+    INIT_MOD( 9, bdmfs_fatfs);
+    INIT_MOD(10, usbd_mini);
+    INIT_MOD(11, usbmass_bd_mini);
+    INIT_MOD(12, mx4sio_bd_mini);
+    INIT_MOD(13, ps2dev9);
+    INIT_MOD(14, ata_bd);
+    INIT_MOD(15, smap);
+    INIT_MOD(16, iLinkman);
+    INIT_MOD(17, IEEE1394_bd_mini);
+    INIT_ELF(18, ee_core);
 }
 
 #define MAX_FILENAME 128
@@ -805,12 +801,6 @@ int main(int argc, char *argv[])
 
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
-
-    //
-    // Load udnl.irx first
-    //
-    irxptr += load_file_mod("udnl.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
 
     //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC

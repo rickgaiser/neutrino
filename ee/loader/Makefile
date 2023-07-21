@@ -20,7 +20,6 @@ EE_IRX_FILES += \
 	isofs.irx \
 	resetspu.irx \
 	eesync.irx \
-	udnl.irx \
 	iomanX.irx \
 	fileXio.irx \
 	bdm.irx \
@@ -147,7 +146,6 @@ copy:
 	cp ../../iop/resetspu/irx/resetspu.irx    modules
 	cp ../ee_core/ee_core.elf                 modules
 	cp $(PS2SDK)/iop/irx/eesync.irx           modules
-	cp $(PS2SDK)/iop/irx/udnl.irx             modules
 	cp $(PS2SDK)/iop/irx/iomanX.irx           modules
 	cp $(PS2SDK)/iop/irx/fileXio.irx          modules
 	cp $(PS2SDK)/iop/irx/bdm.irx              modules
