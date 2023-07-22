@@ -146,16 +146,16 @@ struct SModule
 #define SMF_D_ILINK  (1 << 14)
 // clang-format off
 struct SModule mod[] = {
-    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, SMF_IOPCORE  , 0},
-    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , 0},
-    {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , 0},
-    {"",        "imgdrv.irx"           , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
+    {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, SMF_IOPCORE  , EECORE_MODULE_ID_CDVDMAN},
+    {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , EECORE_MODULE_ID_CDVDFSV},
+    {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , EECORE_MODULE_ID_EESYNC},
+    {"",        "imgdrv.irx"           , NULL, 0, SMF_IOPCORE  , EECORE_MODULE_ID_IMGDRV},
     {"",        "iomanX.irx"           , NULL, 0, SMF_FIOX     , 0},
     {"",        "fileXio.irx"          , NULL, 0, SMF_FIOX     , 0},
     {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},
     {"",        "bdm.irx"              , NULL, 0, SMF_BDMFS    , 0},
     {"",        "bdmfs_fatfs.irx"      , NULL, 0, SMF_BDMFS    , 0},
-    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB    , OPL_MODULE_ID_USBD},
+    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB    , EECORE_MODULE_ID_USBD},
     {"",        "usbmass_bd_mini.irx"  , NULL, 0, SMF_D_USB    , 0},
     {"",        "mx4sio_bd_mini.irx"   , NULL, 0, SMF_D_MX4SIO , 0},
     {"",        "ps2dev9.irx"          , NULL, 0, SMF_D_ATA|SMF_D_UDPBD, 0},
@@ -817,7 +817,7 @@ int main(int argc, char *argv[])
     unsigned int ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
     //printf("IOPRP.img (new):\n");
     //print_romdir((struct romdir_entry *)irxptr);
-    irxptr_tab->info = ioprp_size | SET_OPL_MOD_ID(OPL_MODULE_ID_IOPRP);
+    irxptr_tab->info = ioprp_size | SET_OPL_MOD_ID(EECORE_MODULE_ID_IOPRP);
     irxptr_tab->ptr = irxptr;
     irxptr_tab++;
     irxptr += ioprp_size;
