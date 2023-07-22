@@ -44,8 +44,8 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
 //        CommandLen = 18;
     }
 
-    GetOPLModInfo(OPL_MODULE_ID_IOPRP, &IOPRP_img, &size_IOPRP_img);
-    GetOPLModInfo(OPL_MODULE_ID_IMGDRV, &imgdrv_irx, &size_imgdrv_irx);
+    GetOPLModInfo(EECORE_MODULE_ID_IOPRP, &IOPRP_img, &size_IOPRP_img);
+    GetOPLModInfo(EECORE_MODULE_ID_IMGDRV, &imgdrv_irx, &size_imgdrv_irx);
 
     length_rounded = (size_IOPRP_img + 0xF) & ~0xF;
     pIOP_buffer = SifAllocIopHeap(length_rounded);
@@ -113,7 +113,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
         //
         // This causes some games to 'need' MODE2 (sync reads) to work.
         switch (GET_OPL_MOD_ID(p.info)) {
-            case OPL_MODULE_ID_USBD:
+            case EECORE_MODULE_ID_USBD:
                 LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 10, "thpri=7,8");
                 break;
             default:

@@ -503,7 +503,7 @@ static int SOS_SifLoadModuleHook(const char *path, int arg_len, const char *args
     ret = _pSifLoadModule(path, arg_len, args, modres, fno);
 
     if ((ret >= 0) && (_strcmp(path, "cdrom0:\\IOP\\IREMSND.IRX;1") == 0)) {
-        GetOPLModInfo(OPL_MODULE_ID_IOP_PATCH, &iremsndpatch_irx, &iremsndpatch_irx_size);
+        GetOPLModInfo(EECORE_MODULE_ID_IOP_PATCH, &iremsndpatch_irx, &iremsndpatch_irx_size);
 
         iopmem = pSifAllocIopHeap(iremsndpatch_irx_size);
         if (iopmem != NULL) {
@@ -626,7 +626,7 @@ static int UltProPinball_SifLoadModuleHook(const char *path, int arg_len, const 
     if (_strcmp(path, "cdrom0:\\APEMOD.IRX;1") != 0)
         ret = pSifLoadModule(path, arg_len, args);
     else {
-        GetOPLModInfo(OPL_MODULE_ID_IOP_PATCH, &apemodpatch_irx, &apemodpatch_irx_size);
+        GetOPLModInfo(EECORE_MODULE_ID_IOP_PATCH, &apemodpatch_irx, &apemodpatch_irx_size);
 
         iopmem = pSifAllocIopHeap(apemodpatch_irx_size);
         if (iopmem != NULL) {
@@ -788,7 +788,7 @@ static int ShadowMan2_SifLoadModuleHook(const char *path, int arg_len, const cha
             asm volatile("break\n");
     }
 
-    GetOPLModInfo(OPL_MODULE_ID_IOP_PATCH, &f2techioppatch_irx, &f2techioppatch_irx_size);
+    GetOPLModInfo(EECORE_MODULE_ID_IOP_PATCH, &f2techioppatch_irx, &f2techioppatch_irx_size);
 
     iopmem = pSifAllocIopHeap(f2techioppatch_irx_size);
     if (iopmem != NULL) {
