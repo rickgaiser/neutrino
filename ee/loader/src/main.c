@@ -761,6 +761,10 @@ int main(int argc, char *argv[])
         printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
         return -1;
     }
+    settings->drvName = (u32)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+    fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &settings->devNr, 4);
+    char *drvName = (char *)&settings->drvName;
+    printf("Using BDM device: %s%d\n", drvName, settings->devNr);
     close(fd);
 
     //

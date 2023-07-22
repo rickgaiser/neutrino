@@ -46,6 +46,9 @@ struct cdvdman_settings_bdm
 {
     struct cdvdman_settings_common common;
 
+    u32 drvName; /// Driver name: usb, ata, sdc, etc...
+    u32 devNr;   /// Device number: 0, 1, 2, etc...
+
     // Fragmented files:
     // 0 = ISO
     struct cdvdman_fragfile fragfile[BDM_MAX_FILES];
