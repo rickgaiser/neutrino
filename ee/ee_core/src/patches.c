@@ -866,6 +866,10 @@ static void HarvestMoonAWLPatch(int region)
 void apply_patches(const char *path)
 {
     const patchlist_t *p;
+    // Some patches hack into specific ELF files
+    // make sure the filename and gameid match for those patches
+    // This prevents games with multiple ELF's from being corrupted by the patch
+    int file_eq_gameid = !_strncmp(&path[8], GameID, 11); // starting after 'cdrom0:\'
 
     // if there are patches matching game name/mode then fill the patch table
     for (p = patch_list; p->game; p++) {
@@ -878,22 +882,28 @@ void apply_patches(const char *path)
                     AC9B_generic_patches();
                     break;
                 case PATCH_GENERIC_SLOW_READS:
-                    generic_delayed_cdRead_patches(p->patch.check, p->patch.val); // slow reads generic patch
+                    if (file_eq_gameid)
+                        generic_delayed_cdRead_patches(p->patch.check, p->patch.val); // slow reads generic patch
                     break;
                 case PATCH_SDF_MACROSS:
-                    SDF_Macross_patch();
+                    if (file_eq_gameid)
+                        SDF_Macross_patch();
                     break;
                 case PATCH_GENERIC_CAPCOM:
-                    generic_capcom_protection_patches(p->patch.val); // Capcom anti cdvd emulator protection patch
+                    if (file_eq_gameid)
+                        generic_capcom_protection_patches(p->patch.val); // Capcom anti cdvd emulator protection patch
                     break;
                 case PATCH_SRW_IMPACT:
-                    SRWI_IMPACT_patches();
+                    if (file_eq_gameid)
+                        SRWI_IMPACT_patches();
                     break;
                 case PATCH_RNC_UYA:
-                    RnC3_UYA_patches((unsigned int *)p->patch.val);
+                    if (file_eq_gameid)
+                        RnC3_UYA_patches((unsigned int *)p->patch.val);
                     break;
                 case PATCH_ZOMBIE_ZONE:
-                    ZombieZone_patches(p->patch.val);
+                    if (file_eq_gameid)
+                        ZombieZone_patches(p->patch.val);
                     break;
                 case PATCH_DOT_HACK:
                     DotHack_patches(path);
@@ -904,7 +914,8 @@ void apply_patches(const char *path)
 #endif
                     break;
                 case PATCH_VIRTUA_QUEST:
-                    VirtuaQuest_patches();
+                    if (file_eq_gameid)
+                        VirtuaQuest_patches();
                     break;
                 case PATCH_ULT_PRO_PINBALL:
 #ifdef APEMOD_PATCH
@@ -912,7 +923,8 @@ void apply_patches(const char *path)
 #endif
                     break;
                 case PATCH_EUTECHNYX_WU_TID:
-                    EutechnyxWakeupTIDPatch(p->patch.val);
+                    if (file_eq_gameid)
+                        EutechnyxWakeupTIDPatch(p->patch.val);
                     break;
                 case PATCH_PRO_SNOWBOARDER:
                     ProSnowboarderPatch();
