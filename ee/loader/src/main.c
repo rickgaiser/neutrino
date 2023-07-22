@@ -108,6 +108,7 @@ void print_usage()
     printf("Options:\n");
     printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio(sdc), udpbd(udp) and ilink(sd)\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
+    printf("  -elf=<file>       Select elf file inside iso to boot\n");
     printf("  -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
     printf("  -gc=<compat>      Game compatibility modes, supperted are:\n");
     printf("                    - 0: Disable builtin compat flags\n");
@@ -485,7 +486,8 @@ int main(int argc, char *argv[])
     printf("----------------------------\n");
 
     const char *sDriver = NULL;
-    const char *sFileName = NULL;
+    const char *sFileNameISO = NULL;
+    const char *sFileNameELF = NULL;
     const char *sIP = NULL;
     const char *sMediaType = NULL;
     const char *sCompat = NULL;
@@ -499,7 +501,9 @@ int main(int argc, char *argv[])
         if (!strncmp(argv[i], "-drv=", 5))
             sDriver = &argv[i][5];
         else if (!strncmp(argv[i], "-iso=", 5))
-            sFileName = &argv[i][5];
+            sFileNameISO = &argv[i][5];
+        else if (!strncmp(argv[i], "-elf=", 5))
+            sFileNameELF = &argv[i][5];
         else if (!strncmp(argv[i], "-ip=", 4))
             sIP = &argv[i][4];
         else if (!strncmp(argv[i], "-mt=", 4))
@@ -631,9 +635,9 @@ int main(int argc, char *argv[])
      * Check if file exists
      * Give low level drivers 10s to start
      */
-    printf("Loading %s...\n", sFileName);
+    printf("Loading %s...\n", sFileNameISO);
     for (i = 0; i < 1000; i++) {
-        fd = open(sFileName, O_RDONLY);
+        fd = open(sFileNameISO, O_RDONLY);
         if (fd >= 0)
             break;
 
@@ -641,7 +645,7 @@ int main(int argc, char *argv[])
         nopdelay();
     }
     if (fd < 0) {
-        printf("Unable to open %s\n", sFileName);
+        printf("Unable to open %s\n", sFileNameISO);
         return -1;
     }
     // Get ISO file size
@@ -680,11 +684,11 @@ int main(int argc, char *argv[])
     printf("- media = %s\n", eMediaType == SCECdPS2DVD ? "DVD" : "CD");
 
     /*
-     * Mount as ISO so we can get some information
+     * Mount as ISO so we can get ELF name to boot
      */
-    int fd_isomount = fileXioMount("iso:", sFileName, FIO_MT_RDONLY);
+    int fd_isomount = fileXioMount("iso:", sFileNameISO, FIO_MT_RDONLY);
     if (fd_isomount < 0) {
-        printf("ERROR: Unable to mount %s as iso\n", sFileName);
+        printf("ERROR: Unable to mount %s as iso\n", sFileNameISO);
         return -1;
     }
     int fd_config = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
@@ -705,6 +709,9 @@ int main(int argc, char *argv[])
     printf("config name: %s\n", sGameID);
     close(fd_config);
     fileXioUmount("iso:");
+
+    if (sFileNameELF == NULL)
+        sFileNameELF = sGameID;
 
     ResetDeckardXParams();
     ApplyDeckardXParam(sGameID);
@@ -902,7 +909,8 @@ int main(int argc, char *argv[])
     eecc_setGameMode(&eeconf, iMode);
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
-    eecc_setFileName(&eeconf, sGameID);
+    eecc_setGameID(&eeconf, sGameID);
+    eecc_setFileName(&eeconf, sFileNameELF);
     eecc_setCompatFlags(&eeconf, iCompat);
     eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
     printf("Starting ee_core with following arguments:\n");
