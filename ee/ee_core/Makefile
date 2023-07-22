@@ -14,7 +14,7 @@ EE_SRC_DIR = src/
 EE_OBJS_DIR = obj/
 
 EE_OBJS = main.o syshook.o iopmgr.o modmgr.o util.o patches.o patches_asm.o \
-	  tlb.o asm.o crt0.o
+	  asm.o crt0.o
 MAPFILE = ee_core.map
 
 EE_INCS := -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -Iinclude -I.
