@@ -33,13 +33,13 @@ Options:\n");
   -iso=<file>       Select iso file (full path!)
   -elf=<file>       Select elf file inside iso to boot
   -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB
-  -gc=<compat>      Game compatibility modes, supperted are:
+  -gc=<compat>      Game compatibility modes, supported are:
                     - 0: Disable builtin compat flags
                     - 1: IOP: Accurate reads (sceCdRead)
                     - 2: IOP: Sync reads (sceCdRead)
                     - 3: EE : Unhook syscalls
                     - 5: IOP: Emulate DVD-DL
-                    Multiple options possible, for example -cp=26
+                    Multiple options possible, for example -gc=23
   -ip=<ip>          Set IP adres for udpbd, default: 192.168.1.10
   -nR               No reboot before loading the iso (faster)
   -eC               Enable eecore debug colors

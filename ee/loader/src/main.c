@@ -110,13 +110,13 @@ void print_usage()
     printf("  -iso=<file>       Select iso file (full path!)\n");
     printf("  -elf=<file>       Select elf file inside iso to boot\n");
     printf("  -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
-    printf("  -gc=<compat>      Game compatibility modes, supperted are:\n");
+    printf("  -gc=<compat>      Game compatibility modes, supported are:\n");
     printf("                    - 0: Disable builtin compat flags\n");
     printf("                    - 1: IOP: Accurate reads (sceCdRead)\n");
     printf("                    - 2: IOP: Sync reads (sceCdRead)\n");
     printf("                    - 3: EE : Unhook syscalls\n");
     printf("                    - 5: IOP: Emulate DVD-DL\n");
-    printf("                    Multiple options possible, for example -cp=26\n");
+    printf("                    Multiple options possible, for example -gc=23\n");
     printf("  -ip=<ip>          Set IP adres for udpbd, default: 192.168.1.10\n");
     printf("  -nR               No reboot before loading the iso (faster)\n");
     printf("  -eC               Enable eecore debug colors\n");
@@ -484,6 +484,12 @@ int main(int argc, char *argv[])
     printf("- Neutrino PS2 Game Loader -\n");
     printf("-       By Maximus32       -\n");
     printf("----------------------------\n");
+
+    if (argc < 2) {
+        printf("ERROR: no arguments provided\n");
+        print_usage();
+        return -1;
+    }
 
     const char *sDriver = NULL;
     const char *sFileNameISO = NULL;
