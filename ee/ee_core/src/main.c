@@ -11,6 +11,7 @@
 #include "modmgr.h"
 #include "util.h"
 #include "syshook.h"
+#include "cheat_api.h"
 
 void *ModStorageStart, *ModStorageEnd;
 void *eeloadCopy, *initUserMemory;
@@ -22,6 +23,7 @@ u32 g_compat_mask = 0;
 char GameID[16];
 int GameMode;
 int EnableDebug = 0;
+int *gCheatList = NULL; // Store hooks/codes addr+val pairs
 
 // This function is defined as weak in ps2sdkc, so how
 // we are not using time zone, so we can safe some KB
@@ -62,6 +64,11 @@ static void set_args_mod(char *arg)
     ModStorageEnd = (void *)_strtoui(_strtok(NULL, " "));
 }
 
+static void set_args_cheat(char *arg)
+{
+    gCheatList = (void *)_strtoui(_strtok(arg, " "));
+}
+
 static void set_args_gameid(const char *arg)
 {
     strncpy(GameID, arg, sizeof(GameID) - 1);
@@ -89,6 +96,8 @@ static int eecoreInit(int argc, char **argv)
             set_args_drv(&argv[i][5]);
         if (!_strncmp(argv[i], "-v=", 3))
             set_args_v(&argv[i][3]);
+        if (!_strncmp(argv[i], "-ec=", 4))
+            set_args_cheat(&argv[i][4]);
         if (!_strncmp(argv[i], "-kernel=", 8))
             set_args_kernel(&argv[i][8]);
         if (!_strncmp(argv[i], "-mod=", 5))
@@ -101,6 +110,10 @@ static int eecoreInit(int argc, char **argv)
             break;
     }
     i++;
+
+    // Enable cheat engine
+    if (gCheatList != NULL)
+        EnableCheats();
 
     /* installing kernel hooks */
     DPRINTF("Installing Kernel Hooks...\n");

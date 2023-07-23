@@ -13,8 +13,10 @@ EE_BIN = ee_core.elf
 EE_SRC_DIR = src/
 EE_OBJS_DIR = obj/
 
+CHEATCORE_EE_OBJS = cheat_engine.o cheat_api.o
+
 EE_OBJS = main.o syshook.o iopmgr.o modmgr.o util.o patches.o patches_asm.o \
-	  asm.o crt0.o
+	  asm.o crt0.o $(CHEATCORE_EE_OBJS)
 MAPFILE = ee_core.map
 
 EE_INCS := -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -Iinclude -I.
