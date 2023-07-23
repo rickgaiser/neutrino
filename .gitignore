@@ -7,8 +7,11 @@
 obj/
 obj.*/
 
-.vscode/
 ee/loader/irx/
 iop/patches/
 iop/fileio/
 releases/
+
+.*
+!.clang-format
+!.github
