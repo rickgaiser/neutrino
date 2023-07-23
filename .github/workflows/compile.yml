@@ -7,13 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ps2dev/ps2dev:latest
+    container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install dependencies
-        run: |
-          apk add build-base git p7zip
 
       - name: Compile
         run: |
