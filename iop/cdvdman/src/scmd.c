@@ -28,7 +28,7 @@ int sceCdReadClock(sceCdCLOCK *rtc)
 //-------------------------------------------------------------------------
 int sceCdGetDiskType(void)
 {
-    DPRINTF("%s() = %d\n", __FUNCTION__, cdvdman_stat.disc_type_reg);
+    DPRINTF("%s() = 0x%02X\n", __FUNCTION__, cdvdman_stat.disc_type_reg);
 
     return cdvdman_stat.disc_type_reg;
 }

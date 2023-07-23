@@ -64,9 +64,7 @@ IRX_COMMON_DEFINE(cdvdfsv);
 IRX_COMMON_DEFINE(bdm_cdvdman);
 IRX_COMMON_DEFINE(imgdrv);
 IRX_COMMON_DEFINE(isofs);
-IRX_COMMON_DEFINE(resetspu);
 IRX_COMMON_DEFINE(eesync);
-IRX_COMMON_DEFINE(udnl);
 IRX_COMMON_DEFINE(iomanX);
 IRX_COMMON_DEFINE(fileXio);
 IRX_COMMON_DEFINE(bdm);
@@ -90,13 +88,11 @@ ELF_DEFINE(ee_core);
 OPL Module Storage Memory Map:
     struct irxtab_t;
     struct irxptr_tab[modcount];
-    udnl.irx
     IOPRP.img, containing:
     - cdvdman.irx
     - cdvdfsv.irx
     - eesync.irx
     imgdrv.irx
-    resetspu.irx
     <extra modules>
 */
 
@@ -112,6 +108,7 @@ void print_usage()
     printf("Options:\n");
     printf("  -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio(sdc), udpbd(udp) and ilink(sd)\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
+    printf("  -elf=<file>       Select elf file inside iso to boot\n");
     printf("  -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
     printf("  -gc=<compat>      Game compatibility modes, supperted are:\n");
     printf("                    - 0: Disable builtin compat flags\n");
@@ -149,12 +146,10 @@ struct SModule
 #define SMF_D_ILINK  (1 << 14)
 // clang-format off
 struct SModule mod[] = {
-    {"",        "udnl.irx"             , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_UDNL},
     {"CDVDMAN", "bdm_cdvdman.irx"      , NULL, 0, SMF_IOPCORE  , 0},
     {"CDVDFSV", "cdvdfsv.irx"          , NULL, 0, SMF_IOPCORE  , 0},
     {"EESYNC",  "eesync.irx"           , NULL, 0, SMF_IOPCORE  , 0},
     {"",        "imgdrv.irx"           , NULL, 0, SMF_IOPCORE  , OPL_MODULE_ID_IMGDRV},
-    {"",        "resetspu.irx"         , NULL, 0, SMF_IOPCORE  , 0},
     {"",        "iomanX.irx"           , NULL, 0, SMF_FIOX     , 0},
     {"",        "fileXio.irx"          , NULL, 0, SMF_FIOX     , 0},
     {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},
@@ -183,26 +178,24 @@ struct SModule mod[] = {
 
 void mod_init()
 {
-    INIT_MOD( 0, udnl);
-    INIT_MOD( 1, bdm_cdvdman);
-    INIT_MOD( 2, cdvdfsv);
-    INIT_MOD( 3, eesync);
-    INIT_MOD( 4, imgdrv);
-    INIT_MOD( 5, resetspu);
-    INIT_MOD( 6, iomanX);
-    INIT_MOD( 7, fileXio);
-    INIT_MOD( 8, isofs);
-    INIT_MOD( 9, bdm);
-    INIT_MOD(10, bdmfs_fatfs);
-    INIT_MOD(11, usbd_mini);
-    INIT_MOD(12, usbmass_bd_mini);
-    INIT_MOD(13, mx4sio_bd_mini);
-    INIT_MOD(14, ps2dev9);
-    INIT_MOD(15, ata_bd);
-    INIT_MOD(16, smap);
-    INIT_MOD(17, iLinkman);
-    INIT_MOD(18, IEEE1394_bd_mini);
-    INIT_ELF(19, ee_core);
+    INIT_MOD( 0, bdm_cdvdman);
+    INIT_MOD( 1, cdvdfsv);
+    INIT_MOD( 2, eesync);
+    INIT_MOD( 3, imgdrv);
+    INIT_MOD( 4, iomanX);
+    INIT_MOD( 5, fileXio);
+    INIT_MOD( 6, isofs);
+    INIT_MOD( 7, bdm);
+    INIT_MOD( 8, bdmfs_fatfs);
+    INIT_MOD( 9, usbd_mini);
+    INIT_MOD(10, usbmass_bd_mini);
+    INIT_MOD(11, mx4sio_bd_mini);
+    INIT_MOD(12, ps2dev9);
+    INIT_MOD(13, ata_bd);
+    INIT_MOD(14, smap);
+    INIT_MOD(15, iLinkman);
+    INIT_MOD(16, IEEE1394_bd_mini);
+    INIT_ELF(17, ee_core);
 }
 
 #define MAX_FILENAME 128
@@ -493,7 +486,8 @@ int main(int argc, char *argv[])
     printf("----------------------------\n");
 
     const char *sDriver = NULL;
-    const char *sFileName = NULL;
+    const char *sFileNameISO = NULL;
+    const char *sFileNameELF = NULL;
     const char *sIP = NULL;
     const char *sMediaType = NULL;
     const char *sCompat = NULL;
@@ -507,7 +501,9 @@ int main(int argc, char *argv[])
         if (!strncmp(argv[i], "-drv=", 5))
             sDriver = &argv[i][5];
         else if (!strncmp(argv[i], "-iso=", 5))
-            sFileName = &argv[i][5];
+            sFileNameISO = &argv[i][5];
+        else if (!strncmp(argv[i], "-elf=", 5))
+            sFileNameELF = &argv[i][5];
         else if (!strncmp(argv[i], "-ip=", 4))
             sIP = &argv[i][4];
         else if (!strncmp(argv[i], "-mt=", 4))
@@ -639,9 +635,9 @@ int main(int argc, char *argv[])
      * Check if file exists
      * Give low level drivers 10s to start
      */
-    printf("Loading %s...\n", sFileName);
+    printf("Loading %s...\n", sFileNameISO);
     for (i = 0; i < 1000; i++) {
-        fd = open(sFileName, O_RDONLY);
+        fd = open(sFileNameISO, O_RDONLY);
         if (fd >= 0)
             break;
 
@@ -649,7 +645,7 @@ int main(int argc, char *argv[])
         nopdelay();
     }
     if (fd < 0) {
-        printf("Unable to open %s\n", sFileName);
+        printf("Unable to open %s\n", sFileNameISO);
         return -1;
     }
     // Get ISO file size
@@ -688,11 +684,11 @@ int main(int argc, char *argv[])
     printf("- media = %s\n", eMediaType == SCECdPS2DVD ? "DVD" : "CD");
 
     /*
-     * Mount as ISO so we can get some information
+     * Mount as ISO so we can get ELF name to boot
      */
-    int fd_isomount = fileXioMount("iso:", sFileName, FIO_MT_RDONLY);
+    int fd_isomount = fileXioMount("iso:", sFileNameISO, FIO_MT_RDONLY);
     if (fd_isomount < 0) {
-        printf("ERROR: Unable to mount %s as iso\n", sFileName);
+        printf("ERROR: Unable to mount %s as iso\n", sFileNameISO);
         return -1;
     }
     int fd_config = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
@@ -713,6 +709,9 @@ int main(int argc, char *argv[])
     printf("config name: %s\n", sGameID);
     close(fd_config);
     fileXioUmount("iso:");
+
+    if (sFileNameELF == NULL)
+        sFileNameELF = sGameID;
 
     ResetDeckardXParams();
     ApplyDeckardXParam(sGameID);
@@ -769,6 +768,10 @@ int main(int argc, char *argv[])
         printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
         return -1;
     }
+    settings->drvName = (u32)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+    fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &settings->devNr, 4);
+    char *drvName = (char *)&settings->drvName;
+    printf("Using BDM device: %s%d\n", drvName, settings->devNr);
     close(fd);
 
     //
@@ -807,12 +810,6 @@ int main(int argc, char *argv[])
     irxtable->count = 0;
 
     //
-    // Load udnl.irx first
-    //
-    irxptr += load_file_mod("udnl.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
-
-    //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
     //
     //printf("IOPRP.img (old):\n");
@@ -830,8 +827,6 @@ int main(int argc, char *argv[])
     // Load other modules into place
     //
     irxptr += load_file_mod("imgdrv.irx", irxptr, irxptr_tab++);
-    irxtable->count++;
-    irxptr += load_file_mod("resetspu.irx", irxptr, irxptr_tab++);
     irxtable->count++;
 
 #ifdef DEBUG
@@ -914,7 +909,8 @@ int main(int argc, char *argv[])
     eecc_setGameMode(&eeconf, iMode);
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
-    eecc_setFileName(&eeconf, sGameID);
+    eecc_setGameID(&eeconf, sGameID);
+    eecc_setFileName(&eeconf, sFileNameELF);
     eecc_setCompatFlags(&eeconf, iCompat);
     eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
     printf("Starting ee_core with following arguments:\n");

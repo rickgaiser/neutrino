@@ -62,7 +62,7 @@ static void set_args_mod(char *arg)
     ModStorageEnd = (void *)_strtoui(_strtok(NULL, " "));
 }
 
-static void set_args_file(const char *arg)
+static void set_args_gameid(const char *arg)
 {
     strncpy(GameID, arg, sizeof(GameID) - 1);
     GameID[sizeof(GameID) - 1] = '\0';
@@ -93,8 +93,8 @@ static int eecoreInit(int argc, char **argv)
             set_args_kernel(&argv[i][8]);
         if (!_strncmp(argv[i], "-mod=", 5))
             set_args_mod(&argv[i][5]);
-        if (!_strncmp(argv[i], "-file=", 6))
-            set_args_file(&argv[i][6]);
+        if (!_strncmp(argv[i], "-gid=", 5))
+            set_args_gameid(&argv[i][5]);
         if (!_strncmp(argv[i], "-compat=", 8))
             set_args_compat(&argv[i][8]);
         if (!_strncmp(argv[i], "--b", 3))

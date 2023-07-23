@@ -74,7 +74,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
     ee_kmode_exit();
     EIntr();
 
-    LoadOPLModule(OPL_MODULE_ID_UDNL, SIF_RPC_M_NOWAIT, CommandLen, command);
+    LoadModule("rom0:UDNL", SIF_RPC_M_NOWAIT, CommandLen, command);
 
     DIntr();
     ee_kmode_enter();
@@ -100,9 +100,9 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
 
     DPRINTF("Loading extra IOP modules...\n");
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
-    // Skip the first 4 modules
+    // Skip the first 2 modules: IOPRP.IMG and imgdrv.irx
     // FIXME: magic number!
-    for (i = 4; i < irxtable->count; i++) {
+    for (i = 2; i < irxtable->count; i++) {
         irxptr_t p = irxtable->modules[i];
         // Modules that emulate the sceCdRead function must operate at a higher
         // priority than the highest possible game priority.

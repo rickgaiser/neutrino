@@ -18,9 +18,7 @@ EE_IRX_FILES += \
 	bdm_cdvdman.irx \
 	imgdrv.irx \
 	isofs.irx \
-	resetspu.irx \
 	eesync.irx \
-	udnl.irx \
 	iomanX.irx \
 	fileXio.irx \
 	bdm.irx \
@@ -51,7 +49,6 @@ vpath %.irx ../../iop/cdvdman/irx/
 vpath %.irx ../../iop/smap/irx/
 vpath %.irx ../../iop/imgdrv/irx/
 vpath %.irx ../../iop/isofs/irx/
-vpath %.irx ../../iop/resetspu/irx/
 vpath %.elf ../ee_core/
 vpath %.irx $(PS2SDK)/iop/irx/
 
@@ -75,6 +72,20 @@ $(EE_BIN_PACKED): $(EE_BIN)
 
 all: $(EE_BIN_PACKED)
 
+
+# ALL  : BSOD when returning back to menu
+# Game uses differnt ELF files for menu and game
+#GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso'
+
+# ALL  : BSOD
+# These CD games use sceCdGetToc and sceCdPosToInt
+# Do these functions work as expected?
+#GAME = 'CD/Madden NFL 2001 (U).iso'
+#GAME = 'CD/Madden NFL 2002 (U).iso'
+#GAME = 'CD/NASCAR Thunder 2002 (U).iso'
+
+# UDPBD: works
+#GAME = 'CD/Downforce (U).iso'
 
 # USB  : BSOD
 # UDPBD: works
@@ -101,7 +112,7 @@ all: $(EE_BIN_PACKED)
 
 # Tested, working
 #GAME = 'CD/ICO (U).iso'
-#GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
+GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
 #GAME = 'DVD/PES 2023 (E).iso'
 #GAME = 'DVD/Sonic Unleashed (E).iso'
 #GAME = 'DVD/007 - Agent Under Fire (E).iso'
@@ -110,7 +121,8 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Ratchet Clank - Going Commando (E).iso'
 #GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'CD/Quake III Revolution (E).iso'
-GAME = 'DVD/Super Dragon Ball Z (E).iso'
+#GAME = 'DVD/Super Dragon Ball Z (E).iso'
+#GAME = 'CD/Tekken Tag Tournament (E) v2.iso'
 
 
 run: all copy
@@ -129,10 +141,8 @@ copy:
 	cp ../../iop/smap/irx/smap.irx            modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx        modules
 	cp ../../iop/isofs/irx/isofs.irx          modules
-	cp ../../iop/resetspu/irx/resetspu.irx    modules
 	cp ../ee_core/ee_core.elf                 modules
 	cp $(PS2SDK)/iop/irx/eesync.irx           modules
-	cp $(PS2SDK)/iop/irx/udnl.irx             modules
 	cp $(PS2SDK)/iop/irx/iomanX.irx           modules
 	cp $(PS2SDK)/iop/irx/fileXio.irx          modules
 	cp $(PS2SDK)/iop/irx/bdm.irx              modules

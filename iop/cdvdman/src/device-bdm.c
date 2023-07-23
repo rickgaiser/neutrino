@@ -26,12 +26,25 @@ void bdm_connect_bd(struct block_device *bd)
 {
     DPRINTF("connecting device %s%dp%d\n", bd->name, bd->devNr, bd->parNr);
 
-    if (g_bd == NULL) {
-        g_bd = bd;
-        g_bd_sectors_per_sector = (2048 / bd->sectorSize);
-        // Free usage of block device
-        SignalSema(bdm_io_sema);
+    if (strncmp(bd->name, (char *)&cdvdman_settings.drvName, 4)) {
+        DPRINTF("- skipping wrong driver\n");
+        return;
     }
+
+    if (bd->devNr != cdvdman_settings.devNr) {
+        DPRINTF("- skipping wrong device nr\n");
+        return;
+    }
+
+    if (g_bd != NULL) {
+        DPRINTF("- ERROR: device already connected\n");
+        return;
+    }
+
+    g_bd = bd;
+    g_bd_sectors_per_sector = (2048 / bd->sectorSize);
+    // Free usage of block device
+    SignalSema(bdm_io_sema);
 }
 
 void bdm_disconnect_bd(struct block_device *bd)

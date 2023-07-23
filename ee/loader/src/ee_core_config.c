@@ -9,6 +9,7 @@ void eecc_init(struct SEECoreConfig *eecc)
     eecc_setKernelConfig(eecc, 0, 0);
     eecc_setModStorageConfig(eecc, 0, 0);
     eecc_setCompatFlags(eecc, 0);
+    eecc_setGameID(eecc, "");
     eecc_setFileName(eecc, "");
     eecc_setExitPath(eecc, "Browser");
     IP4_ADDR(&eecc->_ethAddr, 192, 168, 1, 10);
@@ -70,6 +71,11 @@ void eecc_setCheats(struct SEECoreConfig *eecc, bool enable)
     eecc->_enableCheats = enable;
 }
 
+void eecc_setGameID(struct SEECoreConfig *eecc, const char *gameID)
+{
+    eecc->_sGameID = gameID;
+}
+
 void eecc_setFileName(struct SEECoreConfig *eecc, const char *fileName)
 {
     eecc->_sFileName = fileName;
@@ -100,6 +106,9 @@ bool eecc_valid(struct SEECoreConfig *eecc)
         return false;
 
     if (eecc->_irxptr == 0x0)
+        return false;
+
+    if (eecc->_sGameID[0] == 0)
         return false;
 
     if (eecc->_sFileName[0] == 0)
@@ -155,8 +164,8 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
     maxStrLen -= strlen(psConfig) + 1;
     psConfig += strlen(psConfig) + 1;
 
-    // Filename
-    snprintf(psConfig, maxStrLen, "-file=%s", eecc->_sFileName);
+    // GameID
+    snprintf(psConfig, maxStrLen, "-gid=%s", eecc->_sGameID);
     eecc->_argv[eecc->_argc++] = psConfig;
     maxStrLen -= strlen(psConfig) + 1;
     psConfig += strlen(psConfig) + 1;

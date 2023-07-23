@@ -31,6 +31,7 @@ Usage: neutrino.elf -drv=<driver> -iso=<path>\n");
 Options:\n");
   -drv=<driver>     Select block device driver, supported are: ata, usb, mx4sio(sdc), udpbd(udp) and ilink(sd)
   -iso=<file>       Select iso file (full path!)
+  -elf=<file>       Select elf file inside iso to boot
   -mt=<type>        Select media type, supported are: cd, dvd. Defaults to cd for size<=650MiB, and dvd for size>650MiB
   -gc=<compat>      Game compatibility modes, supperted are:
                     - 0: Disable builtin compat flags

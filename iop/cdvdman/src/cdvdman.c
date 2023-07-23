@@ -254,14 +254,14 @@ u32 sceCdPosToInt(sceCdlLOCCD *p)
 {
     register u32 result;
 
-    DPRINTF("%s({%d, %d, %d})\n", __FUNCTION__, p->minute, p->second, p->sector);
-
-    result = ((u32)p->minute >> 16) * 10 + ((u32)p->minute & 0xF);
+    result = ((u32)p->minute >> 4) * 10 + ((u32)p->minute & 0xF);
     result *= 60;
-    result += ((u32)p->second >> 16) * 10 + ((u32)p->second & 0xF);
+    result += ((u32)p->second >> 4) * 10 + ((u32)p->second & 0xF);
     result *= 75;
-    result += ((u32)p->sector >> 16) * 10 + ((u32)p->sector & 0xF);
+    result += ((u32)p->sector >> 4) * 10 + ((u32)p->sector & 0xF);
     result -= 150;
+
+    DPRINTF("%s({0x%X, 0x%X, 0x%X, 0x%X}) = %d\n", __FUNCTION__, p->minute, p->second, p->sector, p->track, result);
 
     return result;
 }

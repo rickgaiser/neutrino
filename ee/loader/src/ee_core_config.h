@@ -25,6 +25,7 @@ struct SEECoreConfig
     ip4_addr_t _ethAddr;
     ip4_addr_t _ethMask;
     ip4_addr_t _ethGateway;
+    const char *_sGameID;
     const char *_sFileName;
     const char *_sExitPath;
 
@@ -46,6 +47,7 @@ void eecc_setGameMode(struct SEECoreConfig *eecc, u32 gameMode);
 void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory);
 void eecc_setModStorageConfig(struct SEECoreConfig *eecc, u32 irxtable, u32 irxptr);
 void eecc_setCompatFlags(struct SEECoreConfig *eecc, u32 compatFlags);
+void eecc_setGameID(struct SEECoreConfig *eecc, const char *gameID);
 void eecc_setFileName(struct SEECoreConfig *eecc, const char *fileName);
 void eecc_setExitPath(struct SEECoreConfig *eecc, const char *path);
 void eecc_setHDDSpindown(struct SEECoreConfig *eecc, u32 minutes);
