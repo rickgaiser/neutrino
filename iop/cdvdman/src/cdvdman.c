@@ -84,7 +84,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     void *ptr;
     int endOfMedia = 0;
 
-    //DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
+    // DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
     if (mediaLsnCount) {
 
@@ -525,7 +525,7 @@ static int intrh_cdrom(void *common)
         CDVDreg_PWOFF = CDL_DATA_RDY;
 
     if (CDVDreg_PWOFF & CDL_DATA_END) {
-        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE|CDVDEF_FSV_S596|CDVDEF_POWER_OFF); // Notify FILEIO and CDVDFSV of the power-off event.
+        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE | CDVDEF_FSV_S596 | CDVDEF_POWER_OFF); // Notify FILEIO and CDVDFSV of the power-off event.
     } else
         CDVDreg_PWOFF = CDL_DATA_COMPLETE; // Acknowledge interrupt
 

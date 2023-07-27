@@ -51,12 +51,12 @@
 #endif
 
 // Event flags
-#define CDVDEF_MAN_UNLOCKED  0x0001
-#define CDVDEF_POWER_OFF     0x0002
-#define CDVDEF_FSV_S596      0x0004
-#define CDVDEF_STM_DONE      0x0008 // Streaming read done
-#define CDVDEF_READ_END      0x1000 // Accurate reads timing event
-#define CDVDEF_CB_DONE       0x2000
+#define CDVDEF_MAN_UNLOCKED 0x0001
+#define CDVDEF_POWER_OFF    0x0002
+#define CDVDEF_FSV_S596     0x0004
+#define CDVDEF_STM_DONE     0x0008 // Streaming read done
+#define CDVDEF_READ_END     0x1000 // Accurate reads timing event
+#define CDVDEF_CB_DONE      0x2000
 
 struct SteamingData
 {

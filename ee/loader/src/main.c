@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <malloc.h>
-_off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be defined in unistd.h ???
+_off64_t lseek64(int __filedes, _off64_t __offset, int __whence); // should be defined in unistd.h ???
 
 // PS2SDK
 #include <kernel.h>
@@ -35,29 +35,29 @@ DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timer
 PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
 
 #ifdef BUILTIN_COMMON
-    #define IRX_COMMON_DEFINE(mod)        \
-        extern unsigned char mod##_irx[]; \
-        extern unsigned int size_##mod##_irx
-    #define ELF_DEFINE(mod)               \
-        extern unsigned char mod##_elf[]; \
-        extern unsigned int size_##mod##_elf
+#define IRX_COMMON_DEFINE(mod)        \
+    extern unsigned char mod##_irx[]; \
+    extern unsigned int size_##mod##_irx
+#define ELF_DEFINE(mod)               \
+    extern unsigned char mod##_elf[]; \
+    extern unsigned int size_##mod##_elf
 #else
-    #define IRX_COMMON_DEFINE(mod)             \
-        const unsigned char *mod##_irx = NULL; \
-        const unsigned int size_##mod##_irx = 0
-    #define ELF_DEFINE(mod)               \
-        const unsigned char *mod##_elf = NULL; \
-        const unsigned int size_##mod##_elf = 0
+#define IRX_COMMON_DEFINE(mod)             \
+    const unsigned char *mod##_irx = NULL; \
+    const unsigned int size_##mod##_irx = 0
+#define ELF_DEFINE(mod)                    \
+    const unsigned char *mod##_elf = NULL; \
+    const unsigned int size_##mod##_elf = 0
 #endif
 
 #ifdef BUILTIN_DRIVERS
-    #define IRX_DRIVER_DEFINE(mod)        \
-        extern unsigned char mod##_irx[]; \
-        extern unsigned int size_##mod##_irx
+#define IRX_DRIVER_DEFINE(mod)        \
+    extern unsigned char mod##_irx[]; \
+    extern unsigned int size_##mod##_irx
 #else
-    #define IRX_DRIVER_DEFINE(mod)        \
-        const unsigned char *mod##_irx = NULL; \
-        const unsigned int size_##mod##_irx = 0
+#define IRX_DRIVER_DEFINE(mod)             \
+    const unsigned char *mod##_irx = NULL; \
+    const unsigned int size_##mod##_irx = 0
 #endif
 
 IRX_COMMON_DEFINE(cdvdfsv);
@@ -168,26 +168,26 @@ struct SModule mod[] = {
 };
 // clang-format on
 
-#define INIT_MOD(nr,name) \
+#define INIT_MOD(nr, name)              \
     mod[nr].pData = (void *)name##_irx; \
     mod[nr].iSize = size_##name##_irx
 
-#define INIT_ELF(nr,name) \
+#define INIT_ELF(nr, name)              \
     mod[nr].pData = (void *)name##_elf; \
     mod[nr].iSize = size_##name##_elf
 
 void mod_init()
 {
-    INIT_MOD( 0, bdm_cdvdman);
-    INIT_MOD( 1, cdvdfsv);
-    INIT_MOD( 2, eesync);
-    INIT_MOD( 3, imgdrv);
-    INIT_MOD( 4, iomanX);
-    INIT_MOD( 5, fileXio);
-    INIT_MOD( 6, isofs);
-    INIT_MOD( 7, bdm);
-    INIT_MOD( 8, bdmfs_fatfs);
-    INIT_MOD( 9, usbd_mini);
+    INIT_MOD(0, bdm_cdvdman);
+    INIT_MOD(1, cdvdfsv);
+    INIT_MOD(2, eesync);
+    INIT_MOD(3, imgdrv);
+    INIT_MOD(4, iomanX);
+    INIT_MOD(5, fileXio);
+    INIT_MOD(6, isofs);
+    INIT_MOD(7, bdm);
+    INIT_MOD(8, bdmfs_fatfs);
+    INIT_MOD(9, usbd_mini);
     INIT_MOD(10, usbmass_bd_mini);
     INIT_MOD(11, mx4sio_bd_mini);
     INIT_MOD(12, ps2dev9);
@@ -203,10 +203,10 @@ int load_module(struct SModule *mod)
 {
     char sFilePath[MAX_FILENAME];
 
-    //printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
+    // printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
 
     if (mod->pData != NULL) {
-        //printf("WARNING: Module already loaded: %s\n", mod->sFileName);
+        // printf("WARNING: Module already loaded: %s\n", mod->sFileName);
         return 0;
     }
 
@@ -218,7 +218,7 @@ int load_module(struct SModule *mod)
         return -1;
     }
 
-    //printf("%s(%s) loaded %s\n", __FUNCTION__, mod->sFileName, sFilePath);
+    // printf("%s(%s) loaded %s\n", __FUNCTION__, mod->sFileName, sFilePath);
 
     // Get module size
     mod->iSize = lseek(fd, 0, SEEK_END);
@@ -275,7 +275,7 @@ static off_t load_file_mod(const char *filename, void *addr, irxptr_t *irx)
     irx->info = mod->iSize | SET_OPL_MOD_ID(mod->eecid);
     irx->ptr = addr;
 
-    printf("SYSTEM IRX %u address start: %p end: %p\n", mod->eecid, addr, (u8*)addr + mod->iSize);
+    printf("SYSTEM IRX %u address start: %p end: %p\n", mod->eecid, addr, (u8 *)addr + mod->iSize);
 
     // Align to 16 bytes
     return (mod->iSize + 0xf) & ~0xf;
@@ -322,7 +322,7 @@ int load_modules(u32 flags)
 
     for (modid = 0; mod[modid].sFileName != NULL; modid++) {
         if (mod[modid].iFlags & flags) {
-            if(load_module(&mod[modid]) < 0)
+            if (load_module(&mod[modid]) < 0)
                 return -1;
         }
     }
@@ -357,11 +357,11 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
     while (romdir_in->name[0] != '\0') {
         struct SModule *mod = load_module_udnlname(romdir_in->name);
         if (mod != NULL) {
-            //printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
+            // printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
             memcpy(ioprp_out, mod->pData, mod->iSize);
             romdir_out->size = mod->iSize;
         } else {
-            //printf("IOPRP: keeping %s\n", romdir_in->name);
+            // printf("IOPRP: keeping %s\n", romdir_in->name);
             memcpy(ioprp_out, ioprp_in, romdir_in->size);
             romdir_out->size = romdir_in->size;
         }
@@ -376,27 +376,28 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
     return (ioprp_out - (u8 *)romdir_out_org);
 }
 
-struct ioprp_ext {
+struct ioprp_ext
+{
     extinfo_t reset_date_ext;
-    uint32_t  reset_date;
+    uint32_t reset_date;
 
     extinfo_t cdvdman_date_ext;
-    uint32_t  cdvdman_date;
+    uint32_t cdvdman_date;
     extinfo_t cdvdman_version_ext;
     extinfo_t cdvdman_comment_ext;
-    char      cdvdman_comment[12];
+    char cdvdman_comment[12];
 
     extinfo_t cdvdfsv_date_ext;
-    uint32_t  cdvdfsv_date;
+    uint32_t cdvdfsv_date;
     extinfo_t cdvdfsv_version_ext;
     extinfo_t cdvdfsv_comment_ext;
-    char      cdvdfsv_comment[16];
+    char cdvdfsv_comment[16];
 
     extinfo_t syncee_date_ext;
-    uint32_t  syncee_date;
+    uint32_t syncee_date;
     extinfo_t syncee_version_ext;
     extinfo_t syncee_comment_ext;
-    char      syncee_comment[8];
+    char syncee_comment[8];
 };
 
 #define ROMDIR_ENTRY_COUNT 7
@@ -407,49 +408,47 @@ struct ioprp_img
 };
 
 static const struct ioprp_img ioprp_img_base = {
-    {{"RESET"  ,  8, 0},
-     {"ROMDIR" ,  0, 0x10 * ROMDIR_ENTRY_COUNT},
-     {"EXTINFO",  0, sizeof(struct ioprp_ext)},
+    {{"RESET", 8, 0},
+     {"ROMDIR", 0, 0x10 * ROMDIR_ENTRY_COUNT},
+     {"EXTINFO", 0, sizeof(struct ioprp_ext)},
      {"CDVDMAN", 28, 0},
      {"CDVDFSV", 32, 0},
-     {"EESYNC" , 24, 0},
+     {"EESYNC", 24, 0},
      {"", 0, 0}},
-    {
-        // RESET extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        // CDVDMAN extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 12, EXTINFO_TYPE_COMMENT},
-        "cdvd_driver",
-        // CDVDFSV extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 16, EXTINFO_TYPE_COMMENT},
-        "cdvd_ee_driver",
-        // SYNCEE extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 8, EXTINFO_TYPE_COMMENT},
-        "SyncEE"
-    }};
+    {// RESET extinfo
+     {0, 4, EXTINFO_TYPE_DATE},
+     0x20230621,
+     // CDVDMAN extinfo
+     {0, 4, EXTINFO_TYPE_DATE},
+     0x20230621,
+     {0x9999, 0, EXTINFO_TYPE_VERSION},
+     {0, 12, EXTINFO_TYPE_COMMENT},
+     "cdvd_driver",
+     // CDVDFSV extinfo
+     {0, 4, EXTINFO_TYPE_DATE},
+     0x20230621,
+     {0x9999, 0, EXTINFO_TYPE_VERSION},
+     {0, 16, EXTINFO_TYPE_COMMENT},
+     "cdvd_ee_driver",
+     // SYNCEE extinfo
+     {0, 4, EXTINFO_TYPE_DATE},
+     0x20230621,
+     {0x9999, 0, EXTINFO_TYPE_VERSION},
+     {0, 8, EXTINFO_TYPE_COMMENT},
+     "SyncEE"}};
 
 u32 parse_ip(const char *sIP)
 {
     int cp = 0;
-    u32 part[4] = {0,0,0,0};
+    u32 part[4] = {0, 0, 0, 0};
 
-    while(*sIP != 0) {
-        //printf("%s\n", sIP);
-        if(*sIP == '.') {
+    while (*sIP != 0) {
+        // printf("%s\n", sIP);
+        if (*sIP == '.') {
             cp++;
             if (cp >= 4)
                 return 0; // Too many dots
-        } else if(*sIP >= '0' && *sIP <= '9') {
+        } else if (*sIP >= '0' && *sIP <= '9') {
             part[cp] = (part[cp] * 10) + (*sIP - '0');
             if (part[cp] > 255)
                 return 0; // Too big number
@@ -496,8 +495,8 @@ int main(int argc, char *argv[])
     enum SCECdvdMediaType eMediaType = SCECdNODISC;
     int iNoReboot = 0;
     int iEnableDebugColors = 0;
-    for (i=1; i<argc; i++) {
-        //printf("argv[%d] = %s\n", i, argv[i]);
+    for (i = 1; i < argc; i++) {
+        // printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-drv=", 5))
             sDriver = &argv[i][5];
         else if (!strncmp(argv[i], "-iso=", 5))
@@ -604,20 +603,20 @@ int main(int argc, char *argv[])
     /*
      * Load drivers before rebooting the IOP
      */
-    if (load_modules(iDrivers|SMF_EECORE|SMF_IOPCORE) < 0)
+    if (load_modules(iDrivers | SMF_EECORE | SMF_IOPCORE) < 0)
         return -1;
 
     if (iNoReboot == 0) {
         /*
-        * Reboot the IOP
-        */
-        //fileXioExit();
+         * Reboot the IOP
+         */
+        // fileXioExit();
         SifExitIopHeap();
         SifLoadFileExit();
         SifExitRpc();
         SifInitRpc(0);
-        while(!SifIopReset(NULL, 0)){};
-        while(!SifIopSync()) {};
+        while (!SifIopReset(NULL, 0)) {};
+        while (!SifIopSync()) {};
         SifInitRpc(0);
         SifInitIopHeap();
         SifLoadFileInit();
@@ -744,7 +743,7 @@ int main(int argc, char *argv[])
     // see if the game is in our builtin database
     if (iCompat == 0)
         iCompat = get_compat(sGameID);
-    iCompat &= ~(1<<31); // Clear dummy flag
+    iCompat &= ~(1 << 31); // Clear dummy flag
     if (iCompat & COMPAT_MODE_1)
         settings->common.flags |= IOPCORE_COMPAT_ACCU_READS;
     if (iCompat & COMPAT_MODE_2)
@@ -759,10 +758,10 @@ int main(int argc, char *argv[])
     struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
     iso_frag->frag_start = 0;
     iso_frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
-    iso_frag->size       = iso_size;
+    iso_frag->size = iso_size;
     printf("ISO fragments: start=%u, count=%u\n", iso_frag->frag_start, iso_frag->frag_count);
-    for (i=0; i<iso_frag->frag_count; i++) {
-        printf("- frag[%d] start=%u, count=%u\n", i, (u32)settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
+    for (i = 0; i < iso_frag->frag_count; i++) {
+        printf("- frag[%d] start=%u, count=%u\n", i, (u32)settings->frags[iso_frag->frag_start + i].sector, settings->frags[iso_frag->frag_start + i].count);
     }
     if ((iso_frag->frag_start + iso_frag->frag_count) > BDM_MAX_FRAGS) {
         printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
@@ -812,11 +811,11 @@ int main(int argc, char *argv[])
     //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
     //
-    //printf("IOPRP.img (old):\n");
-    //print_romdir(ioprp_img_base.romdir);
+    // printf("IOPRP.img (old):\n");
+    // print_romdir(ioprp_img_base.romdir);
     unsigned int ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
-    //printf("IOPRP.img (new):\n");
-    //print_romdir((struct romdir_entry *)irxptr);
+    // printf("IOPRP.img (new):\n");
+    // print_romdir((struct romdir_entry *)irxptr);
     irxptr_tab->info = ioprp_size | SET_OPL_MOD_ID(OPL_MODULE_ID_IOPRP);
     irxptr_tab->ptr = irxptr;
     irxptr_tab++;

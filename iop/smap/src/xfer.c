@@ -45,14 +45,14 @@ void xfer_init(void)
     iop_sema_t sema_info;
     iop_event_t event_info;
 
-    sema_info.attr    = 0;
+    sema_info.attr = 0;
     sema_info.initial = 1; /* Unlocked.  */
-    sema_info.max     = 1;
+    sema_info.max = 1;
     tx_sema = CreateSema(&sema_info);
 
-    event_info.attr   = 0;
+    event_info.attr = 0;
     event_info.option = 0;
-    event_info.bits   = 0;
+    event_info.bits = 0;
     tx_done_ev = CreateEventFlag(&event_info);
 
     dev9RegisterPreDmaCb(1, &Dev9PreDmaCbHandler);
@@ -111,7 +111,7 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
     int NumPacketsReceived;
     volatile smap_bd_t *PktBdPtr;
     volatile u8 *smap_regbase;
-    //void *pbuf, *payload;
+    // void *pbuf, *payload;
     u16 ctrl_stat, length, pointer, LengthRounded;
 
     smap_regbase = SmapDrivPrivData->smap_regbase;
@@ -171,7 +171,7 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, u
 
     if (SmapDrivPrivData->NumPacketsInTx >= SMAP_BD_MAX_ENTRY)
         return -1;
-    
+
     if (SmapDrivPrivData->TxBufferSpaceAvailable < SizeRounded)
         return -2;
 

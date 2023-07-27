@@ -8,9 +8,9 @@
 #include "ee_core.h"
 
 
-#define bool u8
+#define bool  u8
 #define false 0
-#define true 1
+#define true  1
 
 
 struct SEECoreConfig

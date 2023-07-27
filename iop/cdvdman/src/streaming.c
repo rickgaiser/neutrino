@@ -32,7 +32,7 @@ static void StmCallback(void)
         CpuResumeIntr(OldState);
     }
 
-    //DPRINTF("StmCallback: %08lx, wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    // DPRINTF("StmCallback: %08lx, wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     StStartFillStreamBuffer();
 }
@@ -105,7 +105,7 @@ int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
 
     DPRINTF("%s(%lu, %lu, 0x%X)\n", __FUNCTION__, bufmax, bankmax, iop_bufaddr);
 
-    //DPRINTF("%s bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", __FUNCTION__, cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
+    // DPRINTF("%s bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", __FUNCTION__, cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
 
     cdvdman_stat.err = SCECdErNO;
 
@@ -120,7 +120,7 @@ int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
 
     CpuResumeIntr(OldState);
 
-    //DPRINTF("sceCdStInit bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
+    // DPRINTF("sceCdStInit bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
 
     return 1;
 }
@@ -130,7 +130,7 @@ static int AllocBank(void **pointer)
 {
     int result;
 
-    //iDPRINTF("%s\n", __FUNCTION__);
+    // iDPRINTF("%s\n", __FUNCTION__);
 
     if (cdvdman_stat.StreamingData.StBufmax - cdvdman_stat.StreamingData.StStreamed >= cdvdman_stat.StreamingData.StBanksize) {
         *pointer = cdvdman_stat.StreamingData.StIOP_bufaddr + cdvdman_stat.StreamingData.StWritePtr * 2048;
@@ -140,7 +140,7 @@ static int AllocBank(void **pointer)
         result = -ENOMEM;
     }
 
-    //iDPRINTF("AllocBank: wrptr: %u, rdptr: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    // iDPRINTF("AllocBank: wrptr: %u, rdptr: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     return result;
 }
@@ -390,7 +390,7 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
     void *ptr;
 
     DPRINTF("%s(%lu, 0x%X, %lu, 0x%x)\n", __FUNCTION__, sectors, buffer, mode, error);
-    //DPRINTF("StRead called: sectors %lu:%p, mode: %lu, stat: %u,%u\n", sectors, buffer, mode, cdvdman_stat.StreamingData.StStat, cdvdman_stat.StreamingData.StIsReading);
+    // DPRINTF("StRead called: sectors %lu:%p, mode: %lu, stat: %u,%u\n", sectors, buffer, mode, cdvdman_stat.StreamingData.StStat, cdvdman_stat.StreamingData.StIsReading);
 
     cdvdman_stat.err = SCECdErNO;
     if (cdvdman_stat.StreamingData.StStat) {

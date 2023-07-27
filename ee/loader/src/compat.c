@@ -24,7 +24,7 @@ typedef struct
 } gamecompat_t;
 
 static const gamecompat_t default_game_compat[] = {
-    {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures - only needed for USB ?
+    {"SCES_524.12", COMPAT_MODE_2}, // Jackie Chan Adventures - only needed for USB ?
     {NULL, 0},
 };
 

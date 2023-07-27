@@ -30,23 +30,23 @@ typedef struct
 /* Ethernet header (14 bytes = 2 byte alignment!) */
 typedef struct
 {
-    uint8_t  addr_dst[6];
-    uint8_t  addr_src[6];
+    uint8_t addr_dst[6];
+    uint8_t addr_src[6];
     uint16_t type;
 } __attribute__((packed)) eth_header_t;
 
 /* IP header (20 bytes) */
 typedef struct
 {
-    uint8_t   hlen;
-    uint8_t   tos;
-    uint16_t  len;
-    uint16_t  id;
-    uint8_t   flags;
-    uint8_t   frag_offset;
-    uint8_t   ttl;
-    uint8_t   proto;
-    uint16_t  csum;
+    uint8_t hlen;
+    uint8_t tos;
+    uint16_t len;
+    uint16_t id;
+    uint8_t flags;
+    uint8_t frag_offset;
+    uint8_t ttl;
+    uint8_t proto;
+    uint16_t csum;
     ip_addr_t addr_src;
     ip_addr_t addr_dst;
 } __attribute__((packed, aligned(2))) ip_header_t; // Aligned 2 for csum calculation
@@ -55,12 +55,12 @@ typedef struct
 {
     uint16_t htype;
     uint16_t ptype;
-    uint8_t  hlen;
-    uint8_t  plen;
+    uint8_t hlen;
+    uint8_t plen;
     uint16_t oper;
-    uint8_t  sender_mac[6];
+    uint8_t sender_mac[6];
     uint32_t sender_ip;
-    uint8_t  target_mac[6];
+    uint8_t target_mac[6];
     uint32_t target_ip;
     uint16_t padding;
 } __attribute__((packed)) arp_header_t;
@@ -81,16 +81,16 @@ typedef struct
 typedef struct
 {
     eth_header_t eth; // 14 bytes
-    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
-    //char payload[ETH_MAX_PAYLOAD];
+    uint16_t align;   //  2 bytes - 2byte -> 4byte alignment
+    // char payload[ETH_MAX_PAYLOAD];
 } __attribute__((packed, aligned(4))) eth_packet_t;
 
 typedef struct
 {
     eth_header_t eth; // 14 bytes
     ip_header_t ip;   // 20 bytes
-    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
-    //char payload[IP_MAX_PAYLOAD];
+    uint16_t align;   //  2 bytes - 2byte -> 4byte alignment
+    // char payload[IP_MAX_PAYLOAD];
 } __attribute__((packed, aligned(4))) ip_packet_t;
 
 typedef struct
@@ -104,8 +104,8 @@ typedef struct
     eth_header_t eth; // 14 bytes
     ip_header_t ip;   // 20 bytes
     udp_header_t udp; //  8 bytes
-    uint16_t align;    //  2 bytes - 2byte -> 4byte alignment
-    //char payload[UDP_MAX_PAYLOAD];
+    uint16_t align;   //  2 bytes - 2byte -> 4byte alignment
+    // char payload[UDP_MAX_PAYLOAD];
 } __attribute__((packed, aligned(4))) udp_packet_t;
 
 #define ETH_TYPE_IPV4 0x0800
@@ -232,12 +232,8 @@ uint32_t ms_ip_get_ip();
 
 
 
-
 int arp_add_entry(uint32_t ip, uint8_t mac[6]);
 int handle_rx_eth(uint16_t pointer);
-
-
-
 
 
 

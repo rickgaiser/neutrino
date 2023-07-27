@@ -54,7 +54,8 @@ static void lba_to_msf(s32 lba, u8 *m, u8 *s, u8 *f)
 }
 
 //-------------------------------------------------------------------------
-typedef struct {
+typedef struct
+{
     u8 addr_ctrl;
     u8 track_no;
     u8 index_no;
@@ -65,7 +66,8 @@ typedef struct {
     u8 abs_frm;
 } __attribute__((packed)) toc_point_t;
 
-typedef struct {
+typedef struct
+{
     toc_point_t a0;
     toc_point_t a1;
     toc_point_t a2;

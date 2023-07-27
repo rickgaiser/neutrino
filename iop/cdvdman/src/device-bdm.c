@@ -123,7 +123,7 @@ int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
 {
     int rv = SCECdErNO;
     u32 fid = vlsn >> 23;
-    u32 lsn = vlsn & ((1<<23)-1);
+    u32 lsn = vlsn & ((1 << 23) - 1);
 
     // DPRINTF("%s(%u-%u, 0x%p, %u)\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
 
@@ -134,7 +134,7 @@ int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
     if (bd_defrag(g_bd, cdvdman_settings.fragfile[fid].frag_count, &cdvdman_settings.frags[cdvdman_settings.fragfile[fid].frag_start], lsn * 4, buffer, sectors * 4) != (sectors * 4)) {
 #ifdef DEBUG
         DPRINTF("%s(%u-%u, 0x%p, %u) FAILED!\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
-        while(1){}
+        while (1) {}
 #endif
         rv = SCECdErREAD;
     }

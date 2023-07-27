@@ -3,26 +3,26 @@
 #include "ministack.h"
 
 
-static int tty_sema   = -1;
+static int tty_sema = -1;
 static char ttyname[] = "tty";
 static udp_packet_t pkt;
 
 
 static int dummy_m5() { return -5; }
-static int dummy_0()  { return 0; }
-static int dummy_1()  { return 1; }
+static int dummy_0() { return 0; }
+static int dummy_1() { return 1; }
 
 static int ttyInit(iop_device_t *driver)
 {
     iop_sema_t sema_info;
-    sema_info.attr    = 0;
+    sema_info.attr = 0;
     sema_info.initial = 1; /* Unlocked.  */
-    sema_info.max     = 1;
+    sema_info.max = 1;
     if ((tty_sema = CreateSema(&sema_info)) < 0)
         return -1;
 
     // Broadcast packet to UDPTTY port
-    udp_packet_init(&pkt, IP_ADDR(255,255,255,255), 18194);
+    udp_packet_init(&pkt, IP_ADDR(255, 255, 255, 255), 18194);
 
     // We send the header and text separately
     // This saves IOP RAM (~1K), and also saves a memcpy
@@ -37,7 +37,7 @@ static int ttyInit(iop_device_t *driver)
 static int ttyWrite(iop_file_t *file, void *buf, int size)
 {
     // Dummy socket, we do not want anyone to answer
-    udp_socket_t socket = {0,NULL,NULL};
+    udp_socket_t socket = {0, NULL, NULL};
 
     WaitSema(tty_sema);
     udp_packet_send_ll(&socket, &pkt, 2, buf, size);

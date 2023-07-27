@@ -4,7 +4,7 @@
 
 void print_extinfo(const uint8_t *data, uint32_t size)
 {
-    struct extinfo * ext;
+    struct extinfo *ext;
 
     while (size > 0) {
         ext = (struct extinfo *)data;
@@ -19,7 +19,7 @@ void print_extinfo(const uint8_t *data, uint32_t size)
             return;
         }
 
-        switch(ext->type) {
+        switch (ext->type) {
             case EXTINFO_TYPE_DATE:
                 if (ext->ext_length == 0)
                     printf("- -> DATE = 0x%x\n", ext->value);

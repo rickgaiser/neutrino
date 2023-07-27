@@ -13,4 +13,3 @@ DECLARE_EXPORT_TABLE(cdvdfsv, 1, 1)
 	DECLARE_EXPORT(_dummy)
 	DECLARE_EXPORT(sceCdChangeThreadPriority)
 END_EXPORT_TABLE
-
