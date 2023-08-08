@@ -7,13 +7,6 @@
 #ifndef IOPLIB_UTIL_H
 #define IOPLIB_UTIL_H
 
-typedef struct
-{
-    int version;
-    void **exports;
-} modinfo_t;
-
-int getModInfo(char *modname, modinfo_t *info);
 void hookMODLOAD(void);
 
 #endif /* IOPLIB_UTIL_H */
