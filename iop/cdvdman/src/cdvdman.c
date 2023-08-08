@@ -6,6 +6,7 @@
 
 #include "internal.h"
 #include "xmodload.h"
+#include "ioplib.h"
 
 #define MODNAME "cdvd_driver"
 IRX_ID(MODNAME, 1, 1);
@@ -52,6 +53,25 @@ volatile unsigned char sync_flag_locked;
 volatile unsigned char cdvdman_cdinited = 0;
 static unsigned int ReadPos = 0; /* Current buffer offset in 2048-byte sectors. */
 
+//void * AllocSysMemory(int mode, int size, void *ptr);
+typedef void * (*fp_AllocSysMemory)(int mode, int size, void *ptr);
+fp_AllocSysMemory org_AllocSysMemory;
+static void * hooked_AllocSysMemory(int mode, int size, void *ptr)
+{
+    printf("%s(%d, %d, 0x%x), free=%dKiB\n", __FUNCTION__, mode, size, ptr, QueryTotalFreeMemSize()/1024);
+
+    if (size == 321792) {
+        printf("-\n- HACK! reducing requested memory!\n-\n");
+        size = (225*1024);
+    }
+
+    void *rv = org_AllocSysMemory(mode, size, ptr);
+    if (rv == NULL)
+        printf("-\n- OUT OF MEMORY !!!\n-\n");
+
+    return rv;
+}
+
 //-------------------------------------------------------------------------
 void cdvdman_init(void)
 {
@@ -60,6 +80,11 @@ void cdvdman_init(void)
 
         cdvdman_fs_init();
         cdvdman_cdinited = 1;
+
+        // hook AllocSysMemory
+        iop_library_t * lib_sysmem = ioplib_getByName("sysmem");
+        org_AllocSysMemory = ioplib_hookExportEntry(lib_sysmem, 4, hooked_AllocSysMemory);
+        ioplib_relinkExports(lib_sysmem);
 
         // hook MODLOAD's exports
         //   These hooks will fake module loading for the modules we need, like usbd and dev9
