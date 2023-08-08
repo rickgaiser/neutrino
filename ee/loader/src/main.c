@@ -493,7 +493,7 @@ int main(int argc, char *argv[])
 
     const char *sDriver = NULL;
     const char *sFileNameISO = NULL;
-    const char *sFileNameELF = NULL;
+    const char *sFileNameELF = "I5BOOTN.ELF";
     const char *sIP = NULL;
     const char *sMediaType = NULL;
     const char *sCompat = NULL;
