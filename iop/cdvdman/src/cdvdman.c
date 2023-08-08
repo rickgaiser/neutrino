@@ -60,6 +60,12 @@ void cdvdman_init(void)
 
         cdvdman_fs_init();
         cdvdman_cdinited = 1;
+
+        // hook MODLOAD's exports
+        //   These hooks will fake module loading for the modules we need, like usbd and dev9
+        //   Becouse these drivers will be loaded after cdvdman, we must make sure we do not
+        //   fake these modules before they are even loaded.
+        hookMODLOAD();
     }
 }
 
@@ -565,9 +571,6 @@ int _start(int argc, char **argv)
     // register cdrom device driver
     cdvdman_initdev();
     InstallIntrHandler();
-
-    // hook MODLOAD's exports
-    hookMODLOAD();
 
     // init disk type stuff
     cdvdman_initDiskType();
