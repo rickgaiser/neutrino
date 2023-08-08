@@ -155,7 +155,7 @@ struct SModule mod[] = {
     {"",        "isofs.irx"            , NULL, 0, SMF_ISO      , 0},
     {"",        "bdm.irx"              , NULL, 0, SMF_BDMFS    , 0},
     {"",        "bdmfs_fatfs.irx"      , NULL, 0, SMF_BDMFS    , 0},
-    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB    , EECORE_MODULE_ID_USBD},
+    {"",        "usbd_mini.irx"        , NULL, 0, SMF_D_USB|SMF_D_ATA|SMF_D_MX4SIO, EECORE_MODULE_ID_USBD},
     {"",        "usbmass_bd_mini.irx"  , NULL, 0, SMF_D_USB    , 0},
     {"",        "mx4sio_bd_mini.irx"   , NULL, 0, SMF_D_MX4SIO , 0},
     {"",        "ps2dev9.irx"          , NULL, 0, SMF_D_ATA|SMF_D_UDPBD, 0},
@@ -823,6 +823,7 @@ int main(int argc, char *argv[])
         case BDM_ATA_MODE:
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_ATAD;
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD; // Load smaller usbd
             break;
         case BDM_USB_MODE:
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD;
@@ -832,6 +833,9 @@ int main(int argc, char *argv[])
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
             settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
 #endif
+            break;
+        case BDM_M4S_MODE:
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD; // Load smaller usbd
             break;
     }
 
@@ -868,6 +872,9 @@ int main(int argc, char *argv[])
             irxtable->count++;
             irxptr += load_file_mod("ata_bd.irx", irxptr, irxptr_tab++);
             irxtable->count++;
+            // Load smaller usbd
+            irxptr += load_file_mod("usbd_mini.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
             break;
         case BDM_USB_MODE:
             irxptr += load_file_mod("usbd_mini.irx", irxptr, irxptr_tab++);
@@ -885,6 +892,9 @@ int main(int argc, char *argv[])
             break;
         case BDM_M4S_MODE:
             irxptr += load_file_mod("mx4sio_bd_mini.irx", irxptr, irxptr_tab++);
+            irxtable->count++;
+            // Load smaller usbd
+            irxptr += load_file_mod("usbd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
         case BDM_ILK_MODE:
