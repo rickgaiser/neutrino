@@ -1,4 +1,4 @@
-IOP_OBJS = cdvdman.o ioops.o ncmd.o scmd.o searchfile.o streaming.o ioplib_util.o smsutils.o imports.o exports.o
+IOP_OBJS = cdvdman.o ioops.o ncmd.o scmd.o searchfile.o streaming.o ioplib.o ioplib_util.o smsutils.o imports.o exports.o
 
 ifeq ($(USE_BDM),1)
 IOP_BIN  = bdm_cdvdman.irx
