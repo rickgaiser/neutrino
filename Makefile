@@ -27,5 +27,8 @@ clean:
 run:
 	$(MAKE) -C ee/loader     run
 
+sim:
+	$(MAKE) -C ee/loader     sim
+
 opl:
 	ps2client -h 192.168.1.10 execee host:OPNPS2LD.ELF
