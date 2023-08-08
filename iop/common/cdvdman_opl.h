@@ -64,7 +64,7 @@ enum CDIOC_CODE {
 
 // DMA/reading alignment correction buffer. Used by CDVDMAN and CDVDFSV.
 // The minimum size is 2, as one sector may be used for buffer alignment correction.
-#define CDVDMAN_FS_SECTORS 8
+#define CDVDMAN_FS_SECTORS 2
 
 // Codes for use with sceCdSC()
 #define CDSC_GET_DEBUG_STATUS 0xFFFFFFF0 // Get debug status flag.
