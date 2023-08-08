@@ -815,6 +815,26 @@ int main(int argc, char *argv[])
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
 
+#ifdef DEBUG
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
+#endif
+    switch (iMode) {
+        case BDM_ATA_MODE:
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_ATAD;
+            break;
+        case BDM_USB_MODE:
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD;
+            break;
+        case BDM_UDP_MODE:
+#ifndef DEBUG
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
+            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
+#endif
+            break;
+    }
+
     //
     // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
     //
@@ -837,25 +857,19 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     // For debugging (udptty) and also udpbd
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
     irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
     irxtable->count++;
-    settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
     irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
     irxtable->count++;
 #endif
-
     switch (iMode) {
         case BDM_ATA_MODE:
-            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
             irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
             irxtable->count++;
-            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_ATAD;
             irxptr += load_file_mod("ata_bd.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             break;
         case BDM_USB_MODE:
-            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_USBD;
             irxptr += load_file_mod("usbd_mini.irx", irxptr, irxptr_tab++);
             irxtable->count++;
             irxptr += load_file_mod("usbmass_bd_mini.irx", irxptr, irxptr_tab++);
@@ -863,10 +877,8 @@ int main(int argc, char *argv[])
             break;
         case BDM_UDP_MODE:
 #ifndef DEBUG
-            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_DEV9;
             irxptr += load_file_mod("ps2dev9.irx", irxptr, irxptr_tab++);
             irxtable->count++;
-            settings->common.fakemodule_flags |= FAKE_MODULE_FLAG_SMAP;
             irxptr += load_file_mod("smap.irx", irxptr, irxptr_tab++);
             irxtable->count++;
 #endif
