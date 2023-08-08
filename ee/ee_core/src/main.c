@@ -23,7 +23,30 @@ u32 g_compat_mask = 0;
 char GameID[16];
 int GameMode;
 int EnableDebug = 0;
-int *gCheatList = NULL; // Store hooks/codes addr+val pairs
+
+int cheat_rc3[] = {
+// RC3 EU version DNAS patch
+0x90129240, 0x0C04A438,
+0xD04D55E4, 0x24020006,
+0x004D55D8, 0x00000000,
+0xD04D55E4, 0x24020006,
+0x004D55E4, 0x00000005,
+0xD178CAF4, 0x24020006,
+0x0178CAE8, 0x00000000,
+0xD178CAF4, 0x24020006,
+0x0178CAF4, 0x00000005,
+
+// RC3 EU version DNAS patch
+//0x90129B40, 0x0C04A678,
+//0xD05118E4, 0x00000006,
+//0x005118D8, 0x00000000,
+//0xD05118E4, 0x00000006,
+//0x005118E4, 0x00000005,
+
+0x00000000, 0x00000000
+};
+
+int *gCheatList = cheat_rc3; // Store hooks/codes addr+val pairs
 
 // This function is defined as weak in ps2sdkc, so how
 // we are not using time zone, so we can safe some KB
