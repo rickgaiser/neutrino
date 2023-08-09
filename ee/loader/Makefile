@@ -81,7 +81,9 @@ all: $(EE_BIN_PACKED)
 # Spyro Enter the Dragonfly (US, SLUS_203.15) = Works, needs Mode 2
 # Spyro Enter the Dragonfly (EU, SLES_510.43) = Works, needs Mode 2
 # Max Payne 2 freezes when loading Part 1, Chapter 3 on neutrino USB - same on OPL ?
-# RC3: with PAL version, get black screen when choosing multiplayer (so not even local works)
+GAME = 'DVD/Twisted Metal - Black (E).iso'
+#GAME = 'DVD/Spyro - Enter the Dragonfly (E).iso'
+#GAME = 'DVD/Spyro - Enter the Dragonfly (U).iso'
 
 # ALL  : BSOD when returning back to menu
 # Game uses differnt ELF files for menu and game
@@ -123,6 +125,12 @@ all: $(EE_BIN_PACKED)
 # at a priority <9.
 #GAME = 'DVD/Power Rangers - Super Legends (E).iso'
 
+# Tested, working offline
+#   ONLINE this game uses a huge amount of IOP RAM. This causes IRX modules to fail to load
+#   causing random crashes such as black screen or network adapter not detected.
+#GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
+#GAME = 'DVD/Ratchet Clank 3 (E).iso'
+
 # Tested, working
 #GAME = 'CD/ICO (U).iso'
 #GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
@@ -132,8 +140,6 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/MotorStorm Arctic Edge (E).iso'
 #GAME = 'DVD/Need for Speed Pro Street (E).iso'
 #GAME = 'DVD/Ratchet Clank - Going Commando (E).iso'
-#GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
-GAME = 'DVD/Ratchet Clank 3 (E).iso'
 #GAME = 'CD/Quake III Revolution (E).iso'
 #GAME = 'DVD/Super Dragon Ball Z (E).iso'
 #GAME = 'CD/Tekken Tag Tournament (E) v2.iso'

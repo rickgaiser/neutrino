@@ -28,7 +28,7 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 {
     int result;
 
-    result = sceCdRead_internal(lsn, sectors, buf, NULL, ECS_EXTERNAL);
+    result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
 
     if ((result == 1) && (cdvdman_settings.common.flags & IOPCORE_COMPAT_ALT_READ) && !QueryIntrContext())
         WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);

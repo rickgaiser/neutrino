@@ -13,7 +13,7 @@ int sceCdReadClock(sceCdCLOCK *rtc)
 {
     int rc;
 
-    DPRINTF("%s(-)\n", __FUNCTION__);
+    DPRINTF("%s(0x%x)\n", __FUNCTION__, rtc);
 
     cdvdman_stat.err = SCECdErNO;
 
