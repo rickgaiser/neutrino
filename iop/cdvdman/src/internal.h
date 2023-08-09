@@ -83,6 +83,7 @@ typedef struct
 {
     u32 lba;
     u32 sectors;
+    u16 sector_size;
     void *buf;
     enum ECallSource source;
 } cdvdman_read_t;
@@ -134,6 +135,10 @@ extern void cdvdman_searchfile_init(void);
 extern void cdvdman_initdev(void);
 
 extern struct CDVDMAN_SETTINGS_TYPE cdvdman_settings;
+
+// Normally this buffer is only used by 'searchfile', only 1 sector used
+#define CDVDMAN_BUF_SECTORS 1
+extern u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
 
 extern int cdrom_io_sema;
 extern int cdvdman_searchfilesema;

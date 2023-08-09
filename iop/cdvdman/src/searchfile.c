@@ -13,8 +13,6 @@ static int cdvdman_findfile(sceCdlFILE *pcd_file, const char *name, int layer);
 // The max lsn/sectors available based on value retrieved from iso. Used for out of bounds checking. Only check if value non zero.
 u32 mediaLsnCount;
 
-u8 cdvdman_buf[2048];
-
 typedef struct
 {
     u32 rootDirtocLBA;

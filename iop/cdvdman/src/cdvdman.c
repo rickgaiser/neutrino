@@ -25,7 +25,7 @@ static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16
 static unsigned int event_alarm_cb(void *args);
 static void cdvdman_startThreads(void);
 static void cdvdman_create_semaphores(void);
-static int cdvdman_read(u32 lsn, u32 sectors, void *buf);
+static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf);
 
 struct cdvdman_cb_data
 {
@@ -44,6 +44,9 @@ static int cdvdman_ReadingThreadID;
 
 static StmCallback_t Stm0Callback = NULL;
 static iop_sys_clock_t gCallbackSysClock;
+
+// buffers
+u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
 
 #define CDVDMAN_MODULE_VERSION 0x225
 static int cdvdman_debug_print_flag = 0;
@@ -175,12 +178,71 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     return (cdvdman_stat.err == SCECdErNO ? 0 : 1);
 }
 
-static int cdvdman_read(u32 lsn, u32 sectors, void *buf)
+static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf)
 {
     cdvdman_stat.status = SCECdStatRead;
 
+    // OPL only has 2048 bytes no matter what. For other sizes we have to copy to the offset and prepoluate the sector header data (the extra bytes.)
+    u32 offset = 0;
+
+    if (sector_size == 2340)
+        offset = 12; // head - sub - data(2048) -- edc-ecc
+
     buf = (void *)PHYSADDR(buf);
-    cdvdman_read_sectors(lsn, sectors, buf);
+    if (((u32)(buf)&3) || (sector_size != 2048)) {
+        // For transfers to unaligned buffers, a double-copy is required to avoid stalling the device's DMA channel.
+        WaitSema(cdvdman_searchfilesema);
+
+        u32 nsectors, nbytes;
+        u32 rpos = lsn;
+
+        while (sectors > 0) {
+            nsectors = sectors;
+            if (nsectors > CDVDMAN_BUF_SECTORS)
+                nsectors = CDVDMAN_BUF_SECTORS;
+
+            // For other sizes we can only read one sector at a time.
+            // There are only very few games (CDDA games, EA Tiburon) that will be affected
+            if (sector_size != 2048)
+                nsectors = 1;
+
+            cdvdman_read_sectors(rpos, nsectors, cdvdman_buf);
+
+            rpos += nsectors;
+            sectors -= nsectors;
+            nbytes = nsectors * sector_size;
+
+
+            // Copy the data for buffer.
+            // For any sector other than 2048 one sector at a time is copied.
+            memcpy((void *)((u32)buf + offset), cdvdman_buf, nbytes);
+
+            // For these custom sizes we need to manually fix the header.
+            // For 2340 we have 12bytes. 4 are position.
+            if (sector_size == 2340) {
+                u8 *header = (u8 *)buf;
+                // position.
+                sceCdlLOCCD p;
+                sceCdIntToPos(rpos - 1, &p); // to get current pos.
+                header[0] = p.minute;
+                header[1] = p.second;
+                header[2] = p.sector;
+                header[3] = 0; // p.track for cdda only non-zero
+
+                // Subheader and copy of subheader.
+                header[4] = header[8] = 0;
+                header[5] = header[9] = 0;
+                header[6] = header[10] = 0x8;
+                header[7] = header[11] = 0;
+            }
+
+            buf = (void *)((u8 *)buf + nbytes);
+        }
+
+        SignalSema(cdvdman_searchfilesema);
+    } else {
+        cdvdman_read_sectors(lsn, sectors, buf);
+    }
 
     ReadPos = 0; /* Reset the buffer offset indicator. */
 
@@ -202,6 +264,7 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     static u32 free_prev = 0;
     u32 free;
     int IsIntrContext, OldState;
+    u16 sector_size = 2048;
 
     IsIntrContext = QueryIntrContext();
 
@@ -209,6 +272,16 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
         DPRINTF("%s(%d, %d, %08x, {%d, %d, %d}, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, mode->trycount, mode->spindlctrl, mode->datapattern, IsIntrContext);
     else
         DPRINTF("%s(%d, %d, %08x, NULL, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, IsIntrContext);
+
+    // Is is NULL in our emulated cdvdman routines so check if valid.
+    if (mode) {
+        // 0 is 2048
+        if (mode->datapattern == SCECdSecS2328)
+            sector_size = 2328;
+
+        if (mode->datapattern == SCECdSecS2340)
+            sector_size = 2340;
+    }
 
     free = QueryTotalFreeMemSize();
     if (free != free_prev) {
@@ -233,6 +306,7 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
 
     cdvdman_stat.req.lba = lsn;
     cdvdman_stat.req.sectors = sectors;
+    cdvdman_stat.req.sector_size = sector_size;
     cdvdman_stat.req.buf = buf;
     cdvdman_stat.req.source = source;
 
@@ -457,9 +531,9 @@ static void cdvdman_cdread_Thread(void *args)
         WaitSema(cdrom_rthread_sema);
         memcpy(&req, &cdvdman_stat.req, sizeof(req));
 
-        DPRINTF("%s() [%d, %d, %08x, %d]\n", __FUNCTION__, (int)req.lba, (int)req.sectors, (int)req.buf, (int)req.source);
+        DPRINTF("%s() [%d, %d, %d, %08x, %d]\n", __FUNCTION__, (int)req.lba, (int)req.sectors, (int)req.sector_size, (int)req.buf, (int)req.source);
 
-        cdvdman_read(req.lba, req.sectors, req.buf);
+        cdvdman_read(req.lba, req.sectors, req.sector_size, req.buf);
 
         sync_flag_locked = 0;
         SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED);
