@@ -86,24 +86,15 @@ GAME = 'DVD/Twisted Metal - Black (E).iso'
 #GAME = 'DVD/Spyro - Enter the Dragonfly (U).iso'
 
 # ALL  : BSOD when returning back to menu
-# Game uses differnt ELF files for menu and game
+# Game uses different ELF files for menu and game
 #GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso'
-
-# ALL  : BSOD
-# These CD games use sceCdGetToc and sceCdPosToInt
-# Do these functions work as expected?
-#GAME = 'CD/Madden NFL 2001 (U).iso'
-#GAME = 'CD/Madden NFL 2002 (U).iso'
-#GAME = 'CD/NASCAR Thunder 2002 (U).iso'
 
 # CD "MODE2" based games, with multiple tracks
 #GAME = 'CD/Dynasty Warriors 2 (E) (Track 1).bin' # SLES_500.57
 
-# UDPBD: works
-#GAME = 'CD/Downforce (U).iso'
-
-# USB  : BSOD
-# UDPBD: works
+# USB   : BSOD ?!
+# MX4SIO: works
+# UDPBD : works
 #GAME = 'CD/Super Bust-A-Move (U).iso'
 
 # USB  : works only with mode2
@@ -143,6 +134,10 @@ GAME = 'DVD/Twisted Metal - Black (E).iso'
 #GAME = 'CD/Quake III Revolution (E).iso'
 #GAME = 'DVD/Super Dragon Ball Z (E).iso'
 #GAME = 'CD/Tekken Tag Tournament (E) v2.iso'
+#GAME = 'CD/Madden NFL 2001 (U).iso'
+#GAME = 'CD/Madden NFL 2002 (U).iso'
+#GAME = 'CD/NASCAR Thunder 2002 (U).iso'
+#GAME = 'CD/Downforce (U).iso'
 
 
 run: all copy

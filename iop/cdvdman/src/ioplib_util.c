@@ -50,8 +50,12 @@ struct FakeModule
 };
 
 enum FAKE_MODULE_ID {
-    FAKE_MODULE_ID_SMAP = 0xdead0,
+    FAKE_MODULE_ID_DEV9 = 0xdead0,
+    FAKE_MODULE_ID_USBD,
+    FAKE_MODULE_ID_SMAP,
+    FAKE_MODULE_ID_ATAD,
     FAKE_MODULE_ID_CDVDSTM,
+    FAKE_MODULE_ID_CDVDFSV,
 };
 
 // Fake module properties
@@ -59,13 +63,13 @@ enum FAKE_MODULE_ID {
 #define PROP_UNLOAD  (1<<1) /// 'fake' module can be unloaded (note that re-loading is not possible!)
 
 static struct FakeModule modulefake_list[] = {
-    {"DEV9.IRX",     "dev9",             -1,                     FAKE_MODULE_FLAG_DEV9,    PROP_REPLACE,                0x0208, MODULE_RESIDENT_END},
-    {"USBD.IRX",     "USB_driver",       -1,                     FAKE_MODULE_FLAG_USBD,    PROP_REPLACE,                0x0204, MODULE_REMOVABLE_END},
+    {"DEV9.IRX",     "dev9",             FAKE_MODULE_ID_DEV9,    FAKE_MODULE_FLAG_DEV9,    PROP_REPLACE,                0x0208, MODULE_RESIDENT_END},
+    {"USBD.IRX",     "USB_driver",       FAKE_MODULE_ID_USBD,    FAKE_MODULE_FLAG_USBD,    PROP_REPLACE,                0x0204, MODULE_REMOVABLE_END},
     {"SMAP.IRX",     "INET_SMAP_driver", FAKE_MODULE_ID_SMAP,    FAKE_MODULE_FLAG_SMAP,    0,                           0x0219, MODULE_REMOVABLE_END},
     {"ENT_SMAP.IRX", "ent_smap",         FAKE_MODULE_ID_SMAP,    FAKE_MODULE_FLAG_SMAP,    0,                           0x021f, MODULE_REMOVABLE_END},
-    {"ATAD.IRX",     "atad_driver",      -1,                     FAKE_MODULE_FLAG_ATAD,    PROP_REPLACE,                0x0207, MODULE_RESIDENT_END},
+    {"ATAD.IRX",     "atad_driver",      FAKE_MODULE_ID_ATAD,    FAKE_MODULE_FLAG_ATAD,    PROP_REPLACE,                0x0207, MODULE_RESIDENT_END},
     {"CDVDSTM.IRX",  "cdvd_st_driver",   FAKE_MODULE_ID_CDVDSTM, FAKE_MODULE_FLAG_CDVDSTM, 0,                           0x0202, MODULE_REMOVABLE_END},
-    {"CDVDFSV.IRX",  "cdvd_ee_driver",   -1,                     FAKE_MODULE_FLAG_CDVDFSV, PROP_REPLACE | PROP_UNLOAD,  0x0202, MODULE_REMOVABLE_END},
+    {"CDVDFSV.IRX",  "cdvd_ee_driver",   FAKE_MODULE_ID_CDVDFSV, FAKE_MODULE_FLAG_CDVDFSV, PROP_REPLACE | PROP_UNLOAD,  0x0202, MODULE_REMOVABLE_END},
     {NULL, NULL, 0, 0}};
 
 //--------------------------------------------------------------
@@ -119,8 +123,6 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
 
     mod = checkFakemodByFile(modpath, modulefake_list);
     if (mod != NULL && mod->flag) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = mod->returnValue;
         return mod->id;
@@ -138,8 +140,6 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 
     mod = checkFakemodById(id, modulefake_list);
     if (mod != NULL && mod->flag) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = mod->returnValue;
         return mod->id;
@@ -157,8 +157,6 @@ static int Hook_LoadModuleBuffer(void *ptr)
 
     mod = checkFakemodByName(((char *)ptr + 0x8e), modulefake_list);
     if (mod != NULL && mod->flag) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
     }
@@ -175,8 +173,6 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
 
     mod = checkFakemodById(id, modulefake_list);
     if (mod != NULL && mod->flag && (mod->prop & PROP_UNLOAD) == 0) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = 1; // Module unloads and returns NO RESIDENT END
         return mod->id;
@@ -194,8 +190,6 @@ static int Hook_UnloadModule(int id)
 
     mod = checkFakemodById(id, modulefake_list);
     if (mod != NULL && mod->flag && (mod->prop & PROP_UNLOAD) == 0) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
     }
@@ -212,8 +206,6 @@ static int Hook_SearchModuleByName(char *modname)
 
     mod = checkFakemodByName(modname, modulefake_list);
     if (mod != NULL && mod->flag) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
     }
@@ -230,8 +222,6 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus_t *status)
 
     mod = checkFakemodById(id, modulefake_list);
     if (mod != NULL && mod->flag && (mod->prop & PROP_REPLACE) == 0) {
-        if (mod->id == -1)
-            mod->id = SearchModuleByName(mod->name);
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         memset(status, 0, sizeof(ModuleStatus_t));
         strcpy(status->name, mod->name);
