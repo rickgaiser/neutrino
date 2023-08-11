@@ -82,6 +82,8 @@ all: $(EE_BIN_PACKED)
 # Spyro Enter the Dragonfly (EU, SLES_510.43) = Works, needs Mode 2
 # Max Payne 2 freezes when loading Part 1, Chapter 3 on neutrino USB - same on OPL ?
 GAME = 'DVD/Twisted Metal - Black (E).iso'
+#GAME = 'DVD/Ratchet - Deadlocked (U).iso'
+#GAME = 'DVD/Ratchet Gladiator (E).iso'
 #GAME = 'DVD/Spyro - Enter the Dragonfly (E).iso'
 #GAME = 'DVD/Spyro - Enter the Dragonfly (U).iso'
 
@@ -102,7 +104,7 @@ GAME = 'DVD/Twisted Metal - Black (E).iso'
 #GAME = 'DVD/Jackie Chan Adventures (E).iso'
 
 # ALL  : NOT WORKING! - stuck while loading, cause: reading out of bounds
-#GAME ='DVD/Jak 3 (E).iso'
+#GAME ='DVD/Jak 3 (E).iso' # OVERLRD2.IRX / also tried MODE_3, same result
 #GAME ='DVD/Prince of Persia Two Thrones (U).iso'
 
 # ALL  : NOT WORKING! - random crashes (on OPL too)
