@@ -85,8 +85,8 @@ static int cdvdman_fill_toc(u8 *tocBuff)
     }
 
     switch (discType) {
-        case 0x12: // SCECdPS2CD
-        case 0x13: // SCECdPS2CDDA
+        case SCECdPS2CD:
+        case SCECdPS2CDDA:
             toc_t *t = (toc_t *)tocBuff;
             u8 min, sec, frm;
 
@@ -122,8 +122,8 @@ static int cdvdman_fill_toc(u8 *tocBuff)
             // Later when PS2CCDA is added the tracks need to get filled in toc too.
             break;
 
-        case 0x14: // SCECdPS2DVD
-        case 0xFE: // SCECdDVDV
+        case SCECdPS2DVD:
+        case SCECdDVDV:
             // Toc for single layer DVD.
             memset(tocBuff, 0, 2048);
 
@@ -181,7 +181,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
             }
 
             // Not known type.
-            DPRINTF("cdvdman_fill_toc unimplemented for  discType=%02X\n", discType);
+            DPRINTF("cdvdman_fill_toc unimplemented for discType=%02X\n", discType);
             return 0;
     }
 

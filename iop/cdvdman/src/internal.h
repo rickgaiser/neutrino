@@ -91,10 +91,10 @@ typedef struct
 typedef struct
 {
     int err;
-    int status;
+    u8 status; // SCECdvdDriveState
     struct SteamingData StreamingData;
     int intr_ef;
-    int disc_type_reg;
+    int disc_type_reg; // SCECdvdMediaType
     cdvdman_read_t req; // Next requested read
 } cdvdman_status_t;
 
