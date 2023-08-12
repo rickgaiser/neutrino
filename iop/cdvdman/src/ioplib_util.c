@@ -172,9 +172,14 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
     DPRINTF("Hook_StopModule(0x%x)\n", id);
 
     mod = checkFakemodById(id, modulefake_list);
-    if (mod != NULL && mod->flag && (mod->prop & PROP_UNLOAD) == 0) {
+    if (mod != NULL && mod->flag) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        *modres = 1; // Module unloads and returns NO RESIDENT END
+
+        if ((mod->prop & PROP_UNLOAD) == 0)
+            *modres = MODULE_NO_RESIDENT_END;
+        else
+            StopModule(SearchModuleByName(mod->name), arg_len, args, modres);
+
         return mod->id;
     }
 
@@ -189,8 +194,12 @@ static int Hook_UnloadModule(int id)
     DPRINTF("Hook_UnloadModule(0x%x)\n", id);
 
     mod = checkFakemodById(id, modulefake_list);
-    if (mod != NULL && mod->flag && (mod->prop & PROP_UNLOAD) == 0) {
+    if (mod != NULL && mod->flag) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
+
+        if ((mod->prop & PROP_UNLOAD) != 0)
+            UnloadModule(SearchModuleByName(mod->name));
+
         return mod->id;
     }
 
