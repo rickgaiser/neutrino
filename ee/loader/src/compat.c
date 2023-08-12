@@ -25,6 +25,7 @@ typedef struct
 
 static const gamecompat_t default_game_compat[] = {
     {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures - only needed for USB ?
+    {"SCUS_971.24", COMPAT_MODE_3              }, // Jak and Daxter - The Precursor Legacy
     {NULL, 0},
 };
 
