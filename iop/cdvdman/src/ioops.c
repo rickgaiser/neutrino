@@ -431,6 +431,8 @@ static int cdrom_ioctl(iop_file_t *f, u32 cmd, void *args)
 {
     register int r = 0;
 
+    DPRINTF("cdrom_ioctl 0x%X\n", cmd);
+
     WaitSema(cdrom_io_sema);
 
     if (cmd != 0x10000) // Spin Ctrl op
@@ -534,6 +536,7 @@ static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u3
             result = cdvdman_stat.intr_ef;
             break;
         default:
+            DPRINTF("cdrom_devctl unknown, cmd=0x%X\n", cmd);
             result = -EIO;
             break;
     }

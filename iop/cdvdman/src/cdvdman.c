@@ -416,6 +416,7 @@ int sceCdSC(int code, int *param)
             result = cdvdman_stat.err = *param;
             break;
         default:
+            DPRINTF("%s(0x%X, 0x%X) unknown code\n", __FUNCTION__, code, *param);
             result = 1; // dummy result
     }
 
