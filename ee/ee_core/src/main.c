@@ -89,7 +89,7 @@ static int eecoreInit(int argc, char **argv)
     SifInitRpc(0);
 
     DINIT();
-    DPRINTF("OPL EE core start!\n");
+    DPRINTF("EE core start!\n");
 
     for (i=0; i<argc; i++) {
         if (!_strncmp(argv[i], "-drv=", 5))

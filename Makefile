@@ -1,13 +1,14 @@
-DEBUG=0
+EESIO_DEBUG?=0
+IOPCORE_DEBUG?=0
 
 all:
-	$(MAKE) -C iop/cdvdfsv  all DEBUG=$(DEBUG)
-	$(MAKE) -C iop/cdvdman  all DEBUG=$(DEBUG) USE_BDM=1
-	$(MAKE) -C iop/smap     all DEBUG=$(DEBUG)
-	$(MAKE) -C iop/imgdrv   all DEBUG=$(DEBUG)
-	$(MAKE) -C iop/isofs    all DEBUG=$(DEBUG)
-	$(MAKE) -C ee/ee_core   all
-	$(MAKE) -C ee/loader    all DEBUG=$(DEBUG)
+	$(MAKE) -C iop/cdvdfsv  all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/cdvdman  all DEBUG=$(IOPCORE_DEBUG) USE_BDM=1
+	$(MAKE) -C iop/smap     all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/imgdrv   all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/isofs    all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C ee/ee_core   all EESIO_DEBUG=$(EESIO_DEBUG)
+	$(MAKE) -C ee/loader    all DEBUG=0
 
 copy:
 	$(MAKE) -C ee/loader    copy
