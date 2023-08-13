@@ -269,7 +269,7 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     IsIntrContext = QueryIntrContext();
 
     if (mode != NULL)
-        DPRINTF("%s(%d, %d, %08x, {%d, %d, %d}, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, mode->trycount, mode->spindlctrl, mode->datapattern, IsIntrContext);
+        DPRINTF("%s(%d, %d, %08x, {%d, %d, %d}, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, mode->trycount, mode->spindlctrl, mode->datapattern, (int)source, IsIntrContext);
     else
         DPRINTF("%s(%d, %d, %08x, NULL, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, IsIntrContext);
 
