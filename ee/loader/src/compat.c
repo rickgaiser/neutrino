@@ -24,8 +24,10 @@ typedef struct
 } gamecompat_t;
 
 static const gamecompat_t default_game_compat[] = {
-    {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures - only needed for USB ?
-    {"SCUS_971.24", COMPAT_MODE_3              }, // Jak and Daxter - The Precursor Legacy
+    {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures                # only needed for USB ?
+    {"SCUS_971.24", COMPAT_MODE_3              }, // Jak and Daxter - The Precursor Legacy # game writes to 0x84000 region !
+    {"SCUS_973.30", COMPAT_MODE_3              }, // Jak 3                                 # game writes to 0x84000 region !
+    {"SCES_524.60", COMPAT_MODE_3              }, // Jak 3                                 # game writes to 0x84000 region !
     {NULL, 0},
 };
 
