@@ -25,11 +25,21 @@ clean:
 	$(MAKE) -C ee/ee_core    clean
 	$(MAKE) -C ee/loader     clean
 
+# Start on PS2 (ps2link/ps2client)
 run:
 	$(MAKE) -C ee/loader     run
 
+# Start on PCSX2
 sim:
 	$(MAKE) -C ee/loader     sim
+
+# Mount first partition of block device used in PCSX2 testing (ATA or USB)
+sim_mount:
+	sudo mount -o loop,offset=1048576 ee/loader/blockdev.raw mount
+
+# Unmount block device used in PCSX2 testing
+sim_unmount:
+	sudo umount mount
 
 opl:
 	ps2client -h 192.168.1.10 execee host:OPNPS2LD.ELF

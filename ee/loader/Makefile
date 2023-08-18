@@ -74,24 +74,24 @@ all: $(EE_BIN_PACKED)
 
 # TODO:
 # SCUS_971.01 Twisted Metal Black (same as opl, when quit to menu the games crash with black screen)
-# Jak 3 (US, SCUS_973.30) = Works, needs Mode 3
-# Jak 3 (EU, SCES-52460) = Works, needs Mode 3
-# Jak and Daxter The Precursor Legacy (US, SCUS_971.24) = Works, needs Mode 3
-# Ratchet Deadlocked (US, SCUS_974.65) = Crashes to BSOD after a flying ship loading screen right after you start a new game
-# Spyro Enter the Dragonfly (US, SLUS_203.15) = Works, needs Mode 2
-# Spyro Enter the Dragonfly (EU, SLES_510.43) = Works, needs Mode 2
 # Max Payne 2 freezes when loading Part 1, Chapter 3 on neutrino USB - same on OPL ?
-GAME = 'DVD/Twisted Metal - Black (E).iso'
+#GAME = 'DVD/Twisted Metal - Black (E).iso' # psxUNK -> IOP crash (executing data?)
+#GAME = 'DVD/Cy Girls (U) (Disc 1) (Ice).iso'
+#GAME = 'DVD/Cy Girls (U) (Disc 2) (Aska).iso'
+#GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso'
+GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
+
+# These games allocate ALL IOP RAM as an anti-piracy method
+# Special IOP code is needed (in cdvdman?) to counter this
 #GAME = 'DVD/Ratchet - Deadlocked (U).iso'
 #GAME = 'DVD/Ratchet Gladiator (E).iso'
-#GAME = 'DVD/Spyro - Enter the Dragonfly (E).iso'
-#GAME = 'DVD/Spyro - Enter the Dragonfly (U).iso'
 
 # ALL  : BSOD when returning back to menu
 # Game uses different ELF files for menu and game
 #GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso'
 
 # CD "MODE2" based games, with multiple tracks
+# not supported
 #GAME = 'CD/Dynasty Warriors 2 (E) (Track 1).bin' # SLES_500.57
 
 # USB   : BSOD ?!
@@ -102,10 +102,6 @@ GAME = 'DVD/Twisted Metal - Black (E).iso'
 # USB  : works only with mode2
 # UDPBD: works
 #GAME = 'DVD/Jackie Chan Adventures (E).iso'
-
-# ALL  : NOT WORKING! - stuck while loading, cause: reading out of bounds
-#GAME ='DVD/Jak 3 (E).iso' # OVERLRD2.IRX / also tried MODE_3, same result
-#GAME ='DVD/Prince of Persia Two Thrones (U).iso'
 
 # ALL  : NOT WORKING! - random crashes (on OPL too)
 #GAME = 'DVD/Gun (U).iso'
@@ -140,6 +136,18 @@ GAME = 'DVD/Twisted Metal - Black (E).iso'
 #GAME = 'CD/Madden NFL 2002 (U).iso'
 #GAME = 'CD/NASCAR Thunder 2002 (U).iso'
 #GAME = 'CD/Downforce (U).iso'
+#GAME = 'DVD/Winx Club (E).iso'
+#GAME = 'DVD/World Destruction League - Thunder Tanks (E).iso'
+#GAME = 'CD/World Destruction League - Thunder Tanks (U).iso'
+#GAME = 'DVD/Spyro - Enter the Dragonfly (E).iso'
+#GAME = 'DVD/Spyro - Enter the Dragonfly (U).iso'
+#GAME = 'DVD/Jak and Daxter - The Precursor Legacy (U).iso' # OVERLORD.IRX
+#GAME = 'DVD/Jak 3 (E).iso' # OVERLRD2.IRX, needs mode3
+#GAME = 'DVD/Jak 3 (U).iso' # OVERLRD2.IRX, needs mode3
+#GAME = 'DVD/Prince of Persia - The Two Thrones (U).iso'
+#GAME = 'CD/Star Wars - Racer Revenge (E).iso'
+#GAME = 'CD/Star Wars - Racer Revenge (U).iso'
+#GAME = 'CD/LEGO Racers 2 (E).iso' # uses a lot of IOP RAM for caching files (many iop debug printf's about it)
 
 
 run: all copy
