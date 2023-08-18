@@ -74,7 +74,7 @@ void cdvdman_init(void)
 
 int sceCdInit(int init_mode)
 {
-    DPRINTF("%s()\n", __FUNCTION__);
+    DPRINTF("%s(%d)\n", __FUNCTION__, init_mode);
 
     cdvdman_init();
     return 1;
