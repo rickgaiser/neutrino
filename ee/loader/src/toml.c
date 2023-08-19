@@ -1601,7 +1601,7 @@ static void set_eof(context_t *ctx, int lineno) {
 /* Scan p for n digits compositing entirely of [0-9] */
 static int scan_digits(const char *p, int n) {
   int ret = 0;
-  for (; n > 0 && isdigit(*p); n--, p++) {
+  for (; n > 0 && isdigit((unsigned char)*p); n--, p++) {
     ret = 10 * ret + (*p - '0');
   }
   return n ? -1 : ret;
@@ -2024,7 +2024,7 @@ int toml_rtots(toml_raw_t src_, toml_timestamp_t *ret) {
       } else if (*p == '+' || *p == '-') {
         *z++ = *p++;
 
-        if (!(isdigit(p[0]) && isdigit(p[1])))
+        if (!(isdigit((unsigned char)p[0]) && isdigit((unsigned char)p[1])))
           return -1;
         *z++ = *p++;
         *z++ = *p++;
@@ -2032,7 +2032,7 @@ int toml_rtots(toml_raw_t src_, toml_timestamp_t *ret) {
         if (*p == ':') {
           *z++ = *p++;
 
-          if (!(isdigit(p[0]) && isdigit(p[1])))
+          if (!(isdigit((unsigned char)p[0]) && isdigit((unsigned char)p[1])))
             return -1;
           *z++ = *p++;
           *z++ = *p++;
@@ -2166,7 +2166,7 @@ int toml_rtod_ex(toml_raw_t src, double *ret_, char *buf, int buflen) {
   {
     char *dot = strchr(s, '.');
     if (dot) {
-      if (dot == s || !isdigit(dot[-1]) || !isdigit(dot[1]))
+      if (dot == s || !isdigit((unsigned char)dot[-1]) || !isdigit((unsigned char)dot[1]))
         return -1;
     }
   }
