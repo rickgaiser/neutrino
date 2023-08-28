@@ -1,0 +1,33 @@
+# Name of device driver, to show to user
+name = "USB Mass Storage BDM driver"
+
+# Type of device driver, support for this type must exist in
+# type-<type>-load.toml   for the load   environment
+# type-<type>-ingame.toml for the ingame environment
+type = "bdm"
+
+# Device mode as used by the EECORE (used for patches), support for this type must exist in the EECORE
+mode = "BDM_USB_MODE"
+
+# Modules to load
+[[module]]
+file = "usbd_mini.irx"
+# Modules that emulate the sceCdRead function must operate at a higher
+# priority than the highest possible game priority.
+#
+# If the priority is lower (higher number) then some games will wait in
+# and endless loop for data, but the waiting thread will then cause the
+# data to never be processed.
+#
+# This causes some games to 'need' MODE2 (sync reads) to work.
+args = "thpri=7,8"
+[[module]]
+file = "usbmass_bd_mini.irx"
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "USBD.IRX"
+name = "USB_driver"
+replace = true
+version = 0x0204
+return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

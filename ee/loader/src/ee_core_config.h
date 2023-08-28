@@ -15,7 +15,7 @@
 
 struct SEECoreConfig
 {
-    u32 _gameMode;
+    const char *_sGameMode;
     u32 _eeloadCopy;
     u32 _initUserMemory;
     u32 _irxtable;
@@ -43,7 +43,7 @@ struct SEECoreConfig
 
 void eecc_init(struct SEECoreConfig *eecc);
 
-void eecc_setGameMode(struct SEECoreConfig *eecc, u32 gameMode);
+void eecc_setGameMode(struct SEECoreConfig *eecc, const char *gameMode);
 void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory);
 void eecc_setModStorageConfig(struct SEECoreConfig *eecc, u32 irxtable, u32 irxptr);
 void eecc_setCompatFlags(struct SEECoreConfig *eecc, u32 compatFlags);
@@ -63,7 +63,6 @@ bool eecc_valid(struct SEECoreConfig *eecc);
 void eecc_print(struct SEECoreConfig *eecc);
 int eecc_argc(struct SEECoreConfig *eecc);
 const char **eecc_argv(struct SEECoreConfig *eecc);
-const char *eecc_getGameModeString(struct SEECoreConfig *eecc);
 
 
 #endif

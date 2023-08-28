@@ -5,6 +5,8 @@
 */
 
 #include <loadcore.h>
+#include <xmodload.h>
+
 #include <stdio.h>
 #include <sysclib.h>
 
@@ -13,64 +15,14 @@
 #include "ioplib.h"
 #include "smsutils.h"
 
-typedef struct ModuleStatus
-{
-    char name[56];
-    u16 version;
-    u16 flags;
-    int id;
-    u32 entry_addr;
-    u32 gp_value;
-    u32 text_addr;
-    u32 text_size;
-    u32 data_size;
-    u32 bss_size;
-    u32 lreserve[2];
-} ModuleStatus_t;
-
 // MODLOAD's exports pointers
-static int (*LoadStartModule)(char *modpath, int arg_len, char *args, int *modres);
-static int (*StartModule)(int id, char *modname, int arg_len, char *args, int *modres);
-static int (*LoadModuleBuffer)(void *ptr);
-static int (*StopModule)(int id, int arg_len, char *args, int *modres);
-static int (*UnloadModule)(int id);
-static int (*SearchModuleByName)(const char *modname);
-static int (*ReferModuleStatus)(int mid, ModuleStatus_t *status);
-
-// modules list to fake loading
-struct FakeModule
-{
-    const char *fname;
-    const char *name;
-    int id; // ID to return to the game.
-    u8 flag;
-    u8 prop;
-    u16 version;
-    s16 returnValue; // Typical return value of module. RESIDENT END (0), NO RESIDENT END (1) or REMOVABLE END (2).
-};
-
-enum FAKE_MODULE_ID {
-    FAKE_MODULE_ID_DEV9 = 0xdead0,
-    FAKE_MODULE_ID_USBD,
-    FAKE_MODULE_ID_SMAP,
-    FAKE_MODULE_ID_ATAD,
-    FAKE_MODULE_ID_CDVDSTM,
-    FAKE_MODULE_ID_CDVDFSV,
-};
-
-// Fake module properties
-#define PROP_REPLACE (1<<0) /// 'fake' module is replacement module (can be used by the game)
-#define PROP_UNLOAD  (1<<1) /// 'fake' module can be unloaded (note that re-loading is not possible!)
-
-static struct FakeModule modulefake_list[] = {
-    {"DEV9.IRX",     "dev9",             FAKE_MODULE_ID_DEV9,    FAKE_MODULE_FLAG_DEV9,    PROP_REPLACE,                0x0208, MODULE_RESIDENT_END},
-    {"USBD.IRX",     "USB_driver",       FAKE_MODULE_ID_USBD,    FAKE_MODULE_FLAG_USBD,    PROP_REPLACE,                0x0204, MODULE_REMOVABLE_END},
-    {"SMAP.IRX",     "INET_SMAP_driver", FAKE_MODULE_ID_SMAP,    FAKE_MODULE_FLAG_SMAP,    0,                           0x0219, MODULE_REMOVABLE_END},
-    {"ENT_SMAP.IRX", "ent_smap",         FAKE_MODULE_ID_SMAP,    FAKE_MODULE_FLAG_SMAP,    0,                           0x021f, MODULE_REMOVABLE_END},
-    {"ATAD.IRX",     "atad_driver",      FAKE_MODULE_ID_ATAD,    FAKE_MODULE_FLAG_ATAD,    PROP_REPLACE,                0x0207, MODULE_RESIDENT_END},
-    {"CDVDSTM.IRX",  "cdvd_st_driver",   FAKE_MODULE_ID_CDVDSTM, FAKE_MODULE_FLAG_CDVDSTM, 0,                           0x0202, MODULE_REMOVABLE_END},
-    {"CDVDFSV.IRX",  "cdvd_ee_driver",   FAKE_MODULE_ID_CDVDFSV, FAKE_MODULE_FLAG_CDVDFSV, PROP_REPLACE | PROP_UNLOAD,  0x0202, MODULE_REMOVABLE_END},
-    {NULL, NULL, 0, 0}};
+static int (*org_LoadStartModule)(char *modpath, int arg_len, char *args, int *modres);
+static int (*org_StartModule)(int id, char *modname, int arg_len, char *args, int *modres);
+static int (*org_LoadModuleBuffer)(void *ptr);
+static int (*org_StopModule)(int id, int arg_len, char *args, int *modres);
+static int (*org_UnloadModule)(int id);
+static int (*org_SearchModuleByName)(const char *modname);
+static int (*org_ReferModuleStatus)(int mid, ModuleStatus *status);
 
 //--------------------------------------------------------------
 static struct FakeModule *checkFakemodByFile(const char *path, struct FakeModule *fakemod_list)
@@ -119,16 +71,16 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_LoadStartModule(%s)\n", modpath);
+    DPRINTF("%s(%s)\n", __FUNCTION__, modpath);
 
-    mod = checkFakemodByFile(modpath, modulefake_list);
-    if (mod != NULL && mod->flag) {
+    mod = checkFakemodByFile(modpath, cdvdman_settings.common.fake);
+    if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = mod->returnValue;
         return mod->id;
     }
 
-    return LoadStartModule(modpath, arg_len, args, modres);
+    return org_LoadStartModule(modpath, arg_len, args, modres);
 }
 
 //--------------------------------------------------------------
@@ -136,16 +88,16 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_StartModule(0x%x, %s)\n", id, modname);
+    DPRINTF("%s(0x%x, %s)\n", __FUNCTION__, id, modname);
 
-    mod = checkFakemodById(id, modulefake_list);
-    if (mod != NULL && mod->flag) {
+    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = mod->returnValue;
         return mod->id;
     }
 
-    return StartModule(id, modname, arg_len, args, modres);
+    return org_StartModule(id, modname, arg_len, args, modres);
 }
 
 //--------------------------------------------------------------
@@ -153,15 +105,15 @@ static int Hook_LoadModuleBuffer(void *ptr)
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_LoadModuleBuffer() modname = %s\n", ((char *)ptr + 0x8e));
+    DPRINTF("%s() modname = %s\n", __FUNCTION__, ((char *)ptr + 0x8e));
 
-    mod = checkFakemodByName(((char *)ptr + 0x8e), modulefake_list);
-    if (mod != NULL && mod->flag) {
+    mod = checkFakemodByName(((char *)ptr + 0x8e), cdvdman_settings.common.fake);
+    if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
     }
 
-    return LoadModuleBuffer(ptr);
+    return org_LoadModuleBuffer(ptr);
 }
 
 //--------------------------------------------------------------
@@ -169,21 +121,21 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_StopModule(0x%x)\n", id);
+    DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
-    mod = checkFakemodById(id, modulefake_list);
-    if (mod != NULL && mod->flag) {
+    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
 
-        if ((mod->prop & PROP_UNLOAD) == 0)
+        if ((mod->prop & FAKE_PROP_UNLOAD) == 0)
             *modres = MODULE_NO_RESIDENT_END;
         else
-            StopModule(SearchModuleByName(mod->name), arg_len, args, modres);
+            org_StopModule(org_SearchModuleByName(mod->name), arg_len, args, modres);
 
         return mod->id;
     }
 
-    return StopModule(id, arg_len, args, modres);
+    return org_StopModule(id, arg_len, args, modres);
 }
 
 //--------------------------------------------------------------
@@ -191,19 +143,19 @@ static int Hook_UnloadModule(int id)
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_UnloadModule(0x%x)\n", id);
+    DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
-    mod = checkFakemodById(id, modulefake_list);
-    if (mod != NULL && mod->flag) {
+    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
 
-        if ((mod->prop & PROP_UNLOAD) != 0)
-            UnloadModule(SearchModuleByName(mod->name));
+        if ((mod->prop & FAKE_PROP_UNLOAD) != 0)
+            org_UnloadModule(org_SearchModuleByName(mod->name));
 
         return mod->id;
     }
 
-    return UnloadModule(id);
+    return org_UnloadModule(id);
 }
 
 //--------------------------------------------------------------
@@ -211,58 +163,78 @@ static int Hook_SearchModuleByName(char *modname)
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_SearchModuleByName(%s)\n", modname);
+    DPRINTF("%s(%s)\n", __FUNCTION__, modname);
 
-    mod = checkFakemodByName(modname, modulefake_list);
-    if (mod != NULL && mod->flag) {
+    mod = checkFakemodByName(modname, cdvdman_settings.common.fake);
+    if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
     }
 
-    return SearchModuleByName(modname);
+    return org_SearchModuleByName(modname);
 }
 
 //--------------------------------------------------------------
-static int Hook_ReferModuleStatus(int id, ModuleStatus_t *status)
+static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
 {
     struct FakeModule *mod;
 
-    DPRINTF("Hook_ReferModuleStatus(0x%x)\n", id);
+    DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
-    mod = checkFakemodById(id, modulefake_list);
-    if (mod != NULL && mod->flag && (mod->prop & PROP_REPLACE) == 0) {
+    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        memset(status, 0, sizeof(ModuleStatus_t));
+        memset(status, 0, sizeof(ModuleStatus));
         strcpy(status->name, mod->name);
         status->version = mod->version;
         status->id = mod->id;
         return id;
     }
 
-    return ReferModuleStatus(id, status);
+    return org_ReferModuleStatus(id, status);
 }
 
 //--------------------------------------------------------------
 void hookMODLOAD(void)
 {
-    // Clear the flags of unused modules
-    struct FakeModule *modlist;
-    for (modlist = modulefake_list; modlist->fname != NULL; modlist++)
-        modlist->flag &= cdvdman_settings.common.fakemodule_flags;
+    int i;
+
+    // Change string index to string pointers
+    DPRINTF("Fake module list:\n");
+    for (i = 0; i < MODULE_SETTINGS_MAX_FAKE_COUNT; i++) {
+        struct FakeModule *fm = &cdvdman_settings.common.fake[i];
+
+        // Transform file name index to pointer
+        if ((unsigned int)fm->fname >= 0x80000000) {
+            unsigned int idx = (unsigned int)fm->fname - 0x80000000;
+            fm->fname = (const char *)&cdvdman_settings.common.data[idx];
+        }
+
+        // Transform module name index to pointer
+        if ((unsigned int)fm->name >= 0x80000000) {
+            unsigned int idx = (unsigned int)fm->name - 0x80000000;
+            fm->name = (const char *)&cdvdman_settings.common.data[idx];
+        }
+
+        if (fm->fname != NULL) {
+            DPRINTF("  %d: %12s | %-14s | 0x%3x | %d | 0x%x\n", i, fm->fname, fm->name, fm->version, fm->returnValue, fm->prop);
+        }
+    }
 
     iop_library_t * lib_modload = ioplib_getByName("modload");
-    LoadStartModule  = ioplib_hookExportEntry(lib_modload,  7, Hook_LoadStartModule);
-    StartModule      = ioplib_hookExportEntry(lib_modload,  8, Hook_StartModule);
-    LoadModuleBuffer = ioplib_hookExportEntry(lib_modload, 10, Hook_LoadModuleBuffer);
+    org_LoadStartModule  = ioplib_hookExportEntry(lib_modload,  7, Hook_LoadStartModule);
+    org_StartModule      = ioplib_hookExportEntry(lib_modload,  8, Hook_StartModule);
+    org_LoadModuleBuffer = ioplib_hookExportEntry(lib_modload, 10, Hook_LoadModuleBuffer);
     // check modload version
     if (lib_modload->version > 0x102) {
-        ReferModuleStatus  = ioplib_hookExportEntry(lib_modload, 17, Hook_ReferModuleStatus);
-        StopModule         = ioplib_hookExportEntry(lib_modload, 20, Hook_StopModule);
-        UnloadModule       = ioplib_hookExportEntry(lib_modload, 21, Hook_UnloadModule);
-        SearchModuleByName = ioplib_hookExportEntry(lib_modload, 22, Hook_SearchModuleByName);
+        org_ReferModuleStatus  = ioplib_hookExportEntry(lib_modload, 17, Hook_ReferModuleStatus);
+        org_StopModule         = ioplib_hookExportEntry(lib_modload, 20, Hook_StopModule);
+        org_UnloadModule       = ioplib_hookExportEntry(lib_modload, 21, Hook_UnloadModule);
+        org_SearchModuleByName = ioplib_hookExportEntry(lib_modload, 22, Hook_SearchModuleByName);
     } else {
+        struct FakeModule *modlist;
         // Change all REMOVABLE END values to RESIDENT END, if modload is old.
-        for (modlist = modulefake_list; modlist->fname != NULL; modlist++) {
+        for (modlist = cdvdman_settings.common.fake; modlist->fname != NULL; modlist++) {
             if (modlist->returnValue == MODULE_REMOVABLE_END)
                 modlist->returnValue = MODULE_RESIDENT_END;
         }

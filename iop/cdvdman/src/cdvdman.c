@@ -11,9 +11,7 @@
 IRX_ID(MODNAME, 1, 1);
 
 //------------------ Patch Zone ----------------------
-struct CDVDMAN_SETTINGS_TYPE cdvdman_settings = {
-    CDVDMAN_SETTINGS_DEFAULT_COMMON,
-    CDVDMAN_SETTINGS_DEFAULT_DEVICE_SETTINGS};
+struct CDVDMAN_SETTINGS_TYPE cdvdman_settings = {{MODULE_SETTINGS_MAGIC}};
 
 //----------------------------------------------------
 extern struct irx_export_table _exp_cdvdman;

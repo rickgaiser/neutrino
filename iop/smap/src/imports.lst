@@ -22,6 +22,7 @@ stdio_IMPORTS_end
 sysclib_IMPORTS_start
 I_memcpy
 I_bzero
+I_strncmp
 sysclib_IMPORTS_end
 
 intrman_IMPORTS_start

@@ -299,7 +299,7 @@ u32 *find_pattern_with_mask(u32 *buf, unsigned int bufsize, const u32 *pattern, 
 /*----------------------------------------------------------------------------------------*/
 /* Copy 'size' bytes of 'eedata' from EE to 'iopptr' in IOP.                              */
 /*----------------------------------------------------------------------------------------*/
-void CopyToIop(void *eedata, unsigned int size, void *iopptr)
+void CopyToIop(const void *eedata, unsigned int size, void *iopptr)
 {
     SifDmaTransfer_t dmadata;
     register int id;

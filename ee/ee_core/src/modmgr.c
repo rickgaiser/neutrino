@@ -77,7 +77,7 @@ int LoadModule(const char *path, int mode, int arg_len, const char *args)
 /*----------------------------------------------------------------------------------------*/
 /* Load an irx module from path.                                                          */
 /*----------------------------------------------------------------------------------------*/
-int LoadMemModule(int mode, void *modptr, unsigned int modsize, int arg_len, const char *args)
+int LoadMemModule(int mode, const void *modptr, unsigned int modsize, int arg_len, const char *args)
 {
     SifDmaTransfer_t sifdma;
     void *iopmem;
@@ -127,37 +127,6 @@ int LoadMemModule(int mode, void *modptr, unsigned int modsize, int arg_len, con
         SifFreeIopHeap(iopmem);
 
     return arg.p.result;
-}
-
-int GetOPLModInfo(int id, void **pointer, unsigned int *size)
-{
-    int i, result;
-    irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
-
-    for (i = 0, result = -1; i < irxtable->count; i++) {
-        if (GET_OPL_MOD_ID(irxtable->modules[i].info) == id) {
-            *pointer = irxtable->modules[i].ptr;
-            *size = GET_OPL_MOD_SIZE(irxtable->modules[i].info);
-            result = 0;
-            break;
-        }
-    }
-
-    return result;
-}
-
-int LoadOPLModule(int id, int mode, int arg_len, const char *args)
-{
-    int result;
-    void *pointer;
-    unsigned int size;
-
-    if ((result = GetOPLModInfo(id, &pointer, &size)) == 0) {
-        if (size > 0)
-            result = LoadMemModule(mode, pointer, size, arg_len, args);
-    }
-
-    return result;
 }
 
 /*----------------------------------------------------------------------------------------*/

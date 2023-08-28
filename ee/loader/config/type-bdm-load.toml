@@ -1,0 +1,9 @@
+#
+# Configuration for BDM load environment
+#
+
+# Modules to load
+[[module]]
+file = "bdm.irx"
+[[module]]
+file = "bdmfs_fatfs.irx"

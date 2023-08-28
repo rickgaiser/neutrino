@@ -17,16 +17,17 @@
 #include "syshook.h"
 
 extern int _iop_reboot_count;
-static int imgdrv_offset_ioprpimg = 0;
-static int imgdrv_offset_ioprpsiz = 0;
 extern void *ModStorageStart;
 
 static void ResetIopSpecial(const char *args, unsigned int arglen)
 {
     int i;
-    void *pIOP_buffer, *IOPRP_img, *imgdrv_irx;
+    void *pIOP_buffer;
+    const void *IOPRP_img, *imgdrv_irx;
     unsigned int length_rounded, CommandLen, size_IOPRP_img, size_imgdrv_irx;
     char command[RESET_ARG_MAX + 1];
+    irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
+    static int imgdrv_offset = 0;
 
     if (arglen > 0) {
         strncpy(command, args, arglen);
@@ -35,47 +36,43 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
                         Some games like SOCOM3 will use a command line that isn't NULL terminated, resulting in things like "cdrom0:\RUN\IRX\DNAS300.IMGG;1" */
         _strcpy(&command[arglen + 1], "img0:");
         CommandLen = arglen + 6;
-//        _strcpy(&command[arglen + 1], "cdrom0:\\IOPRP1.IMG");
-//        CommandLen = arglen + 19;
     } else {
         _strcpy(command, "img0:");
         CommandLen = 5;
-//        _strcpy(command, "cdrom0:\\IOPRP1.IMG");
-//        CommandLen = 18;
     }
 
-    GetOPLModInfo(EECORE_MODULE_ID_IOPRP, &IOPRP_img, &size_IOPRP_img);
-    GetOPLModInfo(EECORE_MODULE_ID_IMGDRV, &imgdrv_irx, &size_imgdrv_irx);
+    // FIXED modules:
+    // 0 = IOPRP image
+    // 1 = imgdrv
+    IOPRP_img       = irxtable->modules[0].ptr;
+    size_IOPRP_img  = irxtable->modules[0].size;
+    imgdrv_irx      = irxtable->modules[1].ptr;
+    size_imgdrv_irx = irxtable->modules[1].size;
 
+    // Manually copy IOPRP to IOP
     length_rounded = (size_IOPRP_img + 0xF) & ~0xF;
     pIOP_buffer = SifAllocIopHeap(length_rounded);
-
     CopyToIop(IOPRP_img, length_rounded, pIOP_buffer);
 
-    if (imgdrv_offset_ioprpimg == 0 || imgdrv_offset_ioprpsiz == 0) {
-        for (i = 0; i < size_imgdrv_irx; i += 4) {
-            if (*(u32 *)((&((unsigned char *)imgdrv_irx)[i])) == 0xDEC1DEC1) {
-                imgdrv_offset_ioprpimg = i;
-            }
-            if (*(u32 *)((&((unsigned char *)imgdrv_irx)[i])) == 0xDEC2DEC2) {
-                imgdrv_offset_ioprpsiz = i;
-            }
+    // Patch imgdrv.irx to point to the IOPRP
+    for (i = 0; i < size_imgdrv_irx; i += 4) {
+        if (*(u32 *)((&((unsigned char *)imgdrv_irx)[i])) == 0xDEC1DEC1) {
+            imgdrv_offset = i;
         }
     }
+    *(void **)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset+4])) = pIOP_buffer;
+    *(u32   *)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset+8])) = size_IOPRP_img;
 
-    *(void **)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset_ioprpimg])) = pIOP_buffer;
-    *(u32 *)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset_ioprpsiz])) = size_IOPRP_img;
-
+    // Load patched imgdrv.irx
     LoadMemModule(0, imgdrv_irx, size_imgdrv_irx, 0, NULL);
 
+    // Trigger IOP reboot with update
     DIntr();
     ee_kmode_enter();
     Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
     ee_kmode_exit();
     EIntr();
-
     LoadModule("rom0:UDNL", SIF_RPC_M_NOWAIT, CommandLen, command);
-
     DIntr();
     ee_kmode_enter();
     Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_SIFINIT);
@@ -99,26 +96,10 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
     sbv_patch_enable_lmb();
 
     DPRINTF("Loading extra IOP modules...\n");
-    irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
-    // Skip the first 2 modules: IOPRP.IMG and imgdrv.irx
-    // FIXME: magic number!
+    // Skip the first 2 modules (IOPRP.IMG and imgdrv.irx)
     for (i = 2; i < irxtable->count; i++) {
         irxptr_t p = irxtable->modules[i];
-        // Modules that emulate the sceCdRead function must operate at a higher
-        // priority than the highest possible game priority.
-        //
-        // If the priority is lower (higher number) then some games will wait in
-        // and endless loop for data, but the waiting thread will then cause the
-        // data to never be processed.
-        //
-        // This causes some games to 'need' MODE2 (sync reads) to work.
-        switch (GET_OPL_MOD_ID(p.info)) {
-            case EECORE_MODULE_ID_USBD:
-                LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 10, "thpri=7,8");
-                break;
-            default:
-                LoadMemModule(0, p.ptr, GET_OPL_MOD_SIZE(p.info), 0, NULL);
-        }
+        LoadMemModule(0, p.ptr, p.size, p.arg_len, p.args);
     }
 }
 

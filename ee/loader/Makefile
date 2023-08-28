@@ -5,65 +5,7 @@ EE_LIBS = -lfileXio -lpatches
 EE_NEWLIB_NANO = 1
 EE_COMPACT_EXECUTABLE = 1
 
-# Configuration options
-BUILTIN_COMMON ?= 0
-BUILTIN_DRIVERS ?= 0
-
-# Add embedded files
-ifeq ($(BUILTIN_COMMON),1)
-EE_BIN_NAME_SUFFIX = _plus
-EE_CFLAGS += -DBUILTIN_COMMON
-EE_IRX_FILES += \
-	cdvdfsv.irx \
-	bdm_cdvdman.irx \
-	imgdrv.irx \
-	isofs.irx \
-	eesync.irx \
-	iomanX.irx \
-	fileXio.irx \
-	bdm.irx \
-	bdmfs_fatfs.irx
-
-EE_ELF_FILES += \
-	ee_core.elf
-endif
-ifeq ($(BUILTIN_DRIVERS),1)
-EE_BIN_NAME_SUFFIX = _full
-EE_CFLAGS += -DBUILTIN_DRIVERS
-EE_IRX_FILES += \
-	smap.irx \
-	ata_bd.irx \
-	usbd_mini.irx \
-	usbmass_bd_mini.irx \
-	mx4sio_bd_mini.irx \
-	ps2dev9.irx \
-	iLinkman.irx \
-	IEEE1394_bd_mini.irx
-endif
-EE_OBJS += $(addsuffix _irx.o, $(basename $(EE_IRX_FILES)))
-EE_OBJS += $(addsuffix _elf.o, $(basename $(EE_ELF_FILES)))
-
-# Where to find the modules
-vpath %.irx ../../iop/cdvdfsv/irx/
-vpath %.irx ../../iop/cdvdman/irx/
-vpath %.irx ../../iop/smap/irx/
-vpath %.irx ../../iop/imgdrv/irx/
-vpath %.irx ../../iop/isofs/irx/
-vpath %.elf ../ee_core/
-vpath %.irx $(PS2SDK)/iop/irx/
-
-# Rule to generate them
-%_irx.o: %.irx
-	bin2c $< $*_irx.c $*_irx
-	mips64r5900el-ps2-elf-gcc -c $*_irx.c -o $*_irx.o
-	rm $*_irx.c
-
-%_elf.o: %.elf
-	bin2c $< $*_elf.c $*_elf
-	mips64r5900el-ps2-elf-gcc -c $*_elf.c -o $*_elf.o
-	rm $*_elf.c
-
-EE_BIN_NAME = neutrino$(EE_BIN_NAME_SUFFIX)
+EE_BIN_NAME = neutrino
 EE_BIN = $(EE_BIN_NAME).elf
 EE_BIN_PACKED = $(EE_BIN_NAME)_packed.elf
 

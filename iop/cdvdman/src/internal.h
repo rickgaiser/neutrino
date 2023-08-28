@@ -35,17 +35,10 @@
 #define iDPRINTF(args...)
 #endif
 
-#define CDVDMAN_SETTINGS_DEFAULT_COMMON         \
-    {                                           \
-        0x69, 0x69, 0x1234, 0x39393939, "B00BS" \
-    }
-
 #ifdef BDM_DRIVER
 #define CDVDMAN_SETTINGS_TYPE cdvdman_settings_bdm
-#define CDVDMAN_SETTINGS_DEFAULT_DEVICE_SETTINGS
 #elif defined FILE_DRIVER
 #define CDVDMAN_SETTINGS_TYPE cdvdman_settings_file
-#define CDVDMAN_SETTINGS_DEFAULT_DEVICE_SETTINGS
 #else
 #error Unknown driver type. Please check the Makefile.
 #endif

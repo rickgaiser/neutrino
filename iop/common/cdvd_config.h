@@ -2,7 +2,7 @@
 #define __CDVD_CONFIG__
 
 #include <tamtypes.h>
-#include <usbhdfsd-common.h>
+#include <usbhdfsd-common.h> // bd_fragment_t
 
 // flags
 #define IOPCORE_COMPAT_ACCU_READS    0x0008 // MODE_1
@@ -11,25 +11,41 @@
 #define IOPCORE_COMPAT_EMU_DVDDL     0x0004 // MODE_5
 //#define IOPCORE_ENABLE_POFF          0x0100 // MODE_6 - not supported!
 
-// fakemodule_flags
-#define FAKE_MODULE_FLAG_DEV9    (1 << 0)
-#define FAKE_MODULE_FLAG_USBD    (1 << 1)
-#define FAKE_MODULE_FLAG_SMAP    (1 << 2)
-#define FAKE_MODULE_FLAG_ATAD    (1 << 3)
-#define FAKE_MODULE_FLAG_CDVDSTM (1 << 4)
-#define FAKE_MODULE_FLAG_CDVDFSV (1 << 5)
+struct FakeModule
+{
+    const char *fname;
+    const char *name;
+    int id;
 
-#define ISO_MAX_PARTS 10
+    u16 prop;
+    u16 version;
 
+    s16 returnValue; // Typical return value of module. RESIDENT END (0), NO RESIDENT END (1) or REMOVABLE END (2).
+    u16 fill;
+} __attribute__((packed));
+// Fake module properties
+#define FAKE_PROP_REPLACE (1<<0) /// 'fake' module is replacement module (can be used by the game)
+#define FAKE_PROP_UNLOAD  (1<<1) /// 'fake' module can be unloaded (note that re-loading is not possible!)
+
+#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
+#define MODULE_SETTINGS_MAX_DATA_SIZE 256
+#define MODULE_SETTINGS_MAX_FAKE_COUNT 10
 struct cdvdman_settings_common
 {
-    u8 spare;
+    // Magic number to find
+    u32 magic;
+
+    // Disc info
     u8 media;
+    u8 DiscID[5];
     u16 flags;
     u32 layer1_start;
-    u8 DiscID[5];
-    u8 padding[2];
-    u8 fakemodule_flags;
+
+    // Max 10 fake modules
+    struct FakeModule fake[MODULE_SETTINGS_MAX_FAKE_COUNT];
+
+    // Strings used for fake module names
+    const u8 data[MODULE_SETTINGS_MAX_DATA_SIZE];
 } __attribute__((packed));
 
 #define BDM_MAX_FILES 1  // ISO
@@ -60,6 +76,7 @@ struct cdvdman_settings_bdm
 struct cdvdman_settings_file
 {
     struct cdvdman_settings_common common;
+
     char filename[256];
 } __attribute__((packed));
 

@@ -1,0 +1,24 @@
+# Name of device driver, to show to user
+name = "iLink/FireWire/IEEE1394 BDM driver"
+
+# Type of device driver, support for this type must exist in
+# type-<type>-load.toml   for the load   environment
+# type-<type>-ingame.toml for the ingame environment
+type = "bdm"
+
+# Device mode as used by the EECORE (used for patches), support for this type must exist in the EECORE
+mode = "BDM_ILK_MODE"
+
+# Modules to load
+[[module]]
+file = "iLinkman.irx"
+[[module]]
+file = "IEEE1394_bd_mini.irx"
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "ILINK.IRX"
+name = "iLINK_HW_Manager" # is this correct?
+replace = true            # is this correct?
+version = 0x0202          # is this correct?
+return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END # is this correct?

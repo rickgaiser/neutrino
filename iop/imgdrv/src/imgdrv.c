@@ -6,8 +6,11 @@
 #define MODNAME "img_driver"
 IRX_ID(MODNAME, 1, 1);
 
-unsigned int ioprpimg = 0xDEC1DEC1;
-int ioprpsiz = 0xDEC2DEC2;
+struct SPatchData {
+    unsigned int magic;
+    unsigned int ioprpimg;
+    int ioprpsiz;
+} __attribute__((packed)) p = {0xDEC1DEC1, 0, 0};
 
 int dummy_fs()
 {
@@ -17,7 +20,7 @@ int dummy_fs()
 int lseek_fs(iop_file_t *fd, int offset, int whence)
 {
     if (whence == SEEK_END) {
-        return ioprpsiz;
+        return p.ioprpsiz;
     } else {
         return 0;
     }
@@ -25,7 +28,7 @@ int lseek_fs(iop_file_t *fd, int offset, int whence)
 
 int read_fs(iop_file_t *fd, void *buffer, int size)
 {
-    memcpy(buffer, (void *)ioprpimg, size);
+    memcpy(buffer, (void *)p.ioprpimg, size);
     return size;
 }
 

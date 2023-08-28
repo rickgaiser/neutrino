@@ -5,7 +5,7 @@
 
 void eecc_init(struct SEECoreConfig *eecc)
 {
-    eecc_setGameMode(eecc, 0);
+    eecc_setGameMode(eecc, "");
     eecc_setKernelConfig(eecc, 0, 0);
     eecc_setModStorageConfig(eecc, 0, 0);
     eecc_setCompatFlags(eecc, 0);
@@ -24,9 +24,9 @@ void eecc_init(struct SEECoreConfig *eecc)
     eecc->_argc = 0;
 }
 
-void eecc_setGameMode(struct SEECoreConfig *eecc, u32 gameMode)
+void eecc_setGameMode(struct SEECoreConfig *eecc, const char *gameMode)
 {
-    eecc->_gameMode = gameMode;
+    eecc->_sGameMode = gameMode;
 }
 
 void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory)
@@ -93,7 +93,7 @@ void eecc_setHDDSpindown(struct SEECoreConfig *eecc, u32 minutes)
 
 bool eecc_valid(struct SEECoreConfig *eecc)
 {
-    if (eecc->_gameMode == 0)
+    if (eecc->_sGameMode[0] == 0)
         return false;
 
     if (eecc->_eeloadCopy == 0x0)
@@ -139,7 +139,7 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
     eecc->_argc = 0;
 
     // Base config
-    snprintf(psConfig, maxStrLen, "-drv=%s", eecc_getGameModeString(eecc));
+    snprintf(psConfig, maxStrLen, "-drv=%s", eecc->_sGameMode);
     eecc->_argv[eecc->_argc++] = psConfig;
     maxStrLen -= strlen(psConfig) + 1;
     psConfig += strlen(psConfig) + 1;
@@ -199,22 +199,4 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
     psConfig += strlen(psConfig) + 1;
 
     return eecc->_argv;
-}
-
-const char *eecc_getGameModeString(struct SEECoreConfig *eecc)
-{
-    switch (eecc->_gameMode) {
-        case BDM_ILK_MODE:
-            return "BDM_ILK_MODE";
-        case BDM_M4S_MODE:
-            return "BDM_M4S_MODE";
-        case BDM_USB_MODE:
-            return "BDM_USB_MODE";
-        case BDM_UDP_MODE:
-            return "BDM_UDP_MODE";
-        case BDM_ATA_MODE:
-            return "BDM_ATA_MODE";
-        default:
-            return "INVALID_MODE";
-    }
 }

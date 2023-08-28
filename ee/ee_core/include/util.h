@@ -27,7 +27,7 @@ unsigned int _strtoui(const char *p);
 int _strtoi(const char *p);
 u64 _strtoul(const char *p);
 u32 *find_pattern_with_mask(u32 *buf, unsigned int bufsize, const u32 *pattern, const u32 *mask, unsigned int len);
-void CopyToIop(void *eedata, unsigned int size, void *iopptr);
+void CopyToIop(const void *eedata, unsigned int size, void *iopptr);
 void WipeUserMemory(void *start, void *end);
 void delay(int count);
 

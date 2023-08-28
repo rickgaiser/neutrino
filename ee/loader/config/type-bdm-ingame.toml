@@ -1,0 +1,32 @@
+#
+# Configuration for BDM ingame environment
+#
+
+# Modules to load
+[[module]]
+file = "bdm_cdvdman.irx"
+ioprp = "CDVDMAN"
+[[module]]
+file = "cdvdfsv.irx"
+ioprp = "CDVDFSV"
+[[module]]
+file = "eesync.irx"
+ioprp = "EESYNC"
+[[module]]
+file = "imgdrv.irx"
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "CDVDFSV.IRX"
+name = "cdvd_ee_driver"
+replace = true
+unload = true
+version = 0x0202
+return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "CDVDSTM.IRX"
+name = "cdvd_st_driver"
+replace = false
+unload = false
+version = 0x0202
+return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
