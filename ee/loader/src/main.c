@@ -60,6 +60,7 @@ void print_usage()
     printf("                    - mx4sio\n");
     printf("                    - udpbd\n");
     printf("                    - ilink\n");
+    printf("                    - dvd\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
     printf("  -elf=<file>       Select elf file inside iso to boot\n");
     printf("  -mt=<type>        Select media type, supported are:\n");
@@ -77,6 +78,7 @@ void print_usage()
     printf("\n");
     printf("Usage example:\n");
     printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso\n");
+    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=dvd\n");
 }
 
 struct SModule
@@ -117,14 +119,7 @@ struct SDriver {
     struct SFakeList fake;
 } drv;
 
-struct SModule mod_fixed_list[] = {
-    // fixed modules
-    {"ee_core.elf"},
-    {"iomanX.irx"},
-    {"fileXio.irx"},
-    {"isofs.irx"},
-};
-struct SModList mod_fixed = {sizeof(mod_fixed_list)/sizeof(mod_fixed_list[0]),mod_fixed_list};
+struct SModule mod_ee_core = {"ee_core.elf"};
 
 #define MAX_FILENAME 128
 int module_load(struct SModule *mod)
@@ -307,7 +302,7 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
     return (ioprp_out - (u8 *)romdir_out_org);
 }
 
-struct ioprp_ext {
+struct ioprp_ext_full {
     extinfo_t reset_date_ext;
     uint32_t  reset_date;
 
@@ -329,18 +324,15 @@ struct ioprp_ext {
     extinfo_t syncee_comment_ext;
     char      syncee_comment[8];
 };
-
-#define ROMDIR_ENTRY_COUNT 7
-struct ioprp_img
+struct ioprp_img_full
 {
-    romdir_entry_t romdir[ROMDIR_ENTRY_COUNT];
-    struct ioprp_ext ext;
+    romdir_entry_t romdir[7];
+    struct ioprp_ext_full ext;
 };
-
-static const struct ioprp_img ioprp_img_base = {
+static const struct ioprp_img_full ioprp_img_full = {
     {{"RESET"  ,  8, 0},
-     {"ROMDIR" ,  0, 0x10 * ROMDIR_ENTRY_COUNT},
-     {"EXTINFO",  0, sizeof(struct ioprp_ext)},
+     {"ROMDIR" ,  0, 0x10 * 7},
+     {"EXTINFO",  0, sizeof(struct ioprp_ext_full)},
      {"CDVDMAN", 28, 0},
      {"CDVDFSV", 32, 0},
      {"EESYNC" , 24, 0},
@@ -361,6 +353,51 @@ static const struct ioprp_img ioprp_img_base = {
         {0x9999, 0, EXTINFO_TYPE_VERSION},
         {0, 16, EXTINFO_TYPE_COMMENT},
         "cdvd_ee_driver",
+        // SYNCEE extinfo
+        {0, 4, EXTINFO_TYPE_DATE},
+        0x20230621,
+        {0x9999, 0, EXTINFO_TYPE_VERSION},
+        {0, 8, EXTINFO_TYPE_COMMENT},
+        "SyncEE"
+    }};
+
+struct ioprp_ext_dvd {
+    extinfo_t reset_date_ext;
+    uint32_t  reset_date;
+
+    extinfo_t cdvdman_date_ext;
+    uint32_t  cdvdman_date;
+    extinfo_t cdvdman_version_ext;
+    extinfo_t cdvdman_comment_ext;
+    char      cdvdman_comment[12];
+
+    extinfo_t cdvdfsv_date_ext;
+    uint32_t  cdvdfsv_date;
+    extinfo_t cdvdfsv_version_ext;
+    extinfo_t cdvdfsv_comment_ext;
+    char      cdvdfsv_comment[16];
+
+    extinfo_t syncee_date_ext;
+    uint32_t  syncee_date;
+    extinfo_t syncee_version_ext;
+    extinfo_t syncee_comment_ext;
+    char      syncee_comment[8];
+};
+struct ioprp_img_dvd
+{
+    romdir_entry_t romdir[5];
+    struct ioprp_ext_dvd ext;
+};
+static const struct ioprp_img_dvd ioprp_img_dvd = {
+    {{"RESET"  ,  8, 0},
+     {"ROMDIR" ,  0, 0x10 * 5},
+     {"EXTINFO",  0, sizeof(struct ioprp_ext_dvd)},
+     {"EESYNC" , 24, 0},
+     {"", 0, 0}},
+    {
+        // RESET extinfo
+        {0, 4, EXTINFO_TYPE_DATE},
+        0x20230621,
         // SYNCEE extinfo
         {0, 4, EXTINFO_TYPE_DATE},
         0x20230621,
@@ -570,10 +607,14 @@ int main(int argc, char *argv[])
     irxtab_t *irxtable;
     irxptr_t *irxptr_tab;
     u8 *irxptr;
-    int fd;
+    int fd_iso = 0;
+    int fd_system_cnf;
     int i;
     void *eeloadCopy, *initUserMemory;
     const char *sGameID;
+    uint32_t layer1_lba_start = 0;
+    off_t iso_size = 0;
+    struct cdvdman_settings_bdm *settings = NULL;
 
     printf("----------------------------\n");
     printf("- Neutrino PS2 Game Loader -\n");
@@ -665,7 +706,7 @@ int main(int argc, char *argv[])
     /*
      * Load all needed files before rebooting the IOP
      */
-    if (modlist_load(&mod_fixed) < 0)
+    if (module_load(&mod_ee_core) < 0)
         return -1;
     if (modlist_load(&drv.mod_isys) < 0)
         return -1;
@@ -698,83 +739,87 @@ int main(int argc, char *argv[])
         return -1;
 
     /*
-     * For isofs we need the following drivers
+     * If we load a replacement CDVDMAN then we assume we're not using the DVD drive
+     * but an ISO file instead.
      */
-    if (module_start(modlist_get_by_name(&mod_fixed, "iomanX.irx")) < 0)
-        return -1;
-    if (module_start(modlist_get_by_name(&mod_fixed, "fileXio.irx")) < 0)
-        return -1;
-    fileXioInit();
-    if (module_start(modlist_get_by_name(&mod_fixed, "isofs.irx")) < 0)
-        return -1;
+    int iUseDrive = (modlist_get_by_udnlname(&drv.mod_isys, "CDVDMAN") == NULL) ? 1 : 0;
+    if (iUseDrive == 0) {
+        if (modlist_get_by_name(&drv.mod_lsys, "fileXio.irx") != NULL)
+            fileXioInit();
 
-    /*
-     * Check if file exists
-     * Give low level drivers 10s to start
-     */
-    printf("Loading %s...\n", sFileNameISO);
-    for (i = 0; i < 1000; i++) {
-        fd = open(sFileNameISO, O_RDONLY);
-        if (fd >= 0)
-            break;
+        /*
+         * Check if file exists
+         * Give low level drivers 10s to start
+         */
+        printf("Loading %s...\n", sFileNameISO);
+        for (i = 0; i < 1000; i++) {
+            fd_iso = open(sFileNameISO, O_RDONLY);
+            if (fd_iso >= 0)
+                break;
 
-        // Give low level drivers some time to init
-        nopdelay();
-    }
-    if (fd < 0) {
-        printf("Unable to open %s\n", sFileNameISO);
-        return -1;
-    }
-    // Get ISO file size
-    off_t iso_size = lseek64(fd, 0, SEEK_END);
-    char buffer[6];
-    // Validate this is an ISO
-    lseek64(fd, 16 * 2048, SEEK_SET);
-    if (read(fd, buffer, sizeof(buffer)) != sizeof(buffer)) {
-        printf("Unable to read ISO\n");
-        return -1;
-    }
-    if ((buffer[0x00] != 1) || (strncmp(&buffer[0x01], "CD001", 5))) {
-        printf("File is not a valid ISO\n");
-        return -1;
-    }
-    // Get ISO layer0 size
-    uint32_t layer0_lba_size;
-    lseek64(fd, 16 * 2048 + 80, SEEK_SET);
-    if (read(fd, &layer0_lba_size, sizeof(layer0_lba_size)) != sizeof(layer0_lba_size)) {
-        printf("ISO invalid\n");
-        return -1;
-    }
-    // Try to get ISO layer1 size
-    uint32_t layer1_lba_start = 0;
-    lseek64(fd, (uint64_t)layer0_lba_size * 2048, SEEK_SET);
-    if (read(fd, buffer, sizeof(buffer)) == sizeof(buffer)) {
-        if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
-            layer1_lba_start = layer0_lba_size - 16;
-            printf("- DVD-DL detected\n");
+            // Give low level drivers some time to init
+            nopdelay();
         }
-    }
-    printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
+        if (fd_iso < 0) {
+            printf("Unable to open %s\n", sFileNameISO);
+            return -1;
+        }
+        // Get ISO file size
+        iso_size = lseek64(fd_iso, 0, SEEK_END);
+        char buffer[6];
+        // Validate this is an ISO
+        lseek64(fd_iso, 16 * 2048, SEEK_SET);
+        if (read(fd_iso, buffer, sizeof(buffer)) != sizeof(buffer)) {
+            printf("Unable to read ISO\n");
+            return -1;
+        }
+        if ((buffer[0x00] != 1) || (strncmp(&buffer[0x01], "CD001", 5))) {
+            printf("File is not a valid ISO\n");
+            return -1;
+        }
+        // Get ISO layer0 size
+        uint32_t layer0_lba_size;
+        lseek64(fd_iso, 16 * 2048 + 80, SEEK_SET);
+        if (read(fd_iso, &layer0_lba_size, sizeof(layer0_lba_size)) != sizeof(layer0_lba_size)) {
+            printf("ISO invalid\n");
+            return -1;
+        }
+        // Try to get ISO layer1 size
+        layer1_lba_start = 0;
+        lseek64(fd_iso, (uint64_t)layer0_lba_size * 2048, SEEK_SET);
+        if (read(fd_iso, buffer, sizeof(buffer)) == sizeof(buffer)) {
+            if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
+                layer1_lba_start = layer0_lba_size - 16;
+                printf("- DVD-DL detected\n");
+            }
+        }
+        printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
 
-    if (eMediaType == SCECdNODISC)
-        eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
-    printf("- media = %s\n", eMediaType == SCECdPS2DVD ? "DVD" : "CD");
+        if (eMediaType == SCECdNODISC)
+            eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
+        printf("- media = %s\n", eMediaType == SCECdPS2DVD ? "DVD" : "CD");
 
-    /*
-     * Mount as ISO so we can get ELF name to boot
-     */
-    int fd_isomount = fileXioMount("iso:", sFileNameISO, FIO_MT_RDONLY);
-    if (fd_isomount < 0) {
-        printf("ERROR: Unable to mount %s as iso\n", sFileNameISO);
-        return -1;
+        /*
+         * Mount as ISO so we can get ELF name to boot
+         */
+        int fd_isomount = fileXioMount("iso:", sFileNameISO, FIO_MT_RDONLY);
+        if (fd_isomount < 0) {
+            printf("ERROR: Unable to mount %s as iso\n", sFileNameISO);
+            return -1;
+        }
+
+        fd_system_cnf = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
     }
-    int fd_config = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
-    if (fd_config < 0) {
-        printf("ERROR: Unable to open %s\n", "iso:\\SYSTEM.CNF;1");
+    else {
+        fd_system_cnf = open("cdrom:\\SYSTEM.CNF;1", O_RDONLY);
+    }
+
+    if (fd_system_cnf < 0) {
+        printf("ERROR: Unable to open SYSTEM.CNF from disk\n");
         return -1;
     }
     char config_data[128];
-    read(fd_config, config_data, 128);
+    read(fd_system_cnf, config_data, 128);
     char *fname_start = strstr(config_data, "cdrom0:");
     char *fname_end = strstr(config_data, ";1");
     if (fname_start == NULL || fname_end == NULL) {
@@ -784,8 +829,10 @@ int main(int argc, char *argv[])
     sGameID = &fname_start[8];
     fname_end[0] = '\0';
     printf("config name: %s\n", sGameID);
-    close(fd_config);
-    fileXioUmount("iso:");
+    close(fd_system_cnf);
+
+    if (iUseDrive == 0)
+        fileXioUmount("iso:");
 
     if (sFileNameELF == NULL)
         sFileNameELF = sGameID;
@@ -793,59 +840,60 @@ int main(int argc, char *argv[])
     ResetDeckardXParams();
     ApplyDeckardXParam(sGameID);
 
-    //
-    // Locate and set cdvdman settings
-    //
-    struct SModule *mod_cdvdman = modlist_get_by_udnlname(&drv.mod_isys, "CDVDMAN");
-    struct cdvdman_settings_bdm *settings = NULL;
-    for (i = 0; i < mod_cdvdman->iSize; i += 4) {
-        if (*(u32 *)(mod_cdvdman->pData + i) == MODULE_SETTINGS_MAGIC) {
-            settings = (struct cdvdman_settings_bdm *)(mod_cdvdman->pData + i);
-            break;
+    if (iUseDrive == 0) {
+        //
+        // Locate and set cdvdman settings
+        //
+        struct SModule *mod_cdvdman = modlist_get_by_udnlname(&drv.mod_isys, "CDVDMAN");
+        for (i = 0; i < mod_cdvdman->iSize; i += 4) {
+            if (*(u32 *)(mod_cdvdman->pData + i) == MODULE_SETTINGS_MAGIC) {
+                settings = (struct cdvdman_settings_bdm *)(mod_cdvdman->pData + i);
+                break;
+            }
         }
-    }
-    if (settings == NULL) {
-        printf("ERROR: unable to locate cdvdman settings\n");
-        return -1;
-    }
-    memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
-    settings->common.media = eMediaType;
-    settings->common.layer1_start = layer1_lba_start;
-    // settings->common.DiscID[5];
+        if (settings == NULL) {
+            printf("ERROR: unable to locate cdvdman settings\n");
+            return -1;
+        }
+        memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
+        settings->common.media = eMediaType;
+        settings->common.layer1_start = layer1_lba_start;
+        // settings->common.DiscID[5];
 
-    // If no compatibility options are set on the command line
-    // see if the game is in our builtin database
-    if (iCompat == 0)
-        iCompat = get_compat(sGameID);
-    iCompat &= ~(1<<31); // Clear dummy flag
-    if (iCompat & COMPAT_MODE_1)
-        settings->common.flags |= IOPCORE_COMPAT_ACCU_READS;
-    if (iCompat & COMPAT_MODE_2)
-        settings->common.flags |= IOPCORE_COMPAT_ALT_READ;
-    if (iCompat & COMPAT_MODE_5)
-        settings->common.flags |= IOPCORE_COMPAT_EMU_DVDDL;
-    printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, settings->common.flags);
+        // If no compatibility options are set on the command line
+        // see if the game is in our builtin database
+        if (iCompat == 0)
+            iCompat = get_compat(sGameID);
+        iCompat &= ~(1<<31); // Clear dummy flag
+        if (iCompat & COMPAT_MODE_1)
+            settings->common.flags |= IOPCORE_COMPAT_ACCU_READS;
+        if (iCompat & COMPAT_MODE_2)
+            settings->common.flags |= IOPCORE_COMPAT_ALT_READ;
+        if (iCompat & COMPAT_MODE_5)
+            settings->common.flags |= IOPCORE_COMPAT_EMU_DVDDL;
+        printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, settings->common.flags);
 
-    //
-    // Add ISO as fragfile[0] to fragment list
-    //
-    struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
-    iso_frag->frag_start = 0;
-    iso_frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
-    iso_frag->size       = iso_size;
-    printf("ISO fragments: start=%u, count=%u\n", iso_frag->frag_start, iso_frag->frag_count);
-    for (i=0; i<iso_frag->frag_count; i++) {
-        printf("- frag[%d] start=%u, count=%u\n", i, (u32)settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
+        //
+        // Add ISO as fragfile[0] to fragment list
+        //
+        struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
+        iso_frag->frag_start = 0;
+        iso_frag->frag_count = fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
+        iso_frag->size       = iso_size;
+        printf("ISO fragments: start=%u, count=%u\n", iso_frag->frag_start, iso_frag->frag_count);
+        for (i=0; i<iso_frag->frag_count; i++) {
+            printf("- frag[%d] start=%u, count=%u\n", i, (u32)settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
+        }
+        if ((iso_frag->frag_start + iso_frag->frag_count) > BDM_MAX_FRAGS) {
+            printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
+            return -1;
+        }
+        settings->drvName = (u32)fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+        fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &settings->devNr, 4);
+        char *drvName = (char *)&settings->drvName;
+        printf("Using BDM device: %s%d\n", drvName, settings->devNr);
+        close(fd_iso);
     }
-    if ((iso_frag->frag_start + iso_frag->frag_count) > BDM_MAX_FRAGS) {
-        printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
-        return -1;
-    }
-    settings->drvName = (u32)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-    fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &settings->devNr, 4);
-    char *drvName = (char *)&settings->drvName;
-    printf("Using BDM device: %s%d\n", drvName, settings->devNr);
-    close(fd);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
@@ -862,42 +910,49 @@ int main(int argc, char *argv[])
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
 
-    size_t stringbase = 0;
-    for (i = 0; i < drv.fake.count; i++) {
-        size_t len;
+    if (iUseDrive == 0) {
+        size_t stringbase = 0;
+        for (i = 0; i < drv.fake.count; i++) {
+            size_t len;
 
-        // Copy file name into cdvdman data
-        len = strlen(drv.fake.fake[i].fname) + 1;
-        if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
-            printf("Too much fake string data\n");
-            return -1;
+            // Copy file name into cdvdman data
+            len = strlen(drv.fake.fake[i].fname) + 1;
+            if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
+                printf("Too much fake string data\n");
+                return -1;
+            }
+            strcpy((char *)&settings->common.data[stringbase], drv.fake.fake[i].fname);
+            settings->common.fake[i].fname = (char *)(stringbase + 0x80000000);
+            stringbase += len;
+
+            // Copy module name into cdvdman data
+            len = strlen(drv.fake.fake[i].name) + 1;
+            if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
+                printf("Too much fake string data\n");
+                return -1;
+            }
+            strcpy((char *)&settings->common.data[stringbase], drv.fake.fake[i].name);
+            settings->common.fake[i].name = (char *)(stringbase + 0x80000000);
+            stringbase += len;
+
+            //settings->common.fake[i].id          = drv.fake.fake[i].id;          // id set in cdvdman
+            settings->common.fake[i].prop        = drv.fake.fake[i].prop;
+            settings->common.fake[i].version     = drv.fake.fake[i].version;
+            settings->common.fake[i].returnValue = drv.fake.fake[i].returnValue;
         }
-        strcpy((char *)&settings->common.data[stringbase], drv.fake.fake[i].fname);
-        settings->common.fake[i].fname = (char *)(stringbase + 0x80000000);
-        stringbase += len;
-
-        // Copy module name into cdvdman data
-        len = strlen(drv.fake.fake[i].name) + 1;
-        if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
-            printf("Too much fake string data\n");
-            return -1;
-        }
-        strcpy((char *)&settings->common.data[stringbase], drv.fake.fake[i].name);
-        settings->common.fake[i].name = (char *)(stringbase + 0x80000000);
-        stringbase += len;
-
-        //settings->common.fake[i].id          = drv.fake.fake[i].id;          // id set in cdvdman
-        settings->common.fake[i].prop        = drv.fake.fake[i].prop;
-        settings->common.fake[i].version     = drv.fake.fake[i].version;
-        settings->common.fake[i].returnValue = drv.fake.fake[i].returnValue;
     }
 
     //
-    // Patch IOPRP.img with our own CDVDMAN, CDVDFSV and EESYNC
+    // Patch IOPRP.img with our custom modules
     //
     //printf("IOPRP.img (old):\n");
     //print_romdir(ioprp_img_base.romdir);
-    unsigned int ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_base.romdir);
+    unsigned int ioprp_size;
+
+    if (iUseDrive == 0)
+        ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_full.romdir);
+    else
+        ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_dvd.romdir);
     //printf("IOPRP.img (new):\n");
     //print_romdir((struct romdir_entry *)irxptr);
     irxptr_tab->size = ioprp_size;
@@ -924,7 +979,7 @@ int main(int argc, char *argv[])
     //
     // Load EECORE ELF sections
     //
-    u8 *boot_elf = (u8 *)modlist_get_by_name(&mod_fixed, "ee_core.elf")->pData;
+    u8 *boot_elf = (u8 *)mod_ee_core.pData;
     elf_header_t *eh = (elf_header_t *)boot_elf;
     elf_pheader_t *eph = (elf_pheader_t *)(boot_elf + eh->phoff);
     for (i = 0; i < eh->phnum; i++) {

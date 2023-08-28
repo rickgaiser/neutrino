@@ -29,12 +29,13 @@ When running neutrino using ps2link, the following usage instructions will be sh
 Usage: neutrino.elf -drv=<driver> -iso=<path>\n");
 
 Options:\n");
-  -drv=<driver>     Select block device driver, supported are:
+  -drv=<driver>     Select device driver, supported are:
                     - ata
                     - usb
                     - mx4sio
                     - udpbd
                     - ilink
+                    - dvd
   -iso=<file>       Select iso file (full path!)
   -elf=<file>       Select elf file inside iso to boot
   -mt=<type>        Select media type, supported are:
@@ -52,4 +53,5 @@ Options:\n");
 
 Usage example:
   ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso
+  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=dvd
 ```

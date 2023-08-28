@@ -1,0 +1,10 @@
+#
+# Configuration for DVD ingame environment
+#
+
+# Modules to load
+[[module]]
+file = "eesync.irx"
+ioprp = "EESYNC"
+[[module]]
+file = "imgdrv.irx"
