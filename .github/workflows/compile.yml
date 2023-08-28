@@ -28,6 +28,7 @@ jobs:
           mkdir $TARGET
           cp *.elf $TARGET/
           cp -r modules/ $TARGET/modules/
+          cp -r config/ $TARGET/config/
           7z a -t7z $TARGET.7z $TARGET/*
 
       - name: Upload release as artifact
