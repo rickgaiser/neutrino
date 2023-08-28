@@ -304,7 +304,7 @@ void CopyToIop(const void *eedata, unsigned int size, void *iopptr)
     SifDmaTransfer_t dmadata;
     register int id;
 
-    dmadata.src = eedata;
+    dmadata.src = (void *)eedata;
     dmadata.dest = iopptr;
     dmadata.size = size;
     dmadata.attr = 0;

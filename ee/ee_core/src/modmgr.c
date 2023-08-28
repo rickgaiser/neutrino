@@ -93,7 +93,7 @@ int LoadMemModule(int mode, const void *modptr, unsigned int modsize, int arg_le
     if (iopmem == NULL)
         return -E_IOP_NO_MEMORY;
 
-    sifdma.src = modptr;
+    sifdma.src = (void *)modptr;
     sifdma.dest = iopmem;
     sifdma.size = modsize;
     sifdma.attr = 0;
