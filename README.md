@@ -2,7 +2,7 @@
 Small, Fast and Modular PS2 Game Loader
 
 ## Design
-A neutrino is a patricle with almost zero mass, and that's what this game loaders primary goal is. To have almost 0 mass when running ingame to maximize game compatibility.
+A neutrino is a particle with almost zero mass, and that's what this game loaders primary goal is. To have almost 0 mass when running ingame to maximize game compatibility.
 
 Neutrino also does not have a user interface, instead it's meant to be integrated as a backend to a frontend (user interface). Possible user interfaces can be uLaunchELF, XEB+, OPL or any new user interface. This makes neutrino much more easy to maintain, and allows many more game loaders to be made using neutrino as the backend.
 
