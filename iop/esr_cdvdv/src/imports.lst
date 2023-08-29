@@ -1,0 +1,25 @@
+cdvdman_IMPORTS_start
+I_sceCdGetError
+I_sceCdRV
+cdvdman_IMPORTS_end
+
+loadcore_IMPORTS_start
+I_RegisterLibraryEntries
+loadcore_IMPORTS_end
+
+#ifdef DEBUG
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+#endif
+
+sysmem_IMPORTS_start
+I_FreeSysMemory
+I_QueryMaxFreeMemSize
+sysmem_IMPORTS_end
+
+thbase_IMPORTS_start
+I_CreateThread
+I_StartThread
+I_DelayThread
+thbase_IMPORTS_end

@@ -106,24 +106,26 @@ clean:
 copy:
 	rm -rf modules
 	mkdir -p modules
-	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx      modules
-	cp ../../iop/cdvdman/irx/bdm_cdvdman.irx  modules
-	cp ../../iop/smap/irx/smap.irx            modules
-	cp ../../iop/imgdrv/irx/imgdrv.irx        modules
-	cp ../../iop/isofs/irx/isofs.irx          modules
-	cp ../ee_core/ee_core.elf                 modules
-	cp $(PS2SDK)/iop/irx/eesync.irx           modules
-	cp $(PS2SDK)/iop/irx/iomanX.irx           modules
-	cp $(PS2SDK)/iop/irx/fileXio.irx          modules
-	cp $(PS2SDK)/iop/irx/bdm.irx              modules
-	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx      modules
-	cp $(PS2SDK)/iop/irx/ata_bd.irx           modules
-	cp $(PS2SDK)/iop/irx/usbd_mini.irx        modules
-	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx  modules
-	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx   modules
-	cp $(PS2SDK)/iop/irx/ps2dev9.irx          modules
-	cp $(PS2SDK)/iop/irx/iLinkman.irx         modules
-	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx modules
+	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx       modules
+	cp ../../iop/cdvdman/irx/bdm_cdvdman.irx   modules
+	cp ../../iop/esr_cdvdv/irx/esr_cdvdv.irx   modules
+	cp ../../iop/esr_pcdvdv/irx/esr_pcdvdv.irx modules
+	cp ../../iop/smap/irx/smap.irx             modules
+	cp ../../iop/imgdrv/irx/imgdrv.irx         modules
+	cp ../../iop/isofs/irx/isofs.irx           modules
+	cp ../ee_core/ee_core.elf                  modules
+	cp $(PS2SDK)/iop/irx/eesync.irx            modules
+	cp $(PS2SDK)/iop/irx/iomanX.irx            modules
+	cp $(PS2SDK)/iop/irx/fileXio.irx           modules
+	cp $(PS2SDK)/iop/irx/bdm.irx               modules
+	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx       modules
+	cp $(PS2SDK)/iop/irx/ata_bd.irx            modules
+	cp $(PS2SDK)/iop/irx/usbd_mini.irx         modules
+	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx   modules
+	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx    modules
+	cp $(PS2SDK)/iop/irx/ps2dev9.irx           modules
+	cp $(PS2SDK)/iop/irx/iLinkman.irx          modules
+	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx  modules
 
 include ../../Defs.make
 include ../Rules.make

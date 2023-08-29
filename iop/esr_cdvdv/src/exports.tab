@@ -1,0 +1,11 @@
+/**/
+
+DECLARE_EXPORT_TABLE(esr_sl, 1, 1)
+	DECLARE_EXPORT(_start)
+	DECLARE_EXPORT(_retnull)
+	DECLARE_EXPORT(_retnull)
+	DECLARE_EXPORT(_retnull)
+	DECLARE_EXPORT(in_out_func)
+END_EXPORT_TABLE
+
+void _retnull(){}
