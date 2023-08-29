@@ -61,6 +61,7 @@ void print_usage()
     printf("                    - udpbd\n");
     printf("                    - ilink\n");
     printf("                    - dvd\n");
+    printf("                    - esr\n");
     printf("  -iso=<file>       Select iso file (full path!)\n");
     printf("  -elf=<file>       Select elf file inside iso to boot\n");
     printf("  -mt=<type>        Select media type, supported are:\n");
@@ -76,9 +77,10 @@ void print_usage()
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("  -eC               Enable eecore debug colors\n");
     printf("\n");
-    printf("Usage example:\n");
+    printf("Usage examples:\n");
     printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso\n");
     printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=dvd\n");
+    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=esr\n");
 }
 
 struct SModule

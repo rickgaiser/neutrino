@@ -8,7 +8,7 @@ Neutrino also does not have a user interface, instead it's meant to be integrate
 
 With neutrino all modules are... modular. They are in a separate folder called `modules`. This allows the user to replace them with new and improved modules. For instance when there is an improved mx4sio driver: simply replace the mx4sio_bd.irx with the new version, and done. No need for a complete new backend or frontend.
 
-## Storage
+## ISO file storage support
 The following storage devices are supported:
 - USB
 - ATA (internal HDD)
@@ -20,8 +20,13 @@ These are all BDM drivers, or "Block Devices". On all devices the following file
 - exFat
 - FAT32 (/16/12)
 
-## File types
-Currently only .iso files are supported.
+## File type support
+Only .iso files are supported.
+
+## CD/DVD support
+It is possible to use the following CD's / DVD's:
+- Original CD's / DVD's (region free)
+- ESR patched DVD's
 
 ## Usage instructions
 When running neutrino using ps2link, the following usage instructions will be shown when an invalid argument is passed:
@@ -36,6 +41,7 @@ Options:\n");
                     - udpbd
                     - ilink
                     - dvd
+                    - esr
   -iso=<file>       Select iso file (full path!)
   -elf=<file>       Select elf file inside iso to boot
   -mt=<type>        Select media type, supported are:
@@ -51,7 +57,8 @@ Options:\n");
                     Multiple options possible, for example -gc=23
   -eC               Enable eecore debug colors
 
-Usage example:
+Usage examples:
   ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso
   ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=dvd
+  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=esr
 ```
