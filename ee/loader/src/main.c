@@ -110,6 +110,11 @@ struct SSystemSettings {
         uint8_t ilink_id[8];
         uint64_t ilink_id_int;
     };
+
+    union {
+        uint8_t disk_id[5];
+        uint64_t disk_id_int; // 8 bytes, but that's ok for compare reasons
+    };
 } sys;
 
 struct SDriver {
@@ -648,6 +653,18 @@ int load_system()
         free(arr);
     }
 
+    arr = toml_array_in(tbl_root, "disk_id");
+    if (arr != NULL) {
+        if (toml_array_nelem(arr) == 5) {
+            for (i=0; i < 5; i++) {
+                v = toml_int_at(arr, i);
+                if (v.ok)
+                    sys.disk_id[i] = v.u.i;
+            }
+        }
+        free(arr);
+    }
+
     free(tbl_root);
 
     return 0;
@@ -923,7 +940,6 @@ int main(int argc, char *argv[])
         memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
         settings->common.media = eMediaType;
         settings->common.layer1_start = layer1_lba_start;
-        // settings->common.DiscID[5];
         if (sys.ilink_id_int != 0) {
             printf("Overriding i.Link ID: %2x %2x %2x %2x %2x %2x %2x %2x\n"
             , sys.ilink_id[0]
@@ -935,6 +951,15 @@ int main(int argc, char *argv[])
             , sys.ilink_id[6]
             , sys.ilink_id[7]);
             settings->common.ilink_id_int = sys.ilink_id_int;
+        }
+        if (sys.disk_id_int != 0) {
+            printf("Using disk ID: %2x %2x %2x %2x %2x\n"
+            , sys.disk_id[0]
+            , sys.disk_id[1]
+            , sys.disk_id[2]
+            , sys.disk_id[3]
+            , sys.disk_id[4]);
+            settings->common.disk_id_int = sys.disk_id_int;
         }
 
         // If no compatibility options are set on the command line

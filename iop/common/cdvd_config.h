@@ -35,15 +35,18 @@ struct cdvdman_settings_common
     // Magic number to find
     u32 magic;
 
-    // Disc info
     u8 media;
-    u8 DiscID[5];
     u16 flags;
     u32 layer1_start;
 
     union {
         u8 ilink_id[8];
         u64 ilink_id_int;
+    };
+
+    union {
+        u8 disk_id[5];
+        u64 disk_id_int; // 8 bytes, but that's ok for compare reasons
     };
 
     // Max 10 fake modules
