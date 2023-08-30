@@ -1,162 +1,240 @@
 void _retonly(void) {}
 
 int _ret0(void) {
-	return 0;
+    return 0;
 }
 
 int _dummy(void) {
-	return 1;
+    return 1;
 }
 
 // cdvdman export table
+// missing function names copied from ps2dev/ps2sdk sources
 DECLARE_EXPORT_TABLE(cdvdman, 1, 1)
-	DECLARE_EXPORT(_start)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_shutdown)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(sceCdInit)
-	DECLARE_EXPORT(sceCdStandby)
-	DECLARE_EXPORT(sceCdRead)
-	DECLARE_EXPORT(sceCdSeek)
-	DECLARE_EXPORT(sceCdGetError)
-	DECLARE_EXPORT(sceCdGetToc)
-	DECLARE_EXPORT(sceCdSearchFile)
-	DECLARE_EXPORT(sceCdSync)
-	DECLARE_EXPORT(sceCdGetDiskType)
-	DECLARE_EXPORT(sceCdDiskReady)
-	DECLARE_EXPORT(sceCdTrayReq)
-	DECLARE_EXPORT(sceCdStop)
-	DECLARE_EXPORT(sceCdPosToInt)
-	DECLARE_EXPORT(sceCdIntToPos)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdRI)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdReadClock)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdStatus)
-	DECLARE_EXPORT(sceCdApplySCmd)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdCallback)
-	DECLARE_EXPORT(sceCdPause)
-	DECLARE_EXPORT(sceCdBreak)
-	DECLARE_EXPORT(sceCdReadCdda)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdGetReadPos)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceGetFsvRbuf)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdSC)
-	DECLARE_EXPORT(sceCdReadClock)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdStInit)
-	DECLARE_EXPORT(sceCdStRead)
-	DECLARE_EXPORT(sceCdStSeek)
-	DECLARE_EXPORT(sceCdStStart)
-	DECLARE_EXPORT(sceCdStStat)
-	DECLARE_EXPORT(sceCdStStop)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdRM)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdStPause)
-	DECLARE_EXPORT(sceCdStResume)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdPowerOff)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdStSeek)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdReadDiskID)
-	DECLARE_EXPORT(sceCdReadGUID)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(sceCdReadModelID)
-	DECLARE_EXPORT(sceCdReadDvdDualInfo)
-	DECLARE_EXPORT(sceCdLayerSearchFile)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
-	DECLARE_EXPORT(_dummy)
+    DECLARE_EXPORT(_start)           // 0
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_shutdown)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(sceCdInit)
+    DECLARE_EXPORT(sceCdStandby)
+    DECLARE_EXPORT(sceCdRead)
+    DECLARE_EXPORT(sceCdSeek)
+    DECLARE_EXPORT(sceCdGetError)
+    DECLARE_EXPORT(sceCdGetToc)
+    DECLARE_EXPORT(sceCdSearchFile)  // 10
+    DECLARE_EXPORT(sceCdSync)
+    DECLARE_EXPORT(sceCdGetDiskType)
+    DECLARE_EXPORT(sceCdDiskReady)
+    DECLARE_EXPORT(sceCdTrayReq)
+    DECLARE_EXPORT(sceCdStop)
+    DECLARE_EXPORT(sceCdPosToInt)
+    DECLARE_EXPORT(sceCdIntToPos)
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // sceCdGetToc2
+    DECLARE_EXPORT(_dummy)           // sceCdReadDVDV 20
+    DECLARE_EXPORT(_dummy)           // sceCdCheckCmd
+    DECLARE_EXPORT(sceCdRI)
+    DECLARE_EXPORT(_dummy)           // sceCdWI
+    DECLARE_EXPORT(sceCdReadClock)
+    DECLARE_EXPORT(_dummy)           // sceCdWriteClock
+    DECLARE_EXPORT(_dummy)           // sceCdReadNVM
+    DECLARE_EXPORT(_dummy)           // sceCdWriteNVM
+    DECLARE_EXPORT(sceCdStatus)
+    DECLARE_EXPORT(sceCdApplySCmd)
+    DECLARE_EXPORT(_dummy)           // sceCdSetHDMode 30
+    DECLARE_EXPORT(_dummy)           // sceCdOpenConfig
+    DECLARE_EXPORT(_dummy)           // sceCdCloseConfig
+    DECLARE_EXPORT(_dummy)           // sceCdReadConfig
+    DECLARE_EXPORT(_dummy)           // sceCdWriteConfig
+    DECLARE_EXPORT(_dummy)           // sceCdReadKey
+    DECLARE_EXPORT(_dummy)           // sceCdDecSet
+    DECLARE_EXPORT(sceCdCallback)
+    DECLARE_EXPORT(sceCdPause)
+    DECLARE_EXPORT(sceCdBreak)
+    DECLARE_EXPORT(sceCdReadCdda)    // 40
+    DECLARE_EXPORT(_dummy)           // sceCdReadConsoleID
+    DECLARE_EXPORT(_dummy)           // sceCdWriteConsoleID
+    DECLARE_EXPORT(_dummy)           // sceCdMV
+    DECLARE_EXPORT(sceCdGetReadPos)
+    DECLARE_EXPORT(_dummy)           // sceCdCtrlADout
+    DECLARE_EXPORT(_dummy)           // sceCdNop
+    DECLARE_EXPORT(sceGetFsvRbuf)
+    DECLARE_EXPORT(_dummy)           // sceCdstm0Cb
+    DECLARE_EXPORT(_dummy)           // sceCdstm1Cb
+    DECLARE_EXPORT(sceCdSC)          // 50
+    DECLARE_EXPORT(sceCdReadClock)   // sceCdRC ?
+    DECLARE_EXPORT(_dummy)           // sceCdForbidDVDP
+    DECLARE_EXPORT(_dummy)           // sceCdReadSUBQ
+    DECLARE_EXPORT(_dummy)           // sceCdApplyNCmd
+    DECLARE_EXPORT(_dummy)           // sceCdAutoAdjustCtrl
+    DECLARE_EXPORT(sceCdStInit)
+    DECLARE_EXPORT(sceCdStRead)
+    DECLARE_EXPORT(sceCdStSeek)
+    DECLARE_EXPORT(sceCdStStart)
+    DECLARE_EXPORT(sceCdStStat)      // 60
+    DECLARE_EXPORT(sceCdStStop)
+    DECLARE_EXPORT(_dummy)           // sceCdRead0
+    DECLARE_EXPORT(_dummy)           // sceCdRV
+    DECLARE_EXPORT(sceCdRM)
+    DECLARE_EXPORT(_dummy)           // sceCdWM
+    DECLARE_EXPORT(_dummy)           // sceCdReadChain
+    DECLARE_EXPORT(sceCdStPause)
+    DECLARE_EXPORT(sceCdStResume)
+    DECLARE_EXPORT(_dummy)           // sceCdForbidRead
+    DECLARE_EXPORT(_dummy)           // sceCdBootCertify 70
+    DECLARE_EXPORT(_dummy)           // sceCdSpinCtrlIOP
+    DECLARE_EXPORT(_dummy)           // sceCdBlueLEDCtl
+    DECLARE_EXPORT(_dummy)           // sceCdCancelPOffRdy
+    DECLARE_EXPORT(sceCdPowerOff)
+    DECLARE_EXPORT(_dummy)           // sceCdMmode
+    DECLARE_EXPORT(_dummy)           // sceCdReadFull
+    DECLARE_EXPORT(sceCdStSeek)      // sceCdStSeekF ?
+    DECLARE_EXPORT(_dummy)           // sceCdPOffCallback
+    DECLARE_EXPORT(sceCdReadDiskID)
+    DECLARE_EXPORT(sceCdReadGUID)    // 80
+    DECLARE_EXPORT(_dummy)           // sceCdSetTimeout
+    DECLARE_EXPORT(sceCdReadModelID)
+    DECLARE_EXPORT(sceCdReadDvdDualInfo)
+    DECLARE_EXPORT(sceCdLayerSearchFile)
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // sceCdStatus2 90
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // 100
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // sceCdReadWakeUpTime
+    DECLARE_EXPORT(_dummy)           // sceCdWriteWakeUpTime 110
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // sceCdApplySCmd2
+    DECLARE_EXPORT(_dummy)           // ?
+    DECLARE_EXPORT(_dummy)           // sceCdRE
+                                     // sceCdRcBypassCtl
+                                     // ?
+                                     // sceRemote2_7
+                                     // ?
+                                     // ?
+                                     // sceCdSetLEDsMode 120
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ? 130
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ? 140
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // sceCdReadPS1BootParam
+                                     // ?
+                                     // sceCdSetFanProfile 150
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // sceCdChgSys
+                                     // ?
+                                     // sceCdNoticeGameStart
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ? 160
+                                     // ?
+                                     // ?
+                                     // sceCdXLEDCtl
+                                     // ?
+                                     // sceCdBuzzerCtl
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ? 170
+                                     // sceCdXBSPowerCtl
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // sceCdSetMediumRemoval
+                                     // ?
+                                     // sceCdGetMediumRemoval
+                                     // ?
+                                     // ?
+                                     // ? 180
+                                     // sceCdXDVRPReset
+                                     // ?
+                                     // sceCdGetWakeUpReason
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // ?
+                                     // sceCdReadRegionParams
+                                     // ? 190
+                                     // sceCdWriteRegionParams 191
 END_EXPORT_TABLE
 
 // cdvdstm export table
 DECLARE_EXPORT_TABLE(cdvdstm, 1, 1)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
 END_EXPORT_TABLE
 
 #ifdef BDM_DRIVER
 DECLARE_EXPORT_TABLE(bdm, 1, 1)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_ret0)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(bdm_connect_bd)
-	DECLARE_EXPORT(bdm_disconnect_bd)
-//	DECLARE_EXPORT(bdm_connect_fs)
-//	DECLARE_EXPORT(bdm_disconnect_fs)
-//	DECLARE_EXPORT(bdm_get_bd)
-//	DECLARE_EXPORT(bdm_RegisterCallback)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_ret0)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(bdm_connect_bd)
+    DECLARE_EXPORT(bdm_disconnect_bd)
+    // DECLARE_EXPORT(bdm_connect_fs)
+    // DECLARE_EXPORT(bdm_disconnect_fs)
+    // DECLARE_EXPORT(bdm_get_bd)
+    // DECLARE_EXPORT(bdm_RegisterCallback)
 END_EXPORT_TABLE
 #endif
 
 // smsutils export table
 DECLARE_EXPORT_TABLE(smsutils, 1, 1)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(_retonly)
-	DECLARE_EXPORT(mips_memcpy)
-	DECLARE_EXPORT(mips_memset)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(mips_memcpy)
+    DECLARE_EXPORT(mips_memset)
 END_EXPORT_TABLE
