@@ -1,0 +1,14 @@
+#
+# System settings
+#
+
+# Override the 8-byte string returned by:
+# - sceCdRI
+# This string is also used by:
+# - sceCdReadGUID
+# - sceCdReadModelID
+#
+# This string is used (for instance) by the sony network configuration
+# to verify if the config belongs to the specific console.
+#
+#ilink_id = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]

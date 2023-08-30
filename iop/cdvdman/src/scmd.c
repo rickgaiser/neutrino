@@ -219,7 +219,12 @@ int sceCdRI(u8 *buf, u32 *stat)
 
     DPRINTF("%s(-, -)\n", __FUNCTION__);
 
-    cdvdman_sendSCmd(0x12, NULL, 0, rdbuf, 9);
+    if (cdvdman_settings.common.ilink_id_int != 0) {
+        rdbuf[0] = 0;
+        memcpy(&rdbuf[1], cdvdman_settings.common.ilink_id, 8);
+    } else {
+        cdvdman_sendSCmd(0x12, NULL, 0, rdbuf, 9);
+    }
 
     if (stat)
         *stat = (u32)rdbuf[0];

@@ -41,6 +41,11 @@ struct cdvdman_settings_common
     u16 flags;
     u32 layer1_start;
 
+    union {
+        u8 ilink_id[8];
+        u64 ilink_id_int;
+    };
+
     // Max 10 fake modules
     struct FakeModule fake[MODULE_SETTINGS_MAX_FAKE_COUNT];
 

@@ -105,6 +105,13 @@ struct SFakeList {
     struct FakeModule *fake;
 };
 
+struct SSystemSettings {
+    union {
+        uint8_t ilink_id[8];
+        uint64_t ilink_id_int;
+    };
+} sys;
+
 struct SDriver {
     const char *name;
     const char *type;
@@ -604,6 +611,54 @@ err_exit:
     return -1;
 }
 
+int load_system()
+{
+    int i;
+    FILE* fp;
+    char errbuf[200];
+    toml_table_t *tbl_root = NULL;
+    toml_array_t *arr;
+    toml_datum_t v;
+
+    // Initialize system structure
+    memset(&sys, 0, sizeof(struct SSystemSettings));
+
+    // Open and parse file
+    fp = fopen("config/system.toml", "r");
+    if (!fp) {
+        printf("ERROR: %s: failed to open\n", "system.toml");
+        goto err_exit;
+    }
+    tbl_root = toml_parse_file(fp, errbuf, sizeof(errbuf));
+    fclose(fp);
+    if (!tbl_root) {
+        printf("ERROR: %s: parse error: %s\n", "system.toml", errbuf);
+        goto err_exit;
+    }
+
+    arr = toml_array_in(tbl_root, "ilink_id");
+    if (arr != NULL) {
+        if (toml_array_nelem(arr) == 8) {
+            for (i=0; i < 8; i++) {
+                v = toml_int_at(arr, i);
+                if (v.ok)
+                    sys.ilink_id[i] = v.u.i;
+            }
+        }
+        free(arr);
+    }
+
+    free(tbl_root);
+
+    return 0;
+
+err_exit:
+    if (tbl_root != NULL)
+        free(tbl_root);
+
+    return -1;
+}
+
 int main(int argc, char *argv[])
 {
     irxtab_t *irxtable;
@@ -692,6 +747,14 @@ int main(int argc, char *argv[])
             }
             sCompat++;
         }
+    }
+
+    /*
+     * Load system settings
+     */
+    if (load_system() < 0) {
+        printf("ERROR: failed to load system settings\n");
+        return -1;
     }
 
     /*
@@ -861,6 +924,18 @@ int main(int argc, char *argv[])
         settings->common.media = eMediaType;
         settings->common.layer1_start = layer1_lba_start;
         // settings->common.DiscID[5];
+        if (sys.ilink_id_int != 0) {
+            printf("Overriding i.Link ID: %2x %2x %2x %2x %2x %2x %2x %2x\n"
+            , sys.ilink_id[0]
+            , sys.ilink_id[1]
+            , sys.ilink_id[2]
+            , sys.ilink_id[3]
+            , sys.ilink_id[4]
+            , sys.ilink_id[5]
+            , sys.ilink_id[6]
+            , sys.ilink_id[7]);
+            settings->common.ilink_id_int = sys.ilink_id_int;
+        }
 
         // If no compatibility options are set on the command line
         // see if the game is in our builtin database
