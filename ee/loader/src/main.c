@@ -1037,7 +1037,7 @@ int main(int argc, char *argv[])
             settings->common.fake[i].name = (char *)(stringbase + 0x80000000);
             stringbase += len;
 
-            //settings->common.fake[i].id          = drv.fake.fake[i].id;          // id set in cdvdman
+            settings->common.fake[i].id          = 0xdead0 + i;
             settings->common.fake[i].prop        = drv.fake.fake[i].prop;
             settings->common.fake[i].version     = drv.fake.fake[i].version;
             settings->common.fake[i].returnValue = drv.fake.fake[i].returnValue;
