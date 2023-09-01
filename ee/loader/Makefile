@@ -21,7 +21,11 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Cy Girls (U) (Disc 1) (Ice).iso'
 #GAME = 'DVD/Cy Girls (U) (Disc 2) (Aska).iso'
 #GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso'
-GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
+#GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
+
+# Games that use the HDD in one way or another
+#GAME = 'DVD/The Sims 2 (U).iso'
+GAME = 'DVD/Metal Saga (U).iso'
 
 # These games allocate ALL IOP RAM as an anti-piracy method
 # Special IOP code is needed (in cdvdman?) to counter this
