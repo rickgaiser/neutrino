@@ -10,6 +10,7 @@
 #include <bd_defrag.h>
 
 #include "device.h"
+#include "fhi.h"
 
 extern struct cdvdman_settings_bdm cdvdman_settings;
 static struct block_device *g_bd = NULL;
@@ -17,6 +18,10 @@ static u32 g_bd_sectors_per_sector = 4;
 static int bdm_io_sema;
 
 extern struct irx_export_table _exp_bdm;
+extern struct irx_export_table _exp_fhi;
+
+//#undef DPRINTF
+//#define DPRINTF printf
 
 //
 // BDM exported functions
@@ -57,6 +62,54 @@ void bdm_disconnect_bd(struct block_device *bd)
         g_bd = NULL;
 }
 
+u32 fhi_size(int file_handle)
+{
+    if (file_handle < 0 || file_handle >= BDM_MAX_FILES)
+        return 0;
+
+    DPRINTF("%s(%d)\n", __func__, file_handle);
+
+    return cdvdman_settings.fragfile[file_handle].size / 512;
+}
+
+int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count)
+{
+    int rv;
+    struct cdvdman_fragfile *ff;
+
+    if (file_handle)
+        DPRINTF("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
+
+    if (file_handle < 0 || file_handle >= BDM_MAX_FILES)
+        return -1;
+
+    ff = &cdvdman_settings.fragfile[file_handle];
+    WaitSema(bdm_io_sema);
+    rv = bd_defrag_read(g_bd, ff->frag_count, &cdvdman_settings.frags[ff->frag_start],sector_start, buffer, sector_count);
+    SignalSema(bdm_io_sema);
+
+    return rv;
+}
+
+int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, unsigned int sector_count)
+{
+    int rv;
+    struct cdvdman_fragfile *ff;
+
+    if (file_handle)
+        DPRINTF("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
+
+    if (file_handle < 0 || file_handle >= BDM_MAX_FILES)
+        return -1;
+
+    ff = &cdvdman_settings.fragfile[file_handle];
+    WaitSema(bdm_io_sema);
+    rv = bd_defrag_write(g_bd, ff->frag_count, &cdvdman_settings.frags[ff->frag_start],sector_start, buffer, sector_count);
+    SignalSema(bdm_io_sema);
+
+    return rv;
+}
+
 //
 // cdvdman "Device" functions
 //
@@ -77,6 +130,7 @@ void DeviceInit(void)
     mediaLsnCount = (cdvdman_settings.fragfile[0].size + 2047) / 2048;
 
     RegisterLibraryEntries(&_exp_bdm);
+    RegisterLibraryEntries(&_exp_fhi);
 }
 
 void DeviceDeinit(void)
@@ -130,15 +184,13 @@ int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
     if (g_bd == NULL)
         return SCECdErTRMOPN;
 
-    WaitSema(bdm_io_sema);
-    if (bd_defrag(g_bd, cdvdman_settings.fragfile[fid].frag_count, &cdvdman_settings.frags[cdvdman_settings.fragfile[fid].frag_start], lsn * 4, buffer, sectors * 4) != (sectors * 4)) {
+    if (fhi_read(fid, buffer, lsn * 4, sectors * 4) != (sectors * 4)) {
 #ifdef DEBUG
         DPRINTF("%s(%u-%u, 0x%p, %u) FAILED!\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
         while(1){}
 #endif
         rv = SCECdErREAD;
     }
-    SignalSema(bdm_io_sema);
 
     return rv;
 }
