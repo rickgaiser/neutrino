@@ -1003,11 +1003,19 @@ int main(int argc, char *argv[])
     memset((void *)0x00084000, 0, 0x00100000 - 0x00084000);
 #pragma GCC diagnostic pop
 
+    // Count the number of modules to pass to the ee_core
+    int modcount = 1; // IOPRP
+    modcount += drv.mod_drv.count;
+    for (i = 0; i < drv.mod_isys.count; i++) {
+        if (drv.mod_isys.mod[i].sUDNL == NULL)
+            modcount++;
+    }
+
     irxtable = (irxtab_t *)get_modstorage(sGameID);
     if (irxtable == NULL)
         irxtable = (irxtab_t *)OPL_MOD_STORAGE;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
-    irxptr = (u8 *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * (drv.mod_drv.count + 2)) + 0xF) & ~0xF);
+    irxptr = (u8 *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
 
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
