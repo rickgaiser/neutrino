@@ -1,19 +1,21 @@
-/*
-  Copyright 2009-2010, jimmikaelkael
-  Licenced under Academic Free License version 3.0
-  Review Open PS2 Loader README & LICENSE files for further details.
-*/
-
 #include <loadcore.h>
-#include <xmodload.h>
-
 #include <stdio.h>
 #include <sysclib.h>
+#include <xmodload.h>
 
-#include "internal.h"
-#include "ioplib_util.h"
+#include "fakemod.h"
 #include "ioplib.h"
-#include "smsutils.h"
+
+#ifdef DEBUG
+#define DPRINTF(args...) printf(args)
+#else
+#define DPRINTF(args...)
+#endif
+
+#define MODNAME "fakemod"
+IRX_ID(MODNAME, 1, 1);
+
+struct fakemod_data fmd = {MODULE_SETTINGS_MAGIC};
 
 // MODLOAD's exports pointers
 static int (*org_LoadStartModule)(char *modpath, int arg_len, char *args, int *modres);
@@ -73,7 +75,7 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
 
     DPRINTF("%s(%s)\n", __FUNCTION__, modpath);
 
-    mod = checkFakemodByFile(modpath, cdvdman_settings.common.fake);
+    mod = checkFakemodByFile(modpath, fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = mod->returnValue;
@@ -90,7 +92,7 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 
     DPRINTF("%s(0x%x, %s)\n", __FUNCTION__, id, modname);
 
-    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         *modres = mod->returnValue;
@@ -107,7 +109,7 @@ static int Hook_LoadModuleBuffer(void *ptr)
 
     DPRINTF("%s() modname = %s\n", __FUNCTION__, ((char *)ptr + 0x8e));
 
-    mod = checkFakemodByName(((char *)ptr + 0x8e), cdvdman_settings.common.fake);
+    mod = checkFakemodByName(((char *)ptr + 0x8e), fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
@@ -123,7 +125,7 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
 
     DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
-    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
 
@@ -145,7 +147,7 @@ static int Hook_UnloadModule(int id)
 
     DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
-    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
 
@@ -165,7 +167,7 @@ static int Hook_SearchModuleByName(char *modname)
 
     DPRINTF("%s(%s)\n", __FUNCTION__, modname);
 
-    mod = checkFakemodByName(modname, cdvdman_settings.common.fake);
+    mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         return mod->id;
@@ -181,7 +183,7 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
 
     DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
-    mod = checkFakemodById(id, cdvdman_settings.common.fake);
+    mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         memset(status, 0, sizeof(ModuleStatus));
@@ -195,25 +197,25 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
 }
 
 //--------------------------------------------------------------
-void hookMODLOAD(void)
+int _start(int argc, char **argv)
 {
     int i;
 
     // Change string index to string pointers
     DPRINTF("Fake module list:\n");
     for (i = 0; i < MODULE_SETTINGS_MAX_FAKE_COUNT; i++) {
-        struct FakeModule *fm = &cdvdman_settings.common.fake[i];
+        struct FakeModule *fm = &fmd.fake[i];
 
         // Transform file name index to pointer
         if ((unsigned int)fm->fname >= 0x80000000) {
             unsigned int idx = (unsigned int)fm->fname - 0x80000000;
-            fm->fname = (const char *)&cdvdman_settings.common.data[idx];
+            fm->fname = (const char *)&fmd.data[idx];
         }
 
         // Transform module name index to pointer
         if ((unsigned int)fm->name >= 0x80000000) {
             unsigned int idx = (unsigned int)fm->name - 0x80000000;
-            fm->name = (const char *)&cdvdman_settings.common.data[idx];
+            fm->name = (const char *)&fmd.data[idx];
         }
 
         if (fm->fname != NULL) {
@@ -234,11 +236,13 @@ void hookMODLOAD(void)
     } else {
         struct FakeModule *modlist;
         // Change all REMOVABLE END values to RESIDENT END, if modload is old.
-        for (modlist = cdvdman_settings.common.fake; modlist->fname != NULL; modlist++) {
+        for (modlist = fmd.fake; modlist->fname != NULL; modlist++) {
             if (modlist->returnValue == MODULE_REMOVABLE_END)
                 modlist->returnValue = MODULE_RESIDENT_END;
         }
     }
 
     ioplib_relinkExports(lib_modload);
+
+    return MODULE_RESIDENT_END;
 }

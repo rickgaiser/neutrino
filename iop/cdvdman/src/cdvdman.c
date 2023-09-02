@@ -61,12 +61,6 @@ void cdvdman_init(void)
 
         cdvdman_fs_init();
         cdvdman_cdinited = 1;
-
-        // hook MODLOAD's exports
-        //   These hooks will fake module loading for the modules we need, like usbd and dev9
-        //   Becouse these drivers will be loaded after cdvdman, we must make sure we do not
-        //   fake these modules before they are even loaded.
-        hookMODLOAD();
     }
 }
 

@@ -14,6 +14,8 @@ file = "eesync.irx"
 ioprp = "EESYNC"
 [[module]]
 file = "imgdrv.irx"
+[[module]]
+file = "fakemod.irx"
 
 # Modules of the game that are faked/blocked
 [[fake]]

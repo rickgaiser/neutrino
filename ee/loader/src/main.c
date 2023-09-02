@@ -24,6 +24,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "ioprp.h"
 #include "xparam.h"
 #include "../../../iop/common/cdvd_config.h"
+#include "../../../iop/common/fakemod.h"
 #include "toml.h"
 
 #define NEWLIB_PORT_AWARE
@@ -1020,10 +1021,24 @@ int main(int argc, char *argv[])
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
 
-    if (iUseDrive == 0) {
+    struct fakemod_data *fmd = NULL;
+    struct SModule *mod_fakemod = modlist_get_by_name(&drv.mod_isys, "fakemod.irx");
+    if (mod_fakemod != NULL) {
+        for (i = 0; i < mod_fakemod->iSize; i += 4) {
+            if (*(u32 *)(mod_fakemod->pData + i) == MODULE_SETTINGS_MAGIC) {
+                fmd = (struct fakemod_data *)(mod_fakemod->pData + i);
+                break;
+            }
+        }
+    }
+
+    if (fmd != NULL) {
         size_t stringbase = 0;
+        printf("Faking modules:\n");
         for (i = 0; i < drv.fake.count; i++) {
             size_t len;
+
+            printf("- %s, %s\n", drv.fake.fake[i].fname, drv.fake.fake[i].name);
 
             // Copy file name into cdvdman data
             len = strlen(drv.fake.fake[i].fname) + 1;
@@ -1031,8 +1046,8 @@ int main(int argc, char *argv[])
                 printf("Too much fake string data\n");
                 return -1;
             }
-            strcpy((char *)&settings->common.data[stringbase], drv.fake.fake[i].fname);
-            settings->common.fake[i].fname = (char *)(stringbase + 0x80000000);
+            strcpy((char *)&fmd->data[stringbase], drv.fake.fake[i].fname);
+            fmd->fake[i].fname = (char *)(stringbase + 0x80000000);
             stringbase += len;
 
             // Copy module name into cdvdman data
@@ -1041,14 +1056,14 @@ int main(int argc, char *argv[])
                 printf("Too much fake string data\n");
                 return -1;
             }
-            strcpy((char *)&settings->common.data[stringbase], drv.fake.fake[i].name);
-            settings->common.fake[i].name = (char *)(stringbase + 0x80000000);
+            strcpy((char *)&fmd->data[stringbase], drv.fake.fake[i].name);
+            fmd->fake[i].name = (char *)(stringbase + 0x80000000);
             stringbase += len;
 
-            settings->common.fake[i].id          = 0xdead0 + i;
-            settings->common.fake[i].prop        = drv.fake.fake[i].prop;
-            settings->common.fake[i].version     = drv.fake.fake[i].version;
-            settings->common.fake[i].returnValue = drv.fake.fake[i].returnValue;
+            fmd->fake[i].id          = 0xdead0 + i;
+            fmd->fake[i].prop        = drv.fake.fake[i].prop;
+            fmd->fake[i].version     = drv.fake.fake[i].version;
+            fmd->fake[i].returnValue = drv.fake.fake[i].returnValue;
         }
     }
 

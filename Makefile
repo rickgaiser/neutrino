@@ -4,6 +4,7 @@ IOPCORE_DEBUG?=0
 all:
 	$(MAKE) -C iop/cdvdfsv    all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/cdvdman    all DEBUG=$(IOPCORE_DEBUG) USE_BDM=1
+	$(MAKE) -C iop/fakemod    all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/esr_cdvdv  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/esr_pcdvdv all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/smap       all DEBUG=$(IOPCORE_DEBUG)
@@ -21,6 +22,7 @@ format:
 clean:
 	$(MAKE) -C iop/cdvdfsv    clean
 	$(MAKE) -C iop/cdvdman    clean USE_BDM=1
+	$(MAKE) -C iop/fakemod    clean
 	$(MAKE) -C iop/esr_cdvdv  clean
 	$(MAKE) -C iop/esr_pcdvdv clean
 	$(MAKE) -C iop/smap       clean

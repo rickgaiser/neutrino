@@ -33,7 +33,6 @@ loadcore_IMPORTS_start
 I_FlushDcache
 I_FlushIcache
 I_RegisterLibraryEntries
-I_GetLoadcoreInternalData
 I_QueryBootMode
 loadcore_IMPORTS_end
 
@@ -43,7 +42,6 @@ I_strlen
 I_strncmp
 I_strchr
 I_strrchr
-I_strstr
 I_strncpy
 I_sprintf
 sysclib_IMPORTS_end
