@@ -223,7 +223,7 @@ int _start(int argc, char **argv)
         }
     }
 
-    iop_library_t * lib_modload = ioplib_getByName("modload");
+    iop_library_t * lib_modload = ioplib_getByName("modload\0");
     org_LoadStartModule  = ioplib_hookExportEntry(lib_modload,  7, Hook_LoadStartModule);
     org_StartModule      = ioplib_hookExportEntry(lib_modload,  8, Hook_StartModule);
     org_LoadModuleBuffer = ioplib_hookExportEntry(lib_modload, 10, Hook_LoadModuleBuffer);

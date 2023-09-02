@@ -2,7 +2,6 @@
 #define __CDVD_CONFIG__
 
 #include <tamtypes.h>
-#include <usbhdfsd-common.h> // bd_fragment_t
 
 // flags
 #define IOPCORE_COMPAT_ACCU_READS    0x0008 // MODE_1
@@ -30,38 +29,6 @@ struct cdvdman_settings_common
         u8 disk_id[5];
         u64 disk_id_int; // 8 bytes, but that's ok for compare reasons
     };
-} __attribute__((packed));
-
-#define BDM_MAX_FILES 1  // ISO
-#define BDM_MAX_FRAGS 64 // 64 * 12bytes = 768bytes
-
-struct cdvdman_fragfile
-{
-    u8 frag_start; /// First fragment in the fragment table
-    u8 frag_count; /// Number of fragments in the fragment table
-    u64 size;      /// Size of the file in bytes
-} __attribute__((packed));
-
-struct cdvdman_settings_bdm
-{
-    struct cdvdman_settings_common common;
-
-    u32 drvName; /// Driver name: usb, ata, sdc, etc...
-    u32 devNr;   /// Device number: 0, 1, 2, etc...
-
-    // Fragmented files:
-    // 0 = ISO
-    struct cdvdman_fragfile fragfile[BDM_MAX_FILES];
-
-    // Fragment table, containing the fragments of all files
-    bd_fragment_t frags[BDM_MAX_FRAGS];
-} __attribute__((packed));
-
-struct cdvdman_settings_file
-{
-    struct cdvdman_settings_common common;
-
-    char filename[256];
 } __attribute__((packed));
 
 #endif

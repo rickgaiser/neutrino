@@ -111,8 +111,9 @@ copy:
 	rm -rf modules
 	mkdir -p modules
 	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx       modules
-	cp ../../iop/cdvdman/irx/bdm_cdvdman.irx   modules
+	cp ../../iop/cdvdman/irx/cdvdman.irx       modules
 	cp ../../iop/fakemod/irx/fakemod.irx       modules
+	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx       modules
 	cp ../../iop/esr_cdvdv/irx/esr_cdvdv.irx   modules
 	cp ../../iop/esr_pcdvdv/irx/esr_pcdvdv.irx modules
 	cp ../../iop/smap/irx/smap.irx             modules

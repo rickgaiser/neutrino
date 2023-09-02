@@ -98,7 +98,7 @@ int sceCdTrayReq(int mode, u32 *traycnt)
         If the day comes that OPL implements disc swapping, this will be place to reupdate all disc type, LBA start offsets, mediaLsn count and everything else.
         Until then it will the same disc.
         */
-        cdvdman_stat.disc_type_reg = cdvdman_settings.common.media;
+        cdvdman_stat.disc_type_reg = cdvdman_settings.media;
 
         cdvdman_media_changed = 1;
 
@@ -200,13 +200,13 @@ int sceCdReadDvdDualInfo(int *on_dual, u32 *layer1_start)
 {
     DPRINTF("%s(-, -)\n", __FUNCTION__);
 
-    if (cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL) {
+    if (cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL) {
         // Make layer 1 point to layer 0.
         *layer1_start = 0;
         *on_dual = 1;
     } else {
-        *layer1_start = cdvdman_settings.common.layer1_start;
-        *on_dual = (cdvdman_settings.common.layer1_start > 0) ? 1 : 0;
+        *layer1_start = cdvdman_settings.layer1_start;
+        *on_dual = (cdvdman_settings.layer1_start > 0) ? 1 : 0;
     }
 
     return 1;
@@ -219,9 +219,9 @@ int sceCdRI(u8 *buf, u32 *stat)
 
     DPRINTF("%s(-, -)\n", __FUNCTION__);
 
-    if (cdvdman_settings.common.ilink_id_int != 0) {
+    if (cdvdman_settings.ilink_id_int != 0) {
         rdbuf[0] = 0;
-        memcpy(&rdbuf[1], cdvdman_settings.common.ilink_id, 8);
+        memcpy(&rdbuf[1], cdvdman_settings.ilink_id, 8);
     } else {
         cdvdman_sendSCmd(0x12, NULL, 0, rdbuf, 9);
     }

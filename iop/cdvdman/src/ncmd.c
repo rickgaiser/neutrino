@@ -30,7 +30,7 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 
     result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
 
-    if ((result == 1) && (cdvdman_settings.common.flags & IOPCORE_COMPAT_ALT_READ) && !QueryIntrContext())
+    if ((result == 1) && (cdvdman_settings.flags & IOPCORE_COMPAT_ALT_READ) && !QueryIntrContext())
         WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
 
     return result;
@@ -140,7 +140,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
             memset(tocBuff, 0, 2048);
 
             u8 dual = 0;
-            if ((!(cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL)) || (cdvdman_settings.common.layer1_start > 0))
+            if ((!(cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)) || (cdvdman_settings.layer1_start > 0))
                 dual = 1;
 
             // Write only what we need, memset has cleared the above buffers.
@@ -162,7 +162,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 
             tocBuff[17] = 0x03;
 
-            u32 maxlsn = (cdvdman_settings.common.layer1_start ? cdvdman_settings.common.layer1_start : mediaLsnCount) + (0x30000 - 1);
+            u32 maxlsn = (cdvdman_settings.layer1_start ? cdvdman_settings.layer1_start : mediaLsnCount) + (0x30000 - 1);
             tocBuff[20] = (maxlsn >> 24) & 0xFF;
             tocBuff[21] = (maxlsn >> 16) & 0xff;
             tocBuff[22] = (maxlsn >> 8) & 0xff;
@@ -335,7 +335,7 @@ int sceCdReadDiskID(unsigned int *DiskID)
     if (i == 5)
         *((u16 *)DiskID) = (u16)0xadde;
     else
-        memcpy(DiskID, cdvdman_settings.common.disk_id, 5);
+        memcpy(DiskID, cdvdman_settings.disk_id, 5);
 
     return 1;
 }

@@ -1,0 +1,17 @@
+loadcore_IMPORTS_start
+I_RegisterLibraryEntries
+loadcore_IMPORTS_end
+
+stdio_IMPORTS_start
+I_printf // used by libbdm!
+stdio_IMPORTS_end
+
+sysclib_IMPORTS_start
+I_strncmp
+sysclib_IMPORTS_end
+
+thsemap_IMPORTS_start
+I_CreateSema
+I_SignalSema
+I_WaitSema
+thsemap_IMPORTS_end

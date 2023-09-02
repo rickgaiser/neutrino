@@ -121,7 +121,7 @@ int _start(int argc, char **argv)
 
     CpuSuspendIntr(&oldstate);
 
-    lib = ioplib_getByName("cdvdman");
+    lib = ioplib_getByName("cdvdman\0");
     // if (lib->version == 0x101 || lib->version == 0x201) {
     if (ioplib_getTableSize(lib) == 62) { // FIXME: is this detection correct ?!
         /*
@@ -165,11 +165,11 @@ int _start(int argc, char **argv)
         *def_sceCdMmode = ioplib_hookExportEntry(lib, 75, hook_sceCdMmode);
         ioplib_relinkExports(lib);
 
-        lib = ioplib_getByName("intrman");
+        lib = ioplib_getByName("intrman\0");
         *def_RegisterIntrHandler = ioplib_hookExportEntry(lib, 4, hook_RegisterIntrHandler);
         ioplib_relinkExports(lib);
 
-        lib = ioplib_getByName("sysmem");
+        lib = ioplib_getByName("sysmem\0\0");
         *def_AllocSysMemory = ioplib_hookExportEntry(lib, 4, hook_AllocSysMemory);
         ioplib_relinkExports(lib);
 

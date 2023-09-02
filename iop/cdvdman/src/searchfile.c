@@ -128,7 +128,7 @@ lbl_startlocate:
                     tocLength = tocEntryPointer->fileSize;
                     p = &slash[1];
 
-                    if (!(cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
+                    if (!(cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
                         int on_dual;
                         u32 layer1_start;
                         sceCdReadDvdDualInfo(&on_dual, &layer1_start);
@@ -160,7 +160,7 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
 
     cdvdman_init();
 
-    if (cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL)
+    if (cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)
         layer = 0;
     pLayerInfo = (layer != 0) ? &layer_info[1] : &layer_info[0]; // SCE CDVDMAN simply treats a non-zero value as a signal for the 2nd layer.
 
@@ -235,7 +235,7 @@ void cdvdman_searchfile_init(void)
     //DPRINTF("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
 
     // DVD DL support
-    if (!(cdvdman_settings.common.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
+    if (!(cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
         int on_dual;
         u32 layer1_start;
         sceCdReadDvdDualInfo(&on_dual, &layer1_start);

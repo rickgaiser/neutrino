@@ -4,7 +4,7 @@
 
 # Modules to load
 [[module]]
-file = "bdm_cdvdman.irx"
+file = "cdvdman.irx"
 ioprp = "CDVDMAN"
 [[module]]
 file = "cdvdfsv.irx"
@@ -16,6 +16,8 @@ ioprp = "EESYNC"
 file = "imgdrv.irx"
 [[module]]
 file = "fakemod.irx"
+[[module]]
+file = "fhi_bdm.irx"
 
 # Modules of the game that are faked/blocked
 [[fake]]

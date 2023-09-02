@@ -25,6 +25,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "xparam.h"
 #include "../../../iop/common/cdvd_config.h"
 #include "../../../iop/common/fakemod.h"
+#include "../../../iop/common/fhi_bdm.h"
 #include "toml.h"
 
 #define NEWLIB_PORT_AWARE
@@ -689,7 +690,6 @@ int main(int argc, char *argv[])
     const char *sGameID;
     uint32_t layer1_lba_start = 0;
     off_t iso_size = 0;
-    struct cdvdman_settings_bdm *settings = NULL;
 
     printf("----------------------------\n");
     printf("- Neutrino PS2 Game Loader -\n");
@@ -927,10 +927,11 @@ int main(int argc, char *argv[])
         //
         // Locate and set cdvdman settings
         //
-        struct SModule *mod_cdvdman = modlist_get_by_udnlname(&drv.mod_isys, "CDVDMAN");
+        struct cdvdman_settings_common *settings = NULL;
+        struct SModule *mod_cdvdman = modlist_get_by_name(&drv.mod_isys, "cdvdman.irx");
         for (i = 0; i < mod_cdvdman->iSize; i += 4) {
             if (*(u32 *)(mod_cdvdman->pData + i) == MODULE_SETTINGS_MAGIC) {
-                settings = (struct cdvdman_settings_bdm *)(mod_cdvdman->pData + i);
+                settings = (struct cdvdman_settings_common *)(mod_cdvdman->pData + i);
                 break;
             }
         }
@@ -938,9 +939,9 @@ int main(int argc, char *argv[])
             printf("ERROR: unable to locate cdvdman settings\n");
             return -1;
         }
-        memset((void *)settings, 0, sizeof(struct cdvdman_settings_bdm));
-        settings->common.media = eMediaType;
-        settings->common.layer1_start = layer1_lba_start;
+        memset((void *)settings, 0, sizeof(struct cdvdman_settings_common));
+        settings->media = eMediaType;
+        settings->layer1_start = layer1_lba_start;
         if (sys.ilink_id_int != 0) {
             printf("Overriding i.Link ID: %2x %2x %2x %2x %2x %2x %2x %2x\n"
             , sys.ilink_id[0]
@@ -951,7 +952,7 @@ int main(int argc, char *argv[])
             , sys.ilink_id[5]
             , sys.ilink_id[6]
             , sys.ilink_id[7]);
-            settings->common.ilink_id_int = sys.ilink_id_int;
+            settings->ilink_id_int = sys.ilink_id_int;
         }
         if (sys.disk_id_int != 0) {
             printf("Using disk ID: %2x %2x %2x %2x %2x\n"
@@ -960,7 +961,7 @@ int main(int argc, char *argv[])
             , sys.disk_id[2]
             , sys.disk_id[3]
             , sys.disk_id[4]);
-            settings->common.disk_id_int = sys.disk_id_int;
+            settings->disk_id_int = sys.disk_id_int;
         }
 
         // If no compatibility options are set on the command line
@@ -969,17 +970,36 @@ int main(int argc, char *argv[])
             iCompat = get_compat(sGameID);
         iCompat &= ~(1<<31); // Clear dummy flag
         if (iCompat & COMPAT_MODE_1)
-            settings->common.flags |= IOPCORE_COMPAT_ACCU_READS;
+            settings->flags |= IOPCORE_COMPAT_ACCU_READS;
         if (iCompat & COMPAT_MODE_2)
-            settings->common.flags |= IOPCORE_COMPAT_ALT_READ;
+            settings->flags |= IOPCORE_COMPAT_ALT_READ;
         if (iCompat & COMPAT_MODE_5)
-            settings->common.flags |= IOPCORE_COMPAT_EMU_DVDDL;
-        printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, settings->common.flags);
+            settings->flags |= IOPCORE_COMPAT_EMU_DVDDL;
+        printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, settings->flags);
+    }
+
+    if (iUseDrive == 0) {
+        //
+        // Locate and set fhi_bdm settings
+        //
+        struct fhi_bdm *settings = NULL;
+        struct SModule *mod_cdvdman = modlist_get_by_name(&drv.mod_isys, "fhi_bdm.irx");
+        for (i = 0; i < mod_cdvdman->iSize; i += 4) {
+            if (*(u32 *)(mod_cdvdman->pData + i) == MODULE_SETTINGS_MAGIC) {
+                settings = (struct fhi_bdm *)(mod_cdvdman->pData + i);
+                break;
+            }
+        }
+        if (settings == NULL) {
+            printf("ERROR: unable to locate fhi_bdm settings\n");
+            return -1;
+        }
+        memset((void *)settings, 0, sizeof(struct fhi_bdm));
 
         //
         // Add ISO as fragfile[0] to fragment list
         //
-        struct cdvdman_fragfile *iso_frag = &settings->fragfile[0];
+        struct fhi_bdm_fragfile *iso_frag = &settings->fragfile[0];
         iso_frag->frag_start = 0;
         iso_frag->frag_count = fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
         iso_frag->size       = iso_size;
@@ -994,7 +1014,7 @@ int main(int argc, char *argv[])
         settings->drvName = (u32)fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
         fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &settings->devNr, 4);
         char *drvName = (char *)&settings->drvName;
-        printf("Using BDM device: %s%d\n", drvName, settings->devNr);
+        printf("Using BDM device: %s%d\n", drvName, (int)settings->devNr);
         close(fd_iso);
     }
 

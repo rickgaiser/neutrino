@@ -34,14 +34,6 @@
 #define iDPRINTF(args...)
 #endif
 
-#ifdef BDM_DRIVER
-#define CDVDMAN_SETTINGS_TYPE cdvdman_settings_bdm
-#elif defined FILE_DRIVER
-#define CDVDMAN_SETTINGS_TYPE cdvdman_settings_file
-#else
-#error Unknown driver type. Please check the Makefile.
-#endif
-
 // Event flags
 #define CDVDEF_MAN_UNLOCKED  0x0001
 #define CDVDEF_POWER_OFF     0x0002
@@ -126,7 +118,7 @@ extern void cdvdman_fs_init(void);
 extern void cdvdman_searchfile_init(void);
 extern void cdvdman_initdev(void);
 
-extern struct CDVDMAN_SETTINGS_TYPE cdvdman_settings;
+extern struct cdvdman_settings_common cdvdman_settings;
 
 // Normally this buffer is only used by 'searchfile', only 1 sector used
 #define CDVDMAN_BUF_SECTORS 1

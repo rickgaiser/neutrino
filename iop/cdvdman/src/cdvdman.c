@@ -11,7 +11,7 @@
 IRX_ID(MODNAME, 1, 1);
 
 //------------------ Patch Zone ----------------------
-struct CDVDMAN_SETTINGS_TYPE cdvdman_settings = {{MODULE_SETTINGS_MAGIC}};
+struct cdvdman_settings_common cdvdman_settings = {MODULE_SETTINGS_MAGIC};
 
 //----------------------------------------------------
 extern struct irx_export_table _exp_cdvdman;
@@ -109,7 +109,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     for (ptr = buf, remaining = sectors; remaining > 0;) {
         unsigned int SectorsToRead = remaining;
 
-        if (cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS) {
+        if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) {
             // Limit transfers to a maximum length of 8, with a restricted transfer rate.
             iop_sys_clock_t TargetTime;
 
@@ -117,7 +117,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
                 SectorsToRead = 8;
 
             TargetTime.hi = 0;
-            TargetTime.lo = (cdvdman_settings.common.media == 0x12 ? 81920 : 33512) * SectorsToRead;
+            TargetTime.lo = (cdvdman_settings.media == 0x12 ? 81920 : 33512) * SectorsToRead;
             // SP193: approximately 2KB/3600KB/s = 555us required per 2048-byte data sector at 3600KB/s, so 555 * 36.864 = 20460 ticks per sector with a 36.864MHz clock.
             /* AKuHAK: 3600KB/s is too fast, it is CD 24x - theoretical maximum on CD
                However, when setting SCECdSpinMax we will get 900KB/s (81920) for CD, and 2200KB/s (33512) for DVD */
@@ -127,7 +127,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 
         cdvdman_stat.err = DeviceReadSectors(lsn, ptr, SectorsToRead);
         if (cdvdman_stat.err != SCECdErNO) {
-            if (cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS)
+            if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS)
                 CancelAlarm(&cdvdemu_read_end_cb, NULL);
             break;
         }
@@ -156,7 +156,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
         lsn += SectorsToRead;
         ReadPos += SectorsToRead * 2048;
 
-        if (cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS) {
+        if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) {
             // Sleep until the required amount of time has been spent.
             WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_END, WEF_AND, NULL);
         }
@@ -317,8 +317,8 @@ static void cdvdman_initDiskType(void)
 {
     cdvdman_stat.err = SCECdErNO;
 
-    cdvdman_stat.disc_type_reg = (int)cdvdman_settings.common.media;
-    DPRINTF("DiskType=0x%x\n", cdvdman_settings.common.media);
+    cdvdman_stat.disc_type_reg = (int)cdvdman_settings.media;
+    DPRINTF("DiskType=0x%x\n", cdvdman_settings.media);
 }
 
 //-------------------------------------------------------------------------
@@ -627,7 +627,7 @@ int _start(int argc, char **argv)
     DeviceInit();
 
     // Setup the callback timer.
-    USec2SysClock((cdvdman_settings.common.flags & IOPCORE_COMPAT_ACCU_READS) ? 5000 : 0, &gCallbackSysClock);
+    USec2SysClock((cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) ? 5000 : 0, &gCallbackSysClock);
 
     // create SCMD/searchfile semaphores
     cdvdman_create_semaphores();
@@ -654,7 +654,5 @@ void SetStm0Callback(StmCallback_t callback)
 //-------------------------------------------------------------------------
 int _shutdown(void)
 {
-    DeviceDeinit();
-
     return 0;
 }

@@ -95,7 +95,7 @@ int module_start(int argc, char *argv[])
 
     StartThread(CreateThread(&thread_param), NULL);
 
-    lib_modload = ioplib_getByName("modload");
+    lib_modload = ioplib_getByName("modload\0");
     if (lib_modload != NULL) {
         DPRINTF("modload 0x%x detected\n", lib_modload->version);
         // Newer modload versions allow modules to be unloaded

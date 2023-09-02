@@ -5,10 +5,11 @@
 #define FHI_H
 
 
+#include <stdint.h>
 #include <irx.h>
 
 // Size of the file in SECTORS of 512b
-u32 fhi_size(int file_handle);
+uint32_t fhi_size(int file_handle);
 // Read SECTORS from file
 int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count);
 // Write SECTORS to file
