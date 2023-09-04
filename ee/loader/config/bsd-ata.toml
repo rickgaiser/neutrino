@@ -1,13 +1,8 @@
-# Name of device driver, to show to user
+# Name of loaded config, to show to user
 name = "ATA via DEV9 BDM driver"
 
-# Type of device driver, support for this type must exist in
-# type-<type>-load.toml   for the load   environment
-# type-<type>-ingame.toml for the ingame environment
-type = "bdm"
-
-# Device mode as used by the EECORE (used for patches), support for this type must exist in the EECORE
-mode = "BDM_ATA_MODE"
+# Drivers this driver depends on (config file must exist)
+depends = "bdm"
 
 # Modules to load
 [[module]]

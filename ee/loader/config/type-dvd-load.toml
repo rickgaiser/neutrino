@@ -1,6 +1,0 @@
-#
-# Configuration for DVD load environment
-#
-
-# Modules to load
-# -> Nothing needed, becouse the drivers are always loaded

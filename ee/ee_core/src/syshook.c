@@ -57,6 +57,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
 
     DPRINTF("t_loadElf()\n");
 
+#if 1
     DPRINTF("t_loadElf: Resetting IOP...\n");
 
     set_reg_disabled = 0;
@@ -66,6 +67,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
     iop_reboot_count = 1;
 
     SifInitRpc(0);
+#endif
     LoadFileInit();
 
     DPRINTF("t_loadElf: elf path = '%s'\n", filename);

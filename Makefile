@@ -2,17 +2,18 @@ EESIO_DEBUG?=0
 IOPCORE_DEBUG?=0
 
 all:
-	$(MAKE) -C iop/cdvdfsv    all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/cdvdman    all DEBUG=$(IOPCORE_DEBUG) USE_BDM=1
-	$(MAKE) -C iop/fakemod    all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/fhi_bdm    all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/esr_cdvdv  all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/esr_pcdvdv all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/smap       all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/imgdrv     all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/isofs      all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C ee/ee_core     all EESIO_DEBUG=$(EESIO_DEBUG)
-	$(MAKE) -C ee/loader      all DEBUG=0
+	$(MAKE) -C iop/atad_emu     all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/cdvdfsv      all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/cdvdman_emu  all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/cdvdman_esr1 all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/cdvdman_esr2 all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/fakemod      all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/fhi_bdm      all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/smap_udpbd   all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C ee/ee_core       all EESIO_DEBUG=$(EESIO_DEBUG)
+	$(MAKE) -C ee/loader        all DEBUG=0
 
 copy:
 	$(MAKE) -C ee/loader    copy
@@ -21,17 +22,18 @@ format:
 	find . -type f -a \( -iname \*.h -o -iname \*.c \) | xargs clang-format -i
 
 clean:
-	$(MAKE) -C iop/cdvdfsv    clean
-	$(MAKE) -C iop/cdvdman    clean USE_BDM=1
-	$(MAKE) -C iop/fakemod    clean
-	$(MAKE) -C iop/fhi_bdm    clean
-	$(MAKE) -C iop/esr_cdvdv  clean
-	$(MAKE) -C iop/esr_pcdvdv clean
-	$(MAKE) -C iop/smap       clean
-	$(MAKE) -C iop/imgdrv     clean
-	$(MAKE) -C iop/isofs      clean
-	$(MAKE) -C ee/ee_core     clean
-	$(MAKE) -C ee/loader      clean
+	$(MAKE) -C iop/atad_emu     clean
+	$(MAKE) -C iop/cdvdfsv      clean
+	$(MAKE) -C iop/cdvdman_emu  clean
+	$(MAKE) -C iop/cdvdman_esr1 clean
+	$(MAKE) -C iop/cdvdman_esr2 clean
+	$(MAKE) -C iop/fakemod      clean
+	$(MAKE) -C iop/fhi_bdm      clean
+	$(MAKE) -C iop/imgdrv       clean
+	$(MAKE) -C iop/isofs        clean
+	$(MAKE) -C iop/smap_udpbd   clean
+	$(MAKE) -C ee/ee_core       clean
+	$(MAKE) -C ee/loader        clean
 
 # Start on PS2 (ps2link/ps2client)
 run:

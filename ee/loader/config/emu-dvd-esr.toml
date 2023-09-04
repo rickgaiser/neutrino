@@ -1,0 +1,8 @@
+# Name of loaded config, to show to user
+name = "Builtin DVD drive with ESR patched disk"
+
+# Modules to load
+[[module]]
+file = "cdvdman_esr1.irx"
+[[module]]
+file = "cdvdman_esr2.irx"

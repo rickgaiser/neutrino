@@ -21,7 +21,7 @@ int isInit = 0;
 // Global data
 u32 g_compat_mask = 0;
 char GameID[16];
-int GameMode;
+int GameMode = BDM_NOP_MODE;
 int EnableDebug = 0;
 int *gCheatList = NULL; // Store hooks/codes addr+val pairs
 

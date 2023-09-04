@@ -25,7 +25,7 @@ all: $(EE_BIN_PACKED)
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
-GAME = 'DVD/Metal Saga (U).iso'
+#GAME = 'DVD/Metal Saga (U).iso'
 
 # These games allocate ALL IOP RAM as an anti-piracy method
 # Special IOP code is needed (in cdvdman?) to counter this
@@ -63,7 +63,7 @@ GAME = 'DVD/Metal Saga (U).iso'
 # Tested, working offline
 #   ONLINE this game uses a huge amount of IOP RAM. This causes IRX modules to fail to load
 #   causing random crashes such as black screen or network adapter not detected.
-#GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
+GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/Ratchet Clank 3 (E).iso'
 
 # Tested, working
@@ -97,7 +97,7 @@ GAME = 'DVD/Metal Saga (U).iso'
 
 
 run: all copy
-	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -drv=udpbd -iso=mass:$(GAME)
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -bsd=udpbd -dvd=mass:$(GAME)
 
 sim: all copy
 	flatpak --filesystem=host run net.pcsx2.PCSX2 $(PWD)/ee/loader/$(EE_BIN_PACKED)
@@ -110,28 +110,29 @@ clean:
 copy:
 	rm -rf modules
 	mkdir -p modules
-	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx       modules
-	cp ../../iop/cdvdman/irx/cdvdman.irx       modules
-	cp ../../iop/fakemod/irx/fakemod.irx       modules
-	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx       modules
-	cp ../../iop/esr_cdvdv/irx/esr_cdvdv.irx   modules
-	cp ../../iop/esr_pcdvdv/irx/esr_pcdvdv.irx modules
-	cp ../../iop/smap/irx/smap.irx             modules
-	cp ../../iop/imgdrv/irx/imgdrv.irx         modules
-	cp ../../iop/isofs/irx/isofs.irx           modules
-	cp ../ee_core/ee_core.elf                  modules
-	cp $(PS2SDK)/iop/irx/eesync.irx            modules
-	cp $(PS2SDK)/iop/irx/iomanX.irx            modules
-	cp $(PS2SDK)/iop/irx/fileXio.irx           modules
-	cp $(PS2SDK)/iop/irx/bdm.irx               modules
-	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx       modules
-	cp $(PS2SDK)/iop/irx/ata_bd.irx            modules
-	cp $(PS2SDK)/iop/irx/usbd_mini.irx         modules
-	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx   modules
-	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx    modules
-	cp $(PS2SDK)/iop/irx/ps2dev9.irx           modules
-	cp $(PS2SDK)/iop/irx/iLinkman.irx          modules
-	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx  modules
+	cp ../../iop/atad_emu/irx/atad_emu.irx         modules
+	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx           modules
+	cp ../../iop/cdvdman_emu/irx/cdvdman_emu.irx   modules
+	cp ../../iop/cdvdman_esr1/irx/cdvdman_esr1.irx modules
+	cp ../../iop/cdvdman_esr2/irx/cdvdman_esr2.irx modules
+	cp ../../iop/fakemod/irx/fakemod.irx           modules
+	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx           modules
+	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
+	cp ../../iop/isofs/irx/isofs.irx               modules
+	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
+	cp ../ee_core/ee_core.elf                      modules
+	cp $(PS2SDK)/iop/irx/eesync.irx                modules
+	cp $(PS2SDK)/iop/irx/iomanX.irx                modules
+	cp $(PS2SDK)/iop/irx/fileXio.irx               modules
+	cp $(PS2SDK)/iop/irx/bdm.irx                   modules
+	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx           modules
+	cp $(PS2SDK)/iop/irx/ata_bd.irx                modules
+	cp $(PS2SDK)/iop/irx/usbd_mini.irx             modules
+	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx       modules
+	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx        modules
+	cp $(PS2SDK)/iop/irx/ps2dev9.irx               modules
+	cp $(PS2SDK)/iop/irx/iLinkman.irx              modules
+	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx      modules
 
 include ../../Defs.make
 include ../Rules.make

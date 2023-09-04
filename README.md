@@ -1,18 +1,25 @@
 # neutrino
-Small, Fast and Modular PS2 Game Loader
+Small, Fast and Modular PS2 Device Emulator
 
 ## Design
-A neutrino is a particle with almost zero mass, and that's what this game loaders primary goal is. To have almost 0 mass when running ingame to maximize game compatibility.
+A neutrino is a particle with almost zero mass, and that's what this device emulator's primary goal is. To have almost 0 mass when emulating devices to maximize compatibility.
 
-Neutrino also does not have a user interface, instead it's meant to be integrated as a backend to a frontend (user interface). Possible user interfaces can be uLaunchELF, XEB+, OPL or any new user interface. This makes neutrino much more easy to maintain, and allows many more game loaders to be made using neutrino as the backend.
+Neutrino also does not have a user interface, instead it's meant to be integrated as a backend to a frontend (user interface). Possible user interfaces can be uLaunchELF, XEB+, OPL or any new user interface. This makes neutrino much more easy to maintain, and allows many more applications to be made using neutrino as the backend.
 
-With neutrino all modules are... modular. They are in a separate folder called `modules`. This allows the user to replace them with new and improved modules. For instance when there is an improved mx4sio driver: simply replace the mx4sio_bd.irx with the new version, and done. No need for a complete new backend or frontend.
+With neutrino all modules are... modular. They are in a separate folder called `modules`. This allows the user add new and improved modules. What modules are loaded is fully configurable using TOML config files in the `config` folder.
 
-## ISO file storage support
-The following storage devices are supported:
+## Environments
+An environment in neutrino describes what IOP modules are loaded and defines what features the environment has. In neutrino there are 3 environments:
+- Boot Environment (BE): environment neutrino is loaded from (by uLE / ps2link / ...), containing neutrino, configuration files and drivers
+- Load Environment (LE): neutrino's loader.elf reboots into the LE, containing virtual disk images
+- Emulation Environment (EE): neutrino's ee_core.elf reboots into the EE, emulating devices
+
+## Backing Store Driver
+A backing store driver provides a storage location for storing virtual disk images. For instance of DVD's, HDD's or MC's.
+The following backing storage devices are supported:
 - USB
-- ATA (internal HDD)
 - MX4SIO
+- ATA (internal HDD)
 - UDPBD
 - iLink / IEEE1394
 
@@ -20,34 +27,53 @@ These are all BDM drivers, or "Block Devices". On all devices the following file
 - exFat
 - FAT32 (/16/12)
 
-## File type support
-Only .iso files are supported.
+During the loading phase, the exFat driver will be loaded and all files are accessable as `mass0:<file>` or `mass1:<file>`.
 
-## CD/DVD support
-It is possible to use the following CD's / DVD's:
-- Original CD's / DVD's (region free)
-- ESR patched DVD's
+## CD/DVD emulation
+The following CD/DVD emulation drivers are supported:
+- No: using original CD's / DVD's in the optical drive
+- ESR: using ESR patched DVD's in the optical drive
+- File: using an iso file from the backing store
+
+## ATA HDD emulation
+The following HDD emulation drivers are supported:
+- No: using ATA HDD in the PS2
+- File: using a virtual HDD image file from the backing store
 
 ## Usage instructions
-When running neutrino using ps2link, the following usage instructions will be shown when an invalid argument is passed:
 ```
-Usage: neutrino.elf -drv=<driver> -iso=<path>\n");
+Usage: neutrino.elf options
 
-Options:\n");
-  -drv=<driver>     Select device driver, supported are:
+Options:
+  -bsd=<driver>     Backing store drivers, supported are:
+                    - no (default)
                     - ata
                     - usb
                     - mx4sio
                     - udpbd
                     - ilink
-                    - dvd
+
+  -dvd=<mode>       DVD emulation mode, supported are:
+                    - no (default)
                     - esr
-  -iso=<file>       Select iso file (full path!)
-  -elf=<file>       Select elf file inside iso to boot
+                    - <file>
+
+  -ata0=<mode>      ATA HDD 0 emulation mode, supported are:
+                    - no (default)
+                    - <file>
+                    NOTE: only both emulated, or both real.
+                          mixing not possible
+  -ata1=<mode>      See -ata0=<mode>
+
+  -elf=<file>       ELF file to boot, supported are:
+                    - auto (elf file from cd/dvd) (default)
+                    - <file>
+
   -mt=<type>        Select media type, supported are:
                     - cd
                     - dvd
                     Defaults to cd for size<=650MiB, and dvd for size>650MiB
+
   -gc=<compat>      Game compatibility modes, supported are:
                     - 0: Disable builtin compat flags
                     - 1: IOP: Accurate reads (sceCdRead)
@@ -55,10 +81,14 @@ Options:\n");
                     - 3: EE : Unhook syscalls
                     - 5: IOP: Emulate DVD-DL
                     Multiple options possible, for example -gc=23
+
   -eC               Enable eecore debug colors
 
+  --b               Break, all following parameters are passed to the ELF
+
 Usage examples:
-  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso
-  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=dvd
-  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=esr
+  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso
+  neutrino.elf
+  neutrino.elf -dvd=esr
+  neutrino.elf -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 ```

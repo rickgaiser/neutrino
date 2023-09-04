@@ -7,7 +7,7 @@
 #include <cdvdman.h>
 #include "esrimp.h"
 #include "ioplib.h"
-#include "../../esr_cdvdv/src/scecdvdv.h"
+#include "../../cdvdman_esr1/src/scecdvdv.h"
 
 #ifdef DEBUG
 #define DPRINTF(args...) printf(args)

@@ -5,30 +5,52 @@
 
 void eecc_init(struct SEECoreConfig *eecc)
 {
-    eecc_setGameMode(eecc, "");
+    // String values
+    eecc_setGameMode(eecc, NULL);
+    eecc_setGameID(eecc, NULL);
+    eecc_setELFName(eecc, NULL);
+    eecc_setELFArgs(eecc, 0, NULL);
+
+    // Integer values
     eecc_setKernelConfig(eecc, 0, 0);
     eecc_setModStorageConfig(eecc, 0, 0);
     eecc_setCompatFlags(eecc, 0);
-    eecc_setGameID(eecc, "");
-    eecc_setFileName(eecc, "");
-    eecc_setExitPath(eecc, "Browser");
-    IP4_ADDR(&eecc->_ethAddr, 192, 168, 1, 10);
-    IP4_ADDR(&eecc->_ethMask, 255, 255, 255, 0);
-    IP4_ADDR(&eecc->_ethGateway, 192, 168, 1, 1);
 
+    // Enable bits
     eecc_setDebugColors(eecc, false);
     eecc_setPS2Logo(eecc, false);
     eecc_setPademu(eecc, false);
     eecc_setGSM(eecc, false);
     eecc_setCheats(eecc, false);
+
     eecc->_argc = 0;
 }
 
+//---------------------------------------------------------------------------
+// String values
 void eecc_setGameMode(struct SEECoreConfig *eecc, const char *gameMode)
 {
     eecc->_sGameMode = gameMode;
 }
 
+void eecc_setGameID(struct SEECoreConfig *eecc, const char *gameID)
+{
+    eecc->_sGameID = gameID;
+}
+
+void eecc_setELFName(struct SEECoreConfig *eecc, const char *elfname)
+{
+    eecc->_sELFName = elfname;
+}
+
+void eecc_setELFArgs(struct SEECoreConfig *eecc, int argc, const char *argv[])
+{
+    eecc->_iELFArgc = argc;
+    eecc->_sELFArgv = argv;
+}
+
+//---------------------------------------------------------------------------
+// Integer values
 void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory)
 {
     eecc->_eeloadCopy = eeloadCopy;
@@ -46,6 +68,8 @@ void eecc_setCompatFlags(struct SEECoreConfig *eecc, u32 compatFlags)
     eecc->_compatFlags = compatFlags;
 }
 
+//---------------------------------------------------------------------------
+// Enable bits
 void eecc_setDebugColors(struct SEECoreConfig *eecc, bool enable)
 {
     eecc->_enableDebugColors = enable;
@@ -71,47 +95,19 @@ void eecc_setCheats(struct SEECoreConfig *eecc, bool enable)
     eecc->_enableCheats = enable;
 }
 
-void eecc_setGameID(struct SEECoreConfig *eecc, const char *gameID)
-{
-    eecc->_sGameID = gameID;
-}
-
-void eecc_setFileName(struct SEECoreConfig *eecc, const char *fileName)
-{
-    eecc->_sFileName = fileName;
-}
-
-void eecc_setExitPath(struct SEECoreConfig *eecc, const char *path)
-{
-    eecc->_sExitPath = path;
-}
-
-void eecc_setHDDSpindown(struct SEECoreConfig *eecc, u32 minutes)
-{
-    eecc->_HDDSpindown = minutes < 20 ? minutes : 20;
-}
-
+//---------------------------------------------------------------------------
 bool eecc_valid(struct SEECoreConfig *eecc)
 {
-    if (eecc->_sGameMode[0] == 0)
+    // Check for the minimum needed parameters
+    if (eecc->_sELFName == NULL)
         return false;
-
     if (eecc->_eeloadCopy == 0x0)
         return false;
-
     if (eecc->_initUserMemory == 0x0)
         return false;
-
     if (eecc->_irxtable == 0x0)
         return false;
-
     if (eecc->_irxptr == 0x0)
-        return false;
-
-    if (eecc->_sGameID[0] == 0)
-        return false;
-
-    if (eecc->_sFileName[0] == 0)
         return false;
 
     return true;
@@ -133,16 +129,19 @@ int eecc_argc(struct SEECoreConfig *eecc)
 
 const char **eecc_argv(struct SEECoreConfig *eecc)
 {
+    int i;
     char *psConfig = eecc->_sConfig;
     size_t maxStrLen = sizeof(eecc->_sConfig);
 
     eecc->_argc = 0;
 
     // Base config
-    snprintf(psConfig, maxStrLen, "-drv=%s", eecc->_sGameMode);
-    eecc->_argv[eecc->_argc++] = psConfig;
-    maxStrLen -= strlen(psConfig) + 1;
-    psConfig += strlen(psConfig) + 1;
+    if (eecc->_sGameMode != NULL) {
+        snprintf(psConfig, maxStrLen, "-drv=%s", eecc->_sGameMode);
+        eecc->_argv[eecc->_argc++] = psConfig;
+        maxStrLen -= strlen(psConfig) + 1;
+        psConfig += strlen(psConfig) + 1;
+    }
 
     // Debug colors
     if (eecc->_enableDebugColors) {
@@ -165,10 +164,12 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
     psConfig += strlen(psConfig) + 1;
 
     // GameID
-    snprintf(psConfig, maxStrLen, "-gid=%s", eecc->_sGameID);
-    eecc->_argv[eecc->_argc++] = psConfig;
-    maxStrLen -= strlen(psConfig) + 1;
-    psConfig += strlen(psConfig) + 1;
+    if (eecc->_sGameID != NULL) {
+        snprintf(psConfig, maxStrLen, "-gid=%s", eecc->_sGameID);
+        eecc->_argv[eecc->_argc++] = psConfig;
+        maxStrLen -= strlen(psConfig) + 1;
+        psConfig += strlen(psConfig) + 1;
+    }
 
     // Compatflags
     if (eecc->_compatFlags) {
@@ -192,11 +193,19 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
         psConfig += strlen(psConfig) + 1;
     }
 
-    // Filepath
-    snprintf(psConfig, maxStrLen, "cdrom0:\\%s;1", eecc->_sFileName);
+    // ELF path
+    snprintf(psConfig, maxStrLen, "%s", eecc->_sELFName);
     eecc->_argv[eecc->_argc++] = psConfig;
     maxStrLen -= strlen(psConfig) + 1;
     psConfig += strlen(psConfig) + 1;
+
+    // ELF args
+    for (i = 0; i < eecc->_iELFArgc; i++) {
+        snprintf(psConfig, maxStrLen, "%s", eecc->_sELFArgv[i]);
+        eecc->_argv[eecc->_argc++] = psConfig;
+        maxStrLen -= strlen(psConfig) + 1;
+        psConfig += strlen(psConfig) + 1;
+    }
 
     return eecc->_argv;
 }

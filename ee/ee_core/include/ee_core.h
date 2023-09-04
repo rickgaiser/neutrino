@@ -53,6 +53,7 @@ extern int GameMode;
 #define BDM_USB_MODE (1<<2)
 #define BDM_UDP_MODE (1<<3)
 #define BDM_ATA_MODE (1<<4)
+#define BDM_NOP_MODE (1<<31)
 
 extern int EnableDebug;
 #define GS_BGCOLOUR *((volatile unsigned long int *)0x120000E0)

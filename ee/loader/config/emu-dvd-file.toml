@@ -1,23 +1,13 @@
-#
-# Configuration for BDM ingame environment
-#
+# Name of loaded config, to show to user
+name = "CD/DVD emulation using image file"
 
 # Modules to load
-[[module]]
-file = "cdvdman.irx"
+[[module-emu]]
+file = "cdvdman_emu.irx"
 ioprp = "CDVDMAN"
-[[module]]
+[[module-emu]]
 file = "cdvdfsv.irx"
 ioprp = "CDVDFSV"
-[[module]]
-file = "eesync.irx"
-ioprp = "EESYNC"
-[[module]]
-file = "imgdrv.irx"
-[[module]]
-file = "fakemod.irx"
-[[module]]
-file = "fhi_bdm.irx"
 
 # Modules of the game that are faked/blocked
 [[fake]]

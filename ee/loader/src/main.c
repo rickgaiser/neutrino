@@ -53,23 +53,38 @@ static struct SEECoreConfig eeconf;
 
 void print_usage()
 {
-    printf("Usage: neutrino.elf -drv=<driver> -iso=<path>\n");
+    printf("Usage: neutrino.elf options\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -drv=<driver>     Select block device driver, supported are:\n");
+    printf("  -bsd=<driver>     Backing store drivers, supported are:\n");
+    printf("                    - no (default)\n");
     printf("                    - ata\n");
     printf("                    - usb\n");
     printf("                    - mx4sio\n");
     printf("                    - udpbd\n");
     printf("                    - ilink\n");
-    printf("                    - dvd\n");
+    printf("\n");
+    printf("  -dvd=<mode>       DVD emulation mode, supported are:\n");
+    printf("                    - no (default)\n");
     printf("                    - esr\n");
-    printf("  -iso=<file>       Select iso file (full path!)\n");
-    printf("  -elf=<file>       Select elf file inside iso to boot\n");
+    printf("                    - <file>\n");
+    printf("\n");
+    printf("  -ata0=<mode>      ATA HDD 0 emulation mode, supported are:\n");
+    printf("                    - no (default)\n");
+    printf("                    - <file>\n");
+    printf("                    NOTE: only both emulated, or both real.\n");
+    printf("                          mixing not possible\n");
+    printf("  -ata1=<mode>      See -ata0=<mode>\n");
+    printf("\n");
+    printf("  -elf=<file>       ELF file to boot, supported are:\n");
+    printf("                    - auto (elf file from cd/dvd) (default)\n");
+    printf("                    - <file>\n");
+    printf("\n");
     printf("  -mt=<type>        Select media type, supported are:\n");
     printf("                    - cd\n");
     printf("                    - dvd\n");
     printf("                    Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
+    printf("\n");
     printf("  -gc=<compat>      Game compatibility modes, supported are:\n");
     printf("                    - 0: Disable builtin compat flags\n");
     printf("                    - 1: IOP: Accurate reads (sceCdRead)\n");
@@ -77,12 +92,16 @@ void print_usage()
     printf("                    - 3: EE : Unhook syscalls\n");
     printf("                    - 5: IOP: Emulate DVD-DL\n");
     printf("                    Multiple options possible, for example -gc=23\n");
+    printf("\n");
     printf("  -eC               Enable eecore debug colors\n");
     printf("\n");
+    printf("  --b               Break, all following parameters are passed to the ELF\n");
+    printf("\n");
     printf("Usage examples:\n");
-    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=usb -iso=mass:path/to/filename.iso\n");
-    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=dvd\n");
-    printf("  ps2client -h 192.168.1.10 execee host:neutrino.elf -drv=esr\n");
+    printf("  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf\n");
+    printf("  neutrino.elf -dvd=esr\n");
+    printf("  neutrino.elf -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser\n");
 }
 
 struct SModule
@@ -120,18 +139,13 @@ struct SSystemSettings {
 } sys;
 
 struct SDriver {
-    const char *name;
-    const char *type;
-    const char *mode;
-
     // System drivers for load environment
     struct SModList mod_lsys;
-    // System drivers for ingame environment
+    // System drivers for emulation environment
     struct SModList mod_isys;
     // Device drivers (for both environments)
     struct SModList mod_drv;
-
-    // Module faking for ingame environment
+    // Module faking for emulation environment
     struct SFakeList fake;
 } drv;
 
@@ -445,10 +459,10 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
     return 0;
 }
 
-int modlist_add_array(struct SModList *ml, toml_table_t *tbl_root)
+int modlist_add_array(struct SModList *ml, toml_table_t *tbl_root, const char *arrname)
 {
     int i;
-    toml_array_t *arr = toml_array_in(tbl_root, "module");
+    toml_array_t *arr = toml_array_in(tbl_root, arrname);
     if (arr == NULL)
         return 0;
 
@@ -527,14 +541,8 @@ int fakelist_add_array(struct SFakeList *fl, toml_table_t *tbl_root)
     return 0;
 }
 
-int load_driver(const char * driver)
+void driver_init()
 {
-    FILE* fp;
-    char filename[256];
-    char errbuf[200];
-    toml_table_t *tbl_root = NULL;
-    toml_datum_t v;
-
     // Initialize driver structure
     memset(&drv, 0, sizeof(struct SDriver));
     drv.mod_drv.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
@@ -545,107 +553,52 @@ int load_driver(const char * driver)
     memset(drv.mod_lsys.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
     drv.fake.fake = malloc(MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule)); // NOTE: never freed, but we don't care
     memset(drv.fake.fake, 0, MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule));
-
-    // Open and parse file
-    snprintf(filename, 256, "config/drv-%s.toml", driver);
-    fp = fopen(filename, "r");
-    if (!fp) {
-        printf("ERROR: %s: failed to open\n", filename);
-        goto err_exit;
-    }
-    tbl_root = toml_parse_file(fp, errbuf, sizeof(errbuf));
-    fclose(fp);
-    if (!tbl_root) {
-        printf("ERROR: %s: parse error: %s\n", filename, errbuf);
-        goto err_exit;
-    }
-
-    // Get values in root table
-    v = toml_string_in(tbl_root, "name");
-    if (v.ok)
-        drv.name = v.u.s; // NOTE: passing ownership of dynamic memory
-    v = toml_string_in(tbl_root, "type");
-    if (v.ok)
-        drv.type = v.u.s; // NOTE: passing ownership of dynamic memory
-    v = toml_string_in(tbl_root, "mode");
-    if (v.ok)
-        drv.mode = v.u.s; // NOTE: passing ownership of dynamic memory
-
-    modlist_add_array(&drv.mod_drv, tbl_root);
-    fakelist_add_array(&drv.fake, tbl_root);
-    free(tbl_root);
-
-    // Open and parse type ingame
-    snprintf(filename, 256, "config/type-%s-ingame.toml", drv.type);
-    fp = fopen(filename, "r");
-    if (!fp) {
-        printf("ERROR: %s: failed to open\n", filename);
-        goto err_exit;
-    }
-    tbl_root = toml_parse_file(fp, errbuf, sizeof(errbuf));
-    fclose(fp);
-    if (!tbl_root) {
-        printf("ERROR: %s: parse error: %s\n", filename, errbuf);
-        goto err_exit;
-    }
-    modlist_add_array(&drv.mod_isys, tbl_root);
-    fakelist_add_array(&drv.fake, tbl_root);
-    free(tbl_root);
-
-    // Open and parse type load
-    snprintf(filename, 256, "config/type-%s-load.toml", drv.type);
-    fp = fopen(filename, "r");
-    if (!fp) {
-        printf("ERROR: %s: failed to open\n", filename);
-        goto err_exit;
-    }
-    tbl_root = toml_parse_file(fp, errbuf, sizeof(errbuf));
-    fclose(fp);
-    if (!tbl_root) {
-        printf("ERROR: %s: parse error: %s\n", filename, errbuf);
-        goto err_exit;
-    }
-    modlist_add_array(&drv.mod_lsys, tbl_root);
-    //fakelist_add_array(&drv.fake, tbl_root);
-    free(tbl_root);
-
-    return 0;
-
-err_exit:
-    if (tbl_root != NULL)
-        free(tbl_root);
-
-    return -1;
 }
 
-int load_system()
+int load_driver(const char * type, const char * subtype)
 {
-    int i;
     FILE* fp;
+    char filename[256];
     char errbuf[200];
     toml_table_t *tbl_root = NULL;
     toml_array_t *arr;
     toml_datum_t v;
 
-    // Initialize system structure
-    memset(&sys, 0, sizeof(struct SSystemSettings));
-
     // Open and parse file
-    fp = fopen("config/system.toml", "r");
+    if (subtype != NULL)
+        snprintf(filename, 256, "config/%s-%s.toml", type, subtype);
+    else
+        snprintf(filename, 256, "config/%s.toml", type);
+    fp = fopen(filename, "r");
     if (!fp) {
-        printf("ERROR: %s: failed to open\n", "system.toml");
+        printf("ERROR: %s: failed to open\n", filename);
         goto err_exit;
     }
     tbl_root = toml_parse_file(fp, errbuf, sizeof(errbuf));
     fclose(fp);
     if (!tbl_root) {
-        printf("ERROR: %s: parse error: %s\n", "system.toml", errbuf);
+        printf("ERROR: %s: parse error: %s\n", filename, errbuf);
         goto err_exit;
+    }
+
+    // Recurse into dependencies
+    v = toml_string_in(tbl_root, "depends");
+    if (v.ok) {
+        load_driver(v.u.s, NULL);
+        free(v.u.s);
+    }
+
+    // Display driver set being loaded
+    v = toml_string_in(tbl_root, "name");
+    if (v.ok) {
+        printf("Loading: %s\n", v.u.s);
+        free(v.u.s);
     }
 
     arr = toml_array_in(tbl_root, "ilink_id");
     if (arr != NULL) {
         if (toml_array_nelem(arr) == 8) {
+            int i;
             for (i=0; i < 8; i++) {
                 v = toml_int_at(arr, i);
                 if (v.ok)
@@ -658,6 +611,7 @@ int load_system()
     arr = toml_array_in(tbl_root, "disk_id");
     if (arr != NULL) {
         if (toml_array_nelem(arr) == 5) {
+            int i;
             for (i=0; i < 5; i++) {
                 v = toml_int_at(arr, i);
                 if (v.ok)
@@ -667,6 +621,10 @@ int load_system()
         free(arr);
     }
 
+    modlist_add_array(&drv.mod_drv, tbl_root, "module");
+    modlist_add_array(&drv.mod_isys, tbl_root, "module-emu");
+    modlist_add_array(&drv.mod_lsys, tbl_root, "module-load");
+    fakelist_add_array(&drv.fake, tbl_root);
     free(tbl_root);
 
     return 0;
@@ -678,33 +636,53 @@ err_exit:
     return -1;
 }
 
+/*
+ * Get a pointer to the settings data structure of a module
+ */
+void *modlist_get_settings(struct SModList *ml, const char *name)
+{
+    struct SModule *mod = modlist_get_by_name(ml, name);
+    void *settings = NULL;
+
+    if (mod != NULL) {
+        int i;
+        for (i = 0; i < mod->iSize; i += 4) {
+            if (*(u32 *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
+                settings = (void *)(mod->pData + i);
+                break;
+            }
+        }
+    }
+
+    return settings;
+}
+
+
 int main(int argc, char *argv[])
 {
     irxtab_t *irxtable;
     irxptr_t *irxptr_tab;
     u8 *irxptr;
-    int fd_iso = 0;
-    int fd_system_cnf;
     int i;
     void *eeloadCopy, *initUserMemory;
-    const char *sGameID;
-    uint32_t layer1_lba_start = 0;
+    char sGameID[12];
+    int fd_system_cnf;
+    char system_cnf_data[128];
     off_t iso_size = 0;
 
-    printf("----------------------------\n");
-    printf("- Neutrino PS2 Game Loader -\n");
-    printf("-       By Maximus32       -\n");
-    printf("----------------------------\n");
+    printf("--------------------------------\n");
+    printf("- Neutrino PS2 Device Emulator -\n");
+    printf("-         By Maximus32         -\n");
+    printf("--------------------------------\n");
 
-    if (argc < 2) {
-        printf("ERROR: no arguments provided\n");
-        print_usage();
-        return -1;
-    }
-
-    const char *sDriver = NULL;
-    const char *sFileNameISO = NULL;
-    const char *sFileNameELF = NULL;
+    const char *sBSD = "no";
+    const char *sDVDMode = "no";
+    const char *sDVDFile = NULL;
+    const char *sATAMode = "no";
+    const char *sATA0File = NULL;
+    const char *sATA1File = NULL;
+    const char *sELFFile = "auto";
+    int iELFArgcStart = -1;
     const char *sMediaType = NULL;
     const char *sCompat = NULL;
     u32 iCompat = 0;
@@ -712,18 +690,26 @@ int main(int argc, char *argv[])
     int iEnableDebugColors = 0;
     for (i=1; i<argc; i++) {
         //printf("argv[%d] = %s\n", i, argv[i]);
-        if (!strncmp(argv[i], "-drv=", 5))
-            sDriver = &argv[i][5];
-        else if (!strncmp(argv[i], "-iso=", 5))
-            sFileNameISO = &argv[i][5];
+        if (!strncmp(argv[i], "-bsd=", 5))
+            sBSD = &argv[i][5];
+        else if (!strncmp(argv[i], "-dvd=", 5))
+            sDVDMode = &argv[i][5];
+        else if (!strncmp(argv[i], "-ata0=", 6))
+            sATA0File = &argv[i][6];
+        else if (!strncmp(argv[i], "-ata1=", 6))
+            sATA1File = &argv[i][6];
         else if (!strncmp(argv[i], "-elf=", 5))
-            sFileNameELF = &argv[i][5];
+            sELFFile = &argv[i][5];
         else if (!strncmp(argv[i], "-mt=", 4))
             sMediaType = &argv[i][4];
-        else if (!strncmp(argv[i], "-gc", 3))
+        else if (!strncmp(argv[i], "-gc=", 4))
             sCompat = &argv[i][4];
         else if (!strncmp(argv[i], "-eC", 3))
             iEnableDebugColors = 1;
+        else if (!strncmp(argv[i], "--b", 3)) {
+            iELFArgcStart = i + 1;
+            break;
+        }
         else {
             printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
             print_usage();
@@ -731,11 +717,28 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Make sure we don't pass loader arguments to the ELF
+    if (iELFArgcStart == -1)
+        iELFArgcStart = argc;
+
+    // Check for "file" mode of dvd emulation
+    if (strstr(sDVDMode, ":")) {
+        sDVDFile = sDVDMode;
+        sDVDMode = "file";
+    }
+
+    // Check for "file" mode of ata emulation
+    if (sATA0File != NULL || sATA1File != NULL) {
+        sATAMode = "file";
+    }
+
     if (sMediaType != NULL) {
         if (!strncmp(sMediaType, "cdda", 4)) {
             eMediaType = SCECdPS2CD;
         } else if (!strncmp(sMediaType, "cd", 2)) {
             eMediaType = SCECdPS2CDDA;
+        } else if (!strncmp(sMediaType, "dvdv", 4)) {
+            eMediaType = SCECdDVDV;
         } else if (!strncmp(sMediaType, "dvd", 3)) {
             eMediaType = SCECdPS2DVD;
         } else {
@@ -768,23 +771,47 @@ int main(int argc, char *argv[])
     }
 
     /*
+     * Initialiaze main driver structure before filling it from config files
+     */
+    driver_init();
+
+    /*
      * Load system settings
      */
-    if (load_system() < 0) {
+    if (load_driver("system", NULL) < 0) {
         printf("ERROR: failed to load system settings\n");
         return -1;
     }
 
     /*
-     * Figure out what drivers we need
+     * Load backing store driver settings
      */
-    if (load_driver(sDriver) < 0) {
-        printf("ERROR: driver %s failed\n", sDriver);
+    if (!strcmp(sBSD, "no")) {
+        // Load nothing
+    } else if (load_driver("bsd", sBSD) < 0) {
+        printf("ERROR: driver %s failed\n", sBSD);
         return -1;
     }
-    printf("Driver:  %s\n", drv.name);
-    printf("Type:    %s\n", drv.type);
-    printf("Mode:    %s\n", drv.mode);
+
+    /*
+     * Load CD/DVD emulation driver settings
+     */
+    if (!strcmp(sDVDMode, "no")) {
+        // Load nothing
+    } else if (load_driver("emu-dvd", sDVDMode) < 0) {
+        printf("ERROR: dvd driver %s failed\n", sDVDMode);
+        return -1;
+    }
+
+    /*
+     * Load ATA emulation driver settings
+     */
+    if (!strcmp(sATAMode, "no")) {
+        // Load nothing
+    } else if (load_driver("emu-ata", sATAMode) < 0) {
+        printf("ERROR: ata driver %s failed\n", sATAMode);
+        return -1;
+    }
 
     /*
      * Load all needed files before rebooting the IOP
@@ -799,8 +826,10 @@ int main(int argc, char *argv[])
         return -1;
 
     /*
-    * Reboot the IOP
-    */
+     * Reboot IOP into Load Environment (LE)
+     */
+    printf("Reboot IOP into Load Environment (LE)\n");
+#if 1
     //fileXioExit();
     SifExitIopHeap();
     SifLoadFileExit();
@@ -812,6 +841,7 @@ int main(int argc, char *argv[])
     SifInitIopHeap();
     SifLoadFileInit();
     sbv_patch_enable_lmb();
+#endif
 
     /*
      * Start load environment modules
@@ -820,23 +850,58 @@ int main(int argc, char *argv[])
         return -1;
     if (modlist_start(&drv.mod_drv) < 0)
         return -1;
+    if (modlist_get_by_name(&drv.mod_lsys, "fileXio.irx") != NULL)
+        fileXioInit();
+
+    // FAKEMOD optional module
+    // Only loaded when modules need to be faked
+    struct SModule *mod_fakemod = modlist_get_by_udnlname(&drv.mod_isys, "FAKEMOD");
+
+    // FHI optional module
+    // Only loaded when file access is needed
+    // NOTE: FHI is an abstraction to FHI_BDM, FHI_FILE, etc...
+    struct SModule *mod_fhi = modlist_get_by_udnlname(&drv.mod_isys, "FHI");
+
+    // Load module settings for fhi_bdm backing store
+    struct fhi_bdm *set_fhi_bdm = modlist_get_settings(&drv.mod_isys, "fhi_bdm.irx");
+    if (set_fhi_bdm != NULL)
+        memset((void *)set_fhi_bdm, 0, sizeof(struct fhi_bdm));
+
+    // Load module settings for cdvd emulator
+    struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod_isys, "cdvdman_emu.irx");
+    if (set_cdvdman != NULL)
+        memset((void *)set_cdvdman, 0, sizeof(struct cdvdman_settings_common));
+
+    // Load module settings for module faker
+    struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod_isys, "fakemod.irx");
+    if (set_fakemod != NULL)
+        memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
 
     /*
-     * If we load a replacement CDVDMAN then we assume we're not using the DVD drive
-     * but an ISO file instead.
+     * Enable DVD emulation
      */
-    int iUseDrive = (modlist_get_by_udnlname(&drv.mod_isys, "CDVDMAN") == NULL) ? 1 : 0;
-    if (iUseDrive == 0) {
-        if (modlist_get_by_name(&drv.mod_lsys, "fileXio.irx") != NULL)
-            fileXioInit();
+    if (sDVDFile != NULL) {
+        uint32_t layer1_lba_start = 0;
+        int fd_iso = 0;
+
+        if (set_fhi_bdm == NULL || mod_fhi == NULL) {
+            printf("ERROR: DVD emulator needs FHI backing store!\n");
+            return -1;
+        }
+        if (set_cdvdman == NULL) {
+            printf("ERROR: DVD emulator not found!\n");
+            return -1;
+        }
+        // Make sure the FHI module gets loaded
+        mod_fhi->sUDNL = NULL;
 
         /*
          * Check if file exists
          * Give low level drivers 10s to start
          */
-        printf("Loading %s...\n", sFileNameISO);
+        printf("Loading %s...\n", sDVDFile);
         for (i = 0; i < 1000; i++) {
-            fd_iso = open(sFileNameISO, O_RDONLY);
+            fd_iso = open(sDVDFile, O_RDONLY);
             if (fd_iso >= 0)
                 break;
 
@@ -844,7 +909,7 @@ int main(int argc, char *argv[])
             nopdelay();
         }
         if (fd_iso < 0) {
-            printf("Unable to open %s\n", sFileNameISO);
+            printf("Unable to open %s\n", sDVDFile);
             return -1;
         }
         // Get ISO file size
@@ -880,68 +945,40 @@ int main(int argc, char *argv[])
 
         if (eMediaType == SCECdNODISC)
             eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
-        printf("- media = %s\n", eMediaType == SCECdPS2DVD ? "DVD" : "CD");
 
-        /*
-         * Mount as ISO so we can get ELF name to boot
-         */
-        int fd_isomount = fileXioMount("iso:", sFileNameISO, FIO_MT_RDONLY);
-        if (fd_isomount < 0) {
-            printf("ERROR: Unable to mount %s as iso\n", sFileNameISO);
+        const char *sMT;
+        switch (eMediaType) {
+            case SCECdPS2CDDA: sMT = "ps2 cdda";  break;
+            case SCECdPS2CD:   sMT = "ps2 cd";    break;
+            case SCECdDVDV:    sMT = "dvd video"; break;
+            case SCECdPS2DVD:  sMT = "ps2 dvd";   break;
+            default:           sMT = "unknown";
+        }
+        printf("- media = %s\n", sMT);
+
+        //
+        // Add ISO as fragfile[0] to fragment list
+        //
+        struct fhi_bdm_fragfile *frag = &set_fhi_bdm->fragfile[0];
+        frag->frag_start = 0;
+        frag->frag_count = fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&set_fhi_bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
+        frag->size       = iso_size;
+        printf("ISO fragments: start=%u, count=%u\n", frag->frag_start, frag->frag_count);
+        for (i=0; i<frag->frag_count; i++) {
+            printf("- frag[%d] start=%u, count=%u\n", i, (u32)set_fhi_bdm->frags[frag->frag_start+i].sector, set_fhi_bdm->frags[frag->frag_start+i].count);
+        }
+        if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
+            printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
             return -1;
         }
+        set_fhi_bdm->drvName = (u32)fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+        fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &set_fhi_bdm->devNr, 4);
+        char *drvName = (char *)&set_fhi_bdm->drvName;
+        printf("Using BDM device: %s%d\n", drvName, (int)set_fhi_bdm->devNr);
+        close(fd_iso);
 
-        fd_system_cnf = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
-    }
-    else {
-        fd_system_cnf = open("cdrom:\\SYSTEM.CNF;1", O_RDONLY);
-    }
-
-    if (fd_system_cnf < 0) {
-        printf("ERROR: Unable to open SYSTEM.CNF from disk\n");
-        return -1;
-    }
-    char config_data[128];
-    read(fd_system_cnf, config_data, 128);
-    char *fname_start = strstr(config_data, "cdrom0:");
-    char *fname_end = strstr(config_data, ";1");
-    if (fname_start == NULL || fname_end == NULL) {
-        printf("ERROR: file name not found in SYSTEM.CNF\n");
-        return -1;
-    }
-    sGameID = &fname_start[8];
-    fname_end[0] = '\0';
-    printf("config name: %s\n", sGameID);
-    close(fd_system_cnf);
-
-    if (iUseDrive == 0)
-        fileXioUmount("iso:");
-
-    if (sFileNameELF == NULL)
-        sFileNameELF = sGameID;
-
-    ResetDeckardXParams();
-    ApplyDeckardXParam(sGameID);
-
-    if (iUseDrive == 0) {
-        //
-        // Locate and set cdvdman settings
-        //
-        struct cdvdman_settings_common *settings = NULL;
-        struct SModule *mod_cdvdman = modlist_get_by_name(&drv.mod_isys, "cdvdman.irx");
-        for (i = 0; i < mod_cdvdman->iSize; i += 4) {
-            if (*(u32 *)(mod_cdvdman->pData + i) == MODULE_SETTINGS_MAGIC) {
-                settings = (struct cdvdman_settings_common *)(mod_cdvdman->pData + i);
-                break;
-            }
-        }
-        if (settings == NULL) {
-            printf("ERROR: unable to locate cdvdman settings\n");
-            return -1;
-        }
-        memset((void *)settings, 0, sizeof(struct cdvdman_settings_common));
-        settings->media = eMediaType;
-        settings->layer1_start = layer1_lba_start;
+        set_cdvdman->media = eMediaType;
+        set_cdvdman->layer1_start = layer1_lba_start;
         if (sys.ilink_id_int != 0) {
             printf("Overriding i.Link ID: %2x %2x %2x %2x %2x %2x %2x %2x\n"
             , sys.ilink_id[0]
@@ -952,7 +989,7 @@ int main(int argc, char *argv[])
             , sys.ilink_id[5]
             , sys.ilink_id[6]
             , sys.ilink_id[7]);
-            settings->ilink_id_int = sys.ilink_id_int;
+            set_cdvdman->ilink_id_int = sys.ilink_id_int;
         }
         if (sys.disk_id_int != 0) {
             printf("Using disk ID: %2x %2x %2x %2x %2x\n"
@@ -961,61 +998,262 @@ int main(int argc, char *argv[])
             , sys.disk_id[2]
             , sys.disk_id[3]
             , sys.disk_id[4]);
-            settings->disk_id_int = sys.disk_id_int;
+            set_cdvdman->disk_id_int = sys.disk_id_int;
         }
-
-        // If no compatibility options are set on the command line
-        // see if the game is in our builtin database
-        if (iCompat == 0)
-            iCompat = get_compat(sGameID);
-        iCompat &= ~(1<<31); // Clear dummy flag
-        if (iCompat & COMPAT_MODE_1)
-            settings->flags |= IOPCORE_COMPAT_ACCU_READS;
-        if (iCompat & COMPAT_MODE_2)
-            settings->flags |= IOPCORE_COMPAT_ALT_READ;
-        if (iCompat & COMPAT_MODE_5)
-            settings->flags |= IOPCORE_COMPAT_EMU_DVDDL;
-        printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, settings->flags);
+    }
+    else {
+        if (iCompat != 0)
+            printf("WARNING: compatibility cannot be changed without emulating the DVD\n");
+        if (eMediaType != SCECdNODISC)
+            printf("WARNING: media type cannot be changed without emulating the DVD\n");
+        if (sys.ilink_id_int != 0)
+            printf("WARNING: ilink_id cannot be changed without emulating the DVD\n");
+        if (sys.disk_id_int != 0)
+            printf("WARNING: disk_id cannot be changed without emulating the DVD\n");
     }
 
-    if (iUseDrive == 0) {
-        //
-        // Locate and set fhi_bdm settings
-        //
-        struct fhi_bdm *settings = NULL;
-        struct SModule *mod_cdvdman = modlist_get_by_name(&drv.mod_isys, "fhi_bdm.irx");
-        for (i = 0; i < mod_cdvdman->iSize; i += 4) {
-            if (*(u32 *)(mod_cdvdman->pData + i) == MODULE_SETTINGS_MAGIC) {
-                settings = (struct fhi_bdm *)(mod_cdvdman->pData + i);
-                break;
+    /*
+     * Figure out the the elf file to start automatically from the SYSTEM.CNF
+     */
+    if (strcmp(sELFFile, "auto") == 0) {
+        if (sDVDFile != NULL) {
+            /*
+            * Mount as ISO so we can get ELF name to boot
+            */
+            if (fileXioMount("iso:", sDVDFile, FIO_MT_RDONLY) < 0) {
+                printf("ERROR: Unable to mount %s as iso\n", sDVDFile);
+                return -1;
             }
+            fd_system_cnf = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
         }
-        if (settings == NULL) {
-            printf("ERROR: unable to locate fhi_bdm settings\n");
+        else {
+            fd_system_cnf = open("cdrom:\\SYSTEM.CNF;1", O_RDONLY);
+        }
+
+        if (fd_system_cnf < 0) {
+            printf("ERROR: Unable to open SYSTEM.CNF from disk\n");
             return -1;
         }
-        memset((void *)settings, 0, sizeof(struct fhi_bdm));
+
+        // Read file contents
+        read(fd_system_cnf, system_cnf_data, 128);
+
+        // Locate and set ELF file name
+        sELFFile = strstr(system_cnf_data, "cdrom0:");
+        char *fname_end = strstr(system_cnf_data, ";1");
+        if (sELFFile == NULL || fname_end == NULL) {
+            printf("ERROR: file name not found in SYSTEM.CNF\n");
+            return -1;
+        }
+        fname_end[2] = '\0';
+
+        // Locate and set GameID
+        memcpy(sGameID, &sELFFile[8], 11);
+        sGameID[11] = '\0';
+        close(fd_system_cnf);
+
+        if (sDVDFile != NULL)
+            fileXioUmount("iso:");
+    }
+    else {
+        // Manually specifying an ELF file == no GameID
+        sGameID[0] = '\0';
+    }
+
+    /*
+     * Get ELF/game compatibility flags
+     */
+    if (iCompat == 0)
+        iCompat = get_compat(sGameID);
+    iCompat &= ~(1<<31); // Clear dummy flag
+
+    /*
+     * Set CDVDMAN compatibility
+     */
+    if (sDVDFile != NULL) {
+        if (iCompat & COMPAT_MODE_1)
+            set_cdvdman->flags |= IOPCORE_COMPAT_ACCU_READS;
+        if (iCompat & COMPAT_MODE_2)
+            set_cdvdman->flags |= IOPCORE_COMPAT_ALT_READ;
+        if (iCompat & COMPAT_MODE_5)
+            set_cdvdman->flags |= IOPCORE_COMPAT_EMU_DVDDL;
+
+        printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, set_cdvdman->flags);
+    }
+
+    /*
+     * Set deckard compatibility
+     */
+    ResetDeckardXParams();
+    ApplyDeckardXParam(sGameID);
+
+    /*
+     * Enable ATA0 emulation
+     */
+    if (sATA0File != NULL) {
+        int fd_hdd;
+        off_t hdd_size;
+
+        if (set_fhi_bdm == NULL || mod_fhi == NULL) {
+            printf("ERROR: ATA emulator needs FHI backing store!\n");
+            return -1;
+        }
+        if (modlist_get_by_name(&drv.mod_isys, "atad_emu.irx") == NULL) {
+            printf("ERROR: ATA emulator not found!\n");
+            return -1;
+        }
+        // Make sure the FHI module gets loaded
+        mod_fhi->sUDNL = NULL;
+
+        /*
+         * Check if file exists
+         * Give low level drivers 10s to start
+         */
+        printf("Loading %s...\n", sATA0File);
+        for (i = 0; i < 1000; i++) {
+            fd_hdd = open(sATA0File, O_RDONLY);
+            if (fd_hdd >= 0)
+                break;
+
+            // Give low level drivers some time to init
+            nopdelay();
+        }
+        if (fd_hdd < 0) {
+            printf("Unable to open %s\n", sATA0File);
+            return -1;
+        }
+        // Get ISO file size
+        hdd_size = lseek64(fd_hdd, 0, SEEK_END);
 
         //
-        // Add ISO as fragfile[0] to fragment list
+        // Add ATA0 HDD image as fragfile[1] to fragment list
         //
-        struct fhi_bdm_fragfile *iso_frag = &settings->fragfile[0];
-        iso_frag->frag_start = 0;
-        iso_frag->frag_count = fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&settings->frags[iso_frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - iso_frag->frag_start));
-        iso_frag->size       = iso_size;
-        printf("ISO fragments: start=%u, count=%u\n", iso_frag->frag_start, iso_frag->frag_count);
-        for (i=0; i<iso_frag->frag_count; i++) {
-            printf("- frag[%d] start=%u, count=%u\n", i, (u32)settings->frags[iso_frag->frag_start+i].sector, settings->frags[iso_frag->frag_start+i].count);
+        struct fhi_bdm_fragfile *frag = &set_fhi_bdm->fragfile[1];
+        frag->frag_start = set_fhi_bdm->fragfile[0].frag_count;
+        frag->frag_count = fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&set_fhi_bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
+        frag->size       = hdd_size;
+        printf("ATA0 fragments: start=%u, count=%u\n", frag->frag_start, frag->frag_count);
+        for (i=0; i<frag->frag_count; i++) {
+            printf("- frag[%d] start=%u, count=%u\n", i, (u32)set_fhi_bdm->frags[frag->frag_start+i].sector, set_fhi_bdm->frags[frag->frag_start+i].count);
         }
-        if ((iso_frag->frag_start + iso_frag->frag_count) > BDM_MAX_FRAGS) {
-            printf("Too many fragments (%d)\n", iso_frag->frag_start + iso_frag->frag_count);
+        if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
+            printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
             return -1;
         }
-        settings->drvName = (u32)fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-        fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &settings->devNr, 4);
-        char *drvName = (char *)&settings->drvName;
-        printf("Using BDM device: %s%d\n", drvName, (int)settings->devNr);
-        close(fd_iso);
+        set_fhi_bdm->drvName = (u32)fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+        fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &set_fhi_bdm->devNr, 4);
+        char *drvName = (char *)&set_fhi_bdm->drvName;
+        printf("Using BDM device: %s%d\n", drvName, (int)set_fhi_bdm->devNr);
+        close(fd_hdd);
+    }
+
+    /*
+     * Enable ATA1 emulation
+     */
+    if (sATA1File != NULL) {
+        int fd_hdd;
+        off_t hdd_size;
+
+        if (set_fhi_bdm == NULL || mod_fhi == NULL) {
+            printf("ERROR: ATA emulator needs FHI backing store!\n");
+            return -1;
+        }
+        if (modlist_get_by_name(&drv.mod_isys, "atad_emu.irx") == NULL) {
+            printf("ERROR: ATA emulator not found!\n");
+            return -1;
+        }
+        // Make sure the FHI module gets loaded
+        mod_fhi->sUDNL = NULL;
+
+        /*
+         * Check if file exists
+         * Give low level drivers 10s to start
+         */
+        printf("Loading %s...\n", sATA1File);
+        for (i = 0; i < 1000; i++) {
+            fd_hdd = open(sATA1File, O_RDONLY);
+            if (fd_hdd >= 0)
+                break;
+
+            // Give low level drivers some time to init
+            nopdelay();
+        }
+        if (fd_hdd < 0) {
+            printf("Unable to open %s\n", sATA1File);
+            return -1;
+        }
+        // Get ISO file size
+        hdd_size = lseek64(fd_hdd, 0, SEEK_END);
+
+        //
+        // Add ATA1 HDD image as fragfile[2] to fragment list
+        //
+        struct fhi_bdm_fragfile *frag = &set_fhi_bdm->fragfile[2];
+        frag->frag_start = set_fhi_bdm->fragfile[0].frag_count + set_fhi_bdm->fragfile[1].frag_count;
+        frag->frag_count = fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&set_fhi_bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
+        frag->size       = hdd_size;
+        printf("ATA0 fragments: start=%u, count=%u\n", frag->frag_start, frag->frag_count);
+        for (i=0; i<frag->frag_count; i++) {
+            printf("- frag[%d] start=%u, count=%u\n", i, (u32)set_fhi_bdm->frags[frag->frag_start+i].sector, set_fhi_bdm->frags[frag->frag_start+i].count);
+        }
+        if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
+            printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
+            return -1;
+        }
+        set_fhi_bdm->drvName = (u32)fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+        fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &set_fhi_bdm->devNr, 4);
+        char *drvName = (char *)&set_fhi_bdm->drvName;
+        printf("Using BDM device: %s%d\n", drvName, (int)set_fhi_bdm->devNr);
+        close(fd_hdd);
+    }
+
+    printf("ELF file: %s\n", sELFFile);
+    printf("GameID:   %s\n", sGameID);
+
+    /*
+     * Fill fake module table
+     */
+    if (drv.fake.count > 0) {
+        size_t stringbase = 0;
+
+        if (set_fakemod == NULL || mod_fakemod == NULL) {
+            printf("ERROR: fakemod not found!\n");
+            return -1;
+        }
+        // Clear UDNL name so this module gets loaded
+        mod_fakemod->sUDNL = NULL;
+
+        printf("Faking modules:\n");
+        for (i = 0; i < drv.fake.count; i++) {
+            size_t len;
+
+            printf("- %s, %s\n", drv.fake.fake[i].fname, drv.fake.fake[i].name);
+
+            // Copy file name into cdvdman data
+            len = strlen(drv.fake.fake[i].fname) + 1;
+            if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
+                printf("Too much fake string data\n");
+                return -1;
+            }
+            strcpy((char *)&set_fakemod->data[stringbase], drv.fake.fake[i].fname);
+            set_fakemod->fake[i].fname = (char *)(stringbase + 0x80000000);
+            stringbase += len;
+
+            // Copy module name into cdvdman data
+            len = strlen(drv.fake.fake[i].name) + 1;
+            if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
+                printf("Too much fake string data\n");
+                return -1;
+            }
+            strcpy((char *)&set_fakemod->data[stringbase], drv.fake.fake[i].name);
+            set_fakemod->fake[i].name = (char *)(stringbase + 0x80000000);
+            stringbase += len;
+
+            set_fakemod->fake[i].id          = 0xdead0 + i;
+            set_fakemod->fake[i].prop        = drv.fake.fake[i].prop;
+            set_fakemod->fake[i].version     = drv.fake.fake[i].version;
+            set_fakemod->fake[i].returnValue = drv.fake.fake[i].returnValue;
+        }
     }
 
 #pragma GCC diagnostic push
@@ -1041,60 +1279,13 @@ int main(int argc, char *argv[])
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
 
-    struct fakemod_data *fmd = NULL;
-    struct SModule *mod_fakemod = modlist_get_by_name(&drv.mod_isys, "fakemod.irx");
-    if (mod_fakemod != NULL) {
-        for (i = 0; i < mod_fakemod->iSize; i += 4) {
-            if (*(u32 *)(mod_fakemod->pData + i) == MODULE_SETTINGS_MAGIC) {
-                fmd = (struct fakemod_data *)(mod_fakemod->pData + i);
-                break;
-            }
-        }
-    }
-
-    if (fmd != NULL) {
-        size_t stringbase = 0;
-        printf("Faking modules:\n");
-        for (i = 0; i < drv.fake.count; i++) {
-            size_t len;
-
-            printf("- %s, %s\n", drv.fake.fake[i].fname, drv.fake.fake[i].name);
-
-            // Copy file name into cdvdman data
-            len = strlen(drv.fake.fake[i].fname) + 1;
-            if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
-                printf("Too much fake string data\n");
-                return -1;
-            }
-            strcpy((char *)&fmd->data[stringbase], drv.fake.fake[i].fname);
-            fmd->fake[i].fname = (char *)(stringbase + 0x80000000);
-            stringbase += len;
-
-            // Copy module name into cdvdman data
-            len = strlen(drv.fake.fake[i].name) + 1;
-            if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
-                printf("Too much fake string data\n");
-                return -1;
-            }
-            strcpy((char *)&fmd->data[stringbase], drv.fake.fake[i].name);
-            fmd->fake[i].name = (char *)(stringbase + 0x80000000);
-            stringbase += len;
-
-            fmd->fake[i].id          = 0xdead0 + i;
-            fmd->fake[i].prop        = drv.fake.fake[i].prop;
-            fmd->fake[i].version     = drv.fake.fake[i].version;
-            fmd->fake[i].returnValue = drv.fake.fake[i].returnValue;
-        }
-    }
-
     //
     // Patch IOPRP.img with our custom modules
     //
     //printf("IOPRP.img (old):\n");
     //print_romdir(ioprp_img_base.romdir);
     unsigned int ioprp_size;
-
-    if (iUseDrive == 0)
+    if (sDVDFile != NULL)
         ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_full.romdir);
     else
         ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_dvd.romdir);
@@ -1150,13 +1341,16 @@ int main(int argc, char *argv[])
     // Set arguments, and start EECORE
     //
     eecc_init(&eeconf);
-    eecc_setGameMode(&eeconf, drv.mode);
+    //eecc_setGameMode(&eeconf, "-"); // FIXME: implement or remove
+    if (sGameID[0] != 0)
+        eecc_setGameID(&eeconf, sGameID);
+    eecc_setELFName(&eeconf, sELFFile);
+    eecc_setELFArgs(&eeconf, argc-iELFArgcStart, (const char **)&argv[iELFArgcStart]);
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
-    eecc_setGameID(&eeconf, sGameID);
-    eecc_setFileName(&eeconf, sFileNameELF);
     eecc_setCompatFlags(&eeconf, iCompat);
     eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
+    //eecc_setPS2Logo(&eeconf, true);
     printf("Starting ee_core with following arguments:\n");
     eecc_print(&eeconf);
 

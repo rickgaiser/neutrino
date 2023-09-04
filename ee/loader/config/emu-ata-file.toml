@@ -1,0 +1,14 @@
+# Name of loaded config, to show to user
+name = "ATA emulation using image file"
+
+# Modules to load
+[[module-emu]]
+file = "atad_emu.irx"
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "ATAD.IRX"
+name = "atad_driver"
+replace = true
+version = 0x0207
+return = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

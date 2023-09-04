@@ -1,6 +1,5 @@
-#
-# System settings
-#
+# Name of loaded config, to show to user
+name = "System settings and drivers"
 
 # Override the 8-byte string returned by:
 # - sceCdRI
@@ -16,3 +15,13 @@
 # Use the 5-byte string returned by:
 # - sceCdReadDiskID
 #disk_id = [0x00, 0x00, 0x00, 0x00, 0x00]
+
+# Modules to load in emulation environment
+[[module-emu]]
+file = "eesync.irx"
+ioprp = "EESYNC"
+[[module-emu]]
+file = "imgdrv.irx"
+[[module-emu]]
+file = "fakemod.irx"
+ioprp = "FAKEMOD" # ID used by loader
