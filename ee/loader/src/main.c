@@ -93,7 +93,8 @@ void print_usage()
     printf("                    - 5: IOP: Emulate DVD-DL\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
-    printf("  -eC               Enable eecore debug colors\n");
+    printf("  -eC               Enable debug colors\n");
+    printf("  -eL               Enable logo (adds rom0:PS2LOGO to arguments)\n");
     printf("\n");
     printf("  --b               Break, all following parameters are passed to the ELF\n");
     printf("\n");
@@ -687,7 +688,8 @@ int main(int argc, char *argv[])
     const char *sCompat = NULL;
     u32 iCompat = 0;
     enum SCECdvdMediaType eMediaType = SCECdNODISC;
-    int iEnableDebugColors = 0;
+    bool bEnableDebugColors = false;
+    bool bEnablePS2Logo = false;
     for (i=1; i<argc; i++) {
         //printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-bsd=", 5))
@@ -705,7 +707,9 @@ int main(int argc, char *argv[])
         else if (!strncmp(argv[i], "-gc=", 4))
             sCompat = &argv[i][4];
         else if (!strncmp(argv[i], "-eC", 3))
-            iEnableDebugColors = 1;
+            bEnableDebugColors = true;
+        else if (!strncmp(argv[i], "-eL", 3))
+            bEnablePS2Logo = true;
         else if (!strncmp(argv[i], "--b", 3)) {
             iELFArgcStart = i + 1;
             break;
@@ -1349,8 +1353,8 @@ int main(int argc, char *argv[])
     eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
     eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
     eecc_setCompatFlags(&eeconf, iCompat);
-    eecc_setDebugColors(&eeconf, iEnableDebugColors ? true : false);
-    //eecc_setPS2Logo(&eeconf, true);
+    eecc_setDebugColors(&eeconf, bEnableDebugColors);
+    eecc_setPS2Logo(&eeconf, bEnablePS2Logo);
     printf("Starting ee_core with following arguments:\n");
     eecc_print(&eeconf);
 
