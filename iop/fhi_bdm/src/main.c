@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <sysclib.h>
 #include <thsemap.h>
+#include <thbase.h>
 #include <bdm.h>
 #include <bd_defrag.h>
 
@@ -117,11 +118,36 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
 }
 
 //---------------------------------------------------------------------------
+#ifdef DEBUG
+static void watchdog_thread()
+{
+    while (1) {
+        DPRINTF("FHI alive\n");
+        DelayThread(5 * 1000 * 1000); // 5s
+    }
+}
+#endif
+
+//---------------------------------------------------------------------------
 int _start(int argc, char **argv)
 {
     iop_sema_t smp;
+#ifdef DEBUG
+    int th;
+    iop_thread_t ThreadData;
+#endif
 
     DPRINTF("%s\n", __func__);
+
+#ifdef DEBUG
+    ThreadData.attr = TH_C;
+    ThreadData.thread = (void *)watchdog_thread;
+    ThreadData.option = 0;
+    ThreadData.priority = 40;
+    ThreadData.stacksize = 0x1000;
+    th = CreateThread(&ThreadData);
+    StartThread(th, 0);
+#endif
 
     // Create semaphore, initially locked
     smp.initial = 0;

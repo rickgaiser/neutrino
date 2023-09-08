@@ -10,6 +10,14 @@ sysclib_IMPORTS_start
 I_strncmp
 sysclib_IMPORTS_end
 
+#ifdef DEBUG
+thbase_IMPORTS_start
+I_CreateThread
+I_StartThread
+I_DelayThread
+thbase_IMPORTS_end
+#endif
+
 thsemap_IMPORTS_start
 I_CreateSema
 I_SignalSema
