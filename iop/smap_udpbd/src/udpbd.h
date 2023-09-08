@@ -33,7 +33,7 @@ struct SUDPBDv2_Header { // 2 bytes - Must be a "(multiple of 4) + 2" for RDMA o
             uint16_t cmdid  : 3; // 0..  8 - increment with every new command sequence
             uint16_t cmdpkt : 8; // 0..255 - 0=request, 1 or more are response packets
         };
-    };	
+    };
 } __attribute__((__packed__));
 
 /*
@@ -84,11 +84,11 @@ union block_type
     uint32_t bt;
     struct
     {
-        uint32_t block_shift :  4; // 0..7: blocks_size = 1 << (block_shift+2); min=0=4bytes, max=7=512bytes
+        uint32_t block_shift :  4; // 0..7: blocks_size = 1U << (block_shift+2); min=0=4bytes, max=7=512bytes
         uint32_t block_count :  9; // 1..366 blocks
         uint32_t spare       : 19;
     };
-};	
+};
 /*
  * Maximum payload for an RDMA packet depends on the used block size:
  * -   4 * 366 = 1464 bytes

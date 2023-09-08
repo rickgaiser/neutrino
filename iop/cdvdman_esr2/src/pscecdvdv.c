@@ -100,7 +100,7 @@ static int hook_sceCdRead(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
 
 static inline int is_jmp(void *addr, void *func)
 {
-    if (*(u32 *)addr == (0x0C000000 | (((u32)func >> 2) & 0x03FFFFFF)))
+    if (addr != NULL && *(u32 *)addr == (0x0C000000 | (((u32)func >> 2) & 0x03FFFFFF)))
         return 1;
     return 0;
 }

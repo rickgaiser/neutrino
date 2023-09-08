@@ -50,7 +50,7 @@ int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
 {
     int rv = SCECdErNO;
     u32 fid = vlsn >> 23;
-    u32 lsn = vlsn & ((1<<23)-1);
+    u32 lsn = vlsn & ((1U << 23) - 1);
 
     // DPRINTF("%s(%u-%u, 0x%p, %u)\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
 
