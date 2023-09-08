@@ -16,7 +16,6 @@ IRX_ID("SMAP_driver", 0x2, 0x1A);
 //While the header of the export table is small, the large size of the export table (as a whole) places it in data instead of sdata.
 extern struct irx_export_table _exp_smap __attribute__((section("data")));
 
-#define IP_ADDR(a, b, c, d) ((a << 24) | (b << 16) | (c << 8) | d)
 uint32_t parse_ip(const char *sIP)
 {
     int cp = 0;
@@ -41,7 +40,7 @@ uint32_t parse_ip(const char *sIP)
     if (cp != 3)
         return 0; // Too little dots
 
-    return IP_ADDR(part[0], part[1], part[2], part[3]);
+    return IP_ADDR((uint8_t)part[0], (uint8_t)part[1], (uint8_t)part[2], (uint8_t)part[3]);
 }
 
 int _start(int argc, char *argv[])
