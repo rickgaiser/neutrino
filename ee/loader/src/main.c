@@ -757,13 +757,13 @@ int main(int argc, char *argv[])
             char c = *sCompat;
             switch (c) {
                 case '0':
-                    iCompat |= 1 << 31; // Set dummy flag
+                    iCompat |= 1U << 31; // Set dummy flag
                     break;
                 case '1':
                 case '2':
                 case '3':
                 case '5':
-                    iCompat |= 1 << (c - '1');
+                    iCompat |= 1U << (c - '1');
                     break;
                 default:
                     printf("ERROR: compat flag %c not supported\n", c);
@@ -1069,7 +1069,7 @@ int main(int argc, char *argv[])
      */
     if (iCompat == 0)
         iCompat = get_compat(sGameID);
-    iCompat &= ~(1<<31); // Clear dummy flag
+    iCompat &= ~(1U << 31); // Clear dummy flag
 
     /*
      * Set CDVDMAN compatibility
@@ -1126,7 +1126,7 @@ int main(int argc, char *argv[])
             printf("Unable to open %s\n", sATA0File);
             return -1;
         }
-        // Get ISO file size
+        // Get HDD file size
         hdd_size = lseek64(fd_hdd, 0, SEEK_END);
 
         //
