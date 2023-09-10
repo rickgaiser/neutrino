@@ -1,6 +1,23 @@
+fhi_IMPORTS_start
+I_fhi_size
+I_fhi_read
+I_fhi_write
+fhi_IMPORTS_end
+
 loadcore_IMPORTS_start
 I_RegisterLibraryEntries
 loadcore_IMPORTS_end
+
+//#ifdef DEBUG
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+//#endif
+
+sysclib_IMPORTS_start
+I_memcpy
+I_memset
+sysclib_IMPORTS_end
 
 thbase_IMPORTS_start
 I_DelayThread
@@ -15,18 +32,3 @@ I_iSetEventFlag
 I_ClearEventFlag
 I_WaitEventFlag
 thevent_IMPORTS_end
-
-stdio_IMPORTS_start
-I_printf
-stdio_IMPORTS_end
-
-sysclib_IMPORTS_start
-I_memcpy
-I_memset
-sysclib_IMPORTS_end
-
-fhi_IMPORTS_start
-I_fhi_size
-I_fhi_read
-I_fhi_write
-fhi_IMPORTS_end
