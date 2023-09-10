@@ -668,7 +668,7 @@ int MceEraseBlock(MemoryCard *mcd, int page)
     memset(mcd->dbufp, r, mcd->cspec.PageSize);
 
     for (i = 0; i < mcd->cspec.BlockSize; i++) {
-        r = fhi_write(mcd->mcnum + 3, mcd->dbufp, page + i, 1);
+        r = fhi_write(FHI_FID_MC0 + mcd->mcnum, mcd->dbufp, page + i, 1);
         if (!r) {
             DPRINTF("erase error\n");
             return 0;
@@ -686,7 +686,7 @@ static int do_read(MemoryCard *mcd)
     r = (mcd->flags & 0x10) ? 0xFF : 0x0;
     memset(mcd->cbufp, r, 0x10);
 
-    r = fhi_read(mcd->mcnum + 3, mcd->dbufp, mcd->rpage, 1);
+    r = fhi_read(FHI_FID_MC0 + mcd->mcnum, mcd->dbufp, mcd->rpage, 1);
     if (!r) {
         DPRINTF("read error\n");
         return 0;
@@ -788,7 +788,7 @@ restart:
         size = tot_size - size;
         mcd->wroff = 0;
 
-        r = fhi_write(mcd->mcnum + 3, mcd->dbufp, mcd->wpage, 1);
+        r = fhi_write(FHI_FID_MC0 + mcd->mcnum, mcd->dbufp, mcd->wpage, 1);
         if (!r) {
             DPRINTF("write error.\n");
             return 0;

@@ -39,7 +39,7 @@ ata_devinfo_t *ata_get_devinfo(int device)
 
     if (device == 0 && dev[0].exists == 0) {
         // Initialize
-        u32 size = fhi_size(1);
+        u32 size = fhi_size(FHI_FID_ATA0);
         if (size > 0) {
             M_PRINTF("(%d) size = %d sectors\n", device, size);
             dev[0].exists          = 1;
@@ -86,10 +86,10 @@ int ata_device_sector_io(int device, void *buf, u32 lba, u32 nsectors, int dir)
     M_PRINTF("(%d, 0x%x, %d, %d, %d)\n", device, buf, lba, nsectors, dir);
 
     if (dir == ATA_DIR_WRITE) {
-        fhi_write(1, buf, lba, nsectors);
+        fhi_write(FHI_FID_ATA0, buf, lba, nsectors);
         return 0;
     } else {
-        fhi_read(1, buf, lba, nsectors);
+        fhi_read(FHI_FID_ATA0, buf, lba, nsectors);
         return 0;
     }
 

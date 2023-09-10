@@ -35,7 +35,7 @@ void DeviceFSInit(void)
     DPRINTF("Waiting for device...\n");
 
     while (1) {
-        iso_size = fp_fhi_size(0);
+        iso_size = fp_fhi_size(FHI_FID_CDVD);
         if (iso_size > 0)
             break;
         DelayThread(100 * 1000); // 100ms

@@ -8,6 +8,12 @@
 #include <stdint.h>
 #include <irx.h>
 
+#define FHI_FID_CDVD    0
+#define FHI_FID_ATA0    1
+#define FHI_FID_ATA1    2
+#define FHI_FID_MC0     3
+#define FHI_FID_MC1     4
+
 // Size of the file in SECTORS of 512b
 uint32_t fhi_size(int file_handle);
 // Read SECTORS from file
