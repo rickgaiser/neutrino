@@ -1,0 +1,6 @@
+# Name of loaded config, to show to user
+name = "MC emulation using image file"
+
+# Modules to load
+[[module-emu]]
+file = "mc_emu.irx"

@@ -65,6 +65,11 @@ Options:
                           mixing not possible
   -ata1=<mode>      See -ata0=<mode>
 
+  -mc0=<mode>       MC0 emulation mode, supported are:
+                    - no (default)
+                    - <file>
+  -mc1=<mode>       See -mc0=<mode>
+
   -elf=<file>       ELF file to boot, supported are:
                     - auto (elf file from cd/dvd) (default)
                     - <file>

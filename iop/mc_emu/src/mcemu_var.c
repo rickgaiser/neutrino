@@ -49,7 +49,14 @@ const u8 xortable[256] = {
 // clang-format on
 
 PtrSecrAuthCard pSecrAuthCard[MCEMU_PORTS] = {DummySecrAuthCard, DummySecrAuthCard}; /* Pointer to SecrAuthCard() handler */
+#if 0 // TODO: fill in the correct values from loader? Or have mc_emu figure it out?
 McImageSpec vmcSpec[MCEMU_PORTS] = {{0xC0DEFAC0}, {0xC0DEFAC1}};                     /* Virtual Memory Card Informations */
+#else
+McImageSpec vmcSpec[MCEMU_PORTS] = {
+  {1, 0x2b | 0x100, {512, 16, 512*16}},
+  {0}
+};
+#endif
 MemoryCard memcards[MCEMU_PORTS] = {{0}, {0}};                                       /* Memory Card descriptors */
 void *pFastBuf = NULL;                                                               /* Pointer to Fast I/O buffer */
 

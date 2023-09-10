@@ -26,6 +26,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "../../../iop/common/cdvd_config.h"
 #include "../../../iop/common/fakemod.h"
 #include "../../../iop/common/fhi_bdm.h"
+#include "../../../iop/common/fhi.h"
 #include "toml.h"
 
 #define NEWLIB_PORT_AWARE
@@ -75,6 +76,11 @@ void print_usage()
     printf("                    NOTE: only both emulated, or both real.\n");
     printf("                          mixing not possible\n");
     printf("  -ata1=<mode>      See -ata0=<mode>\n");
+    printf("\n");
+    printf("  -mc0=<mode>       MC0 emulation mode, supported are:\n");
+    printf("                    - no (default)\n");
+    printf("                    - <file>\n");
+    printf("  -mc1=<mode>       See -mc0=<mode>\n");
     printf("\n");
     printf("  -elf=<file>       ELF file to boot, supported are:\n");
     printf("                    - auto (elf file from cd/dvd) (default)\n");
@@ -658,6 +664,62 @@ void *modlist_get_settings(struct SModList *ml, const char *name)
     return settings;
 }
 
+int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
+{
+    int i;
+    off_t size;
+    unsigned int frag_start = 0;
+    struct fhi_bdm_fragfile *frag = &bdm->fragfile[fhi_fid];
+
+    // Get file size
+    size = lseek64(fd, 0, SEEK_END);
+
+    // Get current frag use count
+    for (i = 0; i < BDM_MAX_FILES; i++)
+        frag_start += bdm->fragfile[i].frag_count;
+
+    // Set fragment file
+    frag->frag_start = frag_start;
+    frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
+    frag->size = size;
+
+    // Check for max fragments
+    if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
+        printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
+        return -1;
+    }
+
+    // Debug info
+    printf("fragfile[%d] fragments: start=%u, count=%u\n", fhi_fid, frag->frag_start, frag->frag_count);
+    for (i=0; i<frag->frag_count; i++)
+        printf("- frag[%d] start=%u, count=%u\n", i, (u32)bdm->frags[frag->frag_start+i].sector, bdm->frags[frag->frag_start+i].count);
+
+    // Set BDM driver name and number
+    // NOTE: can be set only once! Check?
+    bdm->drvName = (u32)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+    fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
+    char *drvName = (char *)&bdm->drvName;
+    printf("Using BDM device: %s%d\n", drvName, (int)bdm->devNr);
+
+    return 0;
+}
+
+int fhi_bdm_add_file(struct fhi_bdm *bdm, int fhi_fid, const char *name)
+{
+    int fd, rv;
+
+    // Open file
+    printf("Loading %s...\n", name);
+    fd = open(name, O_RDONLY);
+    if (fd < 0) {
+        printf("Unable to open %s\n", name);
+        return -1;
+    }
+
+    rv = fhi_bdm_add_file_by_fd(bdm, fhi_fid, fd);
+    close(fd);
+    return rv;
+}
 
 int main(int argc, char *argv[])
 {
@@ -682,6 +744,9 @@ int main(int argc, char *argv[])
     const char *sATAMode = "no";
     const char *sATA0File = NULL;
     const char *sATA1File = NULL;
+    const char *sMCMode = "no";
+    const char *sMC0File = NULL;
+    const char *sMC1File = NULL;
     const char *sELFFile = "auto";
     int iELFArgcStart = -1;
     const char *sMediaType = NULL;
@@ -700,6 +765,10 @@ int main(int argc, char *argv[])
             sATA0File = &argv[i][6];
         else if (!strncmp(argv[i], "-ata1=", 6))
             sATA1File = &argv[i][6];
+        else if (!strncmp(argv[i], "-mc0=", 5))
+            sMC0File = &argv[i][5];
+        else if (!strncmp(argv[i], "-mc1=", 5))
+            sMC1File = &argv[i][5];
         else if (!strncmp(argv[i], "-elf=", 5))
             sELFFile = &argv[i][5];
         else if (!strncmp(argv[i], "-mt=", 4))
@@ -734,6 +803,11 @@ int main(int argc, char *argv[])
     // Check for "file" mode of ata emulation
     if (sATA0File != NULL || sATA1File != NULL) {
         sATAMode = "file";
+    }
+
+    // Check for "file" mode of mc emulation
+    if (sMC0File != NULL || sMC1File != NULL) {
+        sMCMode = "file";
     }
 
     if (sMediaType != NULL) {
@@ -814,6 +888,16 @@ int main(int argc, char *argv[])
         // Load nothing
     } else if (load_driver("emu-ata", sATAMode) < 0) {
         printf("ERROR: ata driver %s failed\n", sATAMode);
+        return -1;
+    }
+
+    /*
+     * Load MC emulation driver settings
+     */
+    if (!strcmp(sMCMode, "no")) {
+        // Load nothing
+    } else if (load_driver("emu-mc", sMCMode) < 0) {
+        printf("ERROR: mc driver %s failed\n", sMCMode);
         return -1;
     }
 
@@ -960,25 +1044,8 @@ int main(int argc, char *argv[])
         }
         printf("- media = %s\n", sMT);
 
-        //
-        // Add ISO as fragfile[0] to fragment list
-        //
-        struct fhi_bdm_fragfile *frag = &set_fhi_bdm->fragfile[0];
-        frag->frag_start = 0;
-        frag->frag_count = fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&set_fhi_bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
-        frag->size       = iso_size;
-        printf("ISO fragments: start=%u, count=%u\n", frag->frag_start, frag->frag_count);
-        for (i=0; i<frag->frag_count; i++) {
-            printf("- frag[%d] start=%u, count=%u\n", i, (u32)set_fhi_bdm->frags[frag->frag_start+i].sector, set_fhi_bdm->frags[frag->frag_start+i].count);
-        }
-        if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
-            printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
+        if (fhi_bdm_add_file_by_fd(set_fhi_bdm, FHI_FID_CDVD, fd_iso) < 0)
             return -1;
-        }
-        set_fhi_bdm->drvName = (u32)fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-        fileXioIoctl2(fd_iso, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &set_fhi_bdm->devNr, 4);
-        char *drvName = (char *)&set_fhi_bdm->drvName;
-        printf("Using BDM device: %s%d\n", drvName, (int)set_fhi_bdm->devNr);
         close(fd_iso);
 
         set_cdvdman->media = eMediaType;
@@ -1095,120 +1162,64 @@ int main(int argc, char *argv[])
      * Enable ATA0 emulation
      */
     if (sATA0File != NULL) {
-        int fd_hdd;
-        off_t hdd_size;
-
+        // Check for FHI backing store
         if (set_fhi_bdm == NULL || mod_fhi == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        if (modlist_get_by_name(&drv.mod_isys, "atad_emu.irx") == NULL) {
-            printf("ERROR: ATA emulator not found!\n");
-            return -1;
-        }
         // Make sure the FHI module gets loaded
         mod_fhi->sUDNL = NULL;
-
-        /*
-         * Check if file exists
-         * Give low level drivers 10s to start
-         */
-        printf("Loading %s...\n", sATA0File);
-        for (i = 0; i < 1000; i++) {
-            fd_hdd = open(sATA0File, O_RDONLY);
-            if (fd_hdd >= 0)
-                break;
-
-            // Give low level drivers some time to init
-            nopdelay();
-        }
-        if (fd_hdd < 0) {
-            printf("Unable to open %s\n", sATA0File);
+        // Load fragfile
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0, sATA0File) < 0)
             return -1;
-        }
-        // Get HDD file size
-        hdd_size = lseek64(fd_hdd, 0, SEEK_END);
-
-        //
-        // Add ATA0 HDD image as fragfile[1] to fragment list
-        //
-        struct fhi_bdm_fragfile *frag = &set_fhi_bdm->fragfile[1];
-        frag->frag_start = set_fhi_bdm->fragfile[0].frag_count;
-        frag->frag_count = fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&set_fhi_bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
-        frag->size       = hdd_size;
-        printf("ATA0 fragments: start=%u, count=%u\n", frag->frag_start, frag->frag_count);
-        for (i=0; i<frag->frag_count; i++) {
-            printf("- frag[%d] start=%u, count=%u\n", i, (u32)set_fhi_bdm->frags[frag->frag_start+i].sector, set_fhi_bdm->frags[frag->frag_start+i].count);
-        }
-        if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
-            printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
-            return -1;
-        }
-        set_fhi_bdm->drvName = (u32)fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-        fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &set_fhi_bdm->devNr, 4);
-        char *drvName = (char *)&set_fhi_bdm->drvName;
-        printf("Using BDM device: %s%d\n", drvName, (int)set_fhi_bdm->devNr);
-        close(fd_hdd);
     }
 
     /*
      * Enable ATA1 emulation
      */
     if (sATA1File != NULL) {
-        int fd_hdd;
-        off_t hdd_size;
-
+        // Check for FHI backing store
         if (set_fhi_bdm == NULL || mod_fhi == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        if (modlist_get_by_name(&drv.mod_isys, "atad_emu.irx") == NULL) {
-            printf("ERROR: ATA emulator not found!\n");
+        // Make sure the FHI module gets loaded
+        mod_fhi->sUDNL = NULL;
+        // Load fragfile
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA1, sATA1File) < 0)
+            return -1;
+    }
+
+    /*
+     * Enable MC0 emulation
+     */
+    if (sMC0File != NULL) {
+        // Check for FHI backing store
+        if (set_fhi_bdm == NULL || mod_fhi == NULL) {
+            printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
         // Make sure the FHI module gets loaded
         mod_fhi->sUDNL = NULL;
+        // Load fragfile
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC0, sMC0File) < 0)
+            return -1;
+    }
 
-        /*
-         * Check if file exists
-         * Give low level drivers 10s to start
-         */
-        printf("Loading %s...\n", sATA1File);
-        for (i = 0; i < 1000; i++) {
-            fd_hdd = open(sATA1File, O_RDONLY);
-            if (fd_hdd >= 0)
-                break;
-
-            // Give low level drivers some time to init
-            nopdelay();
-        }
-        if (fd_hdd < 0) {
-            printf("Unable to open %s\n", sATA1File);
+    /*
+     * Enable MC1 emulation
+     */
+    if (sMC1File != NULL) {
+        // Check for FHI backing store
+        if (set_fhi_bdm == NULL || mod_fhi == NULL) {
+            printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        // Get ISO file size
-        hdd_size = lseek64(fd_hdd, 0, SEEK_END);
-
-        //
-        // Add ATA1 HDD image as fragfile[2] to fragment list
-        //
-        struct fhi_bdm_fragfile *frag = &set_fhi_bdm->fragfile[2];
-        frag->frag_start = set_fhi_bdm->fragfile[0].frag_count + set_fhi_bdm->fragfile[1].frag_count;
-        frag->frag_count = fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&set_fhi_bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
-        frag->size       = hdd_size;
-        printf("ATA0 fragments: start=%u, count=%u\n", frag->frag_start, frag->frag_count);
-        for (i=0; i<frag->frag_count; i++) {
-            printf("- frag[%d] start=%u, count=%u\n", i, (u32)set_fhi_bdm->frags[frag->frag_start+i].sector, set_fhi_bdm->frags[frag->frag_start+i].count);
-        }
-        if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
-            printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
+        // Make sure the FHI module gets loaded
+        mod_fhi->sUDNL = NULL;
+        // Load fragfile
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC1, sMC1File) < 0)
             return -1;
-        }
-        set_fhi_bdm->drvName = (u32)fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-        fileXioIoctl2(fd_hdd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &set_fhi_bdm->devNr, 4);
-        char *drvName = (char *)&set_fhi_bdm->drvName;
-        printf("Using BDM device: %s%d\n", drvName, (int)set_fhi_bdm->devNr);
-        close(fd_hdd);
     }
 
     printf("ELF file: %s\n", sELFFile);

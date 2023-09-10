@@ -4,15 +4,16 @@
 #ifndef FHI_H
 #define FHI_H
 
-
-#include <stdint.h>
-#include <irx.h>
-
 #define FHI_FID_CDVD    0
 #define FHI_FID_ATA0    1
 #define FHI_FID_ATA1    2
 #define FHI_FID_MC0     3
 #define FHI_FID_MC1     4
+
+#ifdef _IOP
+
+#include <stdint.h>
+#include <irx.h>
 
 // Size of the file in SECTORS of 512b
 uint32_t fhi_size(int file_handle);
@@ -28,5 +29,5 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
 #define I_fhi_read DECLARE_IMPORT(5, fhi_read)
 #define I_fhi_write DECLARE_IMPORT(6, fhi_write)
 
-
-#endif
+#endif // _IOP
+#endif // FHI_H
