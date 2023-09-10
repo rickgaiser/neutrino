@@ -89,7 +89,6 @@ void LoadFileExit();
 int LoadModule(const char *path, int mode, int arg_len, const char *args);
 int LoadMemModule(int mode, const void *modptr, unsigned int modsize, int arg_len, const char *args);
 int LoadElf(const char *path, t_ExecData *data);
-void ChangeModuleName(const char *name, const char *newname);
 #ifdef __EESIO_DEBUG
 void ListModules(void);
 #endif

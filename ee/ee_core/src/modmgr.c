@@ -159,34 +159,6 @@ int LoadElf(const char *path, t_ExecData *data)
 }
 
 /*----------------------------------------------------------------------------------------*/
-/* Find and change a module's name.                                                       */
-/*----------------------------------------------------------------------------------------*/
-void ChangeModuleName(const char *name, const char *newname)
-{
-    char search_name[60];
-    smod_mod_info_t info;
-    int len;
-
-    if (!smod_get_next_mod(NULL, &info))
-        return;
-
-    len = strlen(name);
-
-    do {
-        smem_read(info.name, search_name, sizeof(search_name));
-
-        if (!_memcmp(search_name, name, len)) {
-            strncpy(search_name, newname, sizeof(search_name));
-            search_name[sizeof(search_name) - 1] = '\0';
-            len = strlen(search_name);
-            SyncDCache(search_name, search_name + len);
-            smem_write(info.name, search_name, len);
-            break;
-        }
-    } while (smod_get_next_mod(&info, &info));
-}
-
-/*----------------------------------------------------------------------------------------*/
 /* List modules currently loaded in the system.                                           */
 /*----------------------------------------------------------------------------------------*/
 #ifdef __EESIO_DEBUG
