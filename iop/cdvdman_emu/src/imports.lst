@@ -38,6 +38,8 @@ I_QueryBootMode
 loadcore_IMPORTS_end
 
 sysclib_IMPORTS_start
+I_memcpy
+I_memset
 I_strcpy
 I_strlen
 I_strncmp

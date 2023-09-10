@@ -20,8 +20,6 @@
 
 #include "cdvdman_opl.h"
 
-#include "smsutils.h"
-
 #ifdef DEBUG
 #define DPRINTF(args...)  printf(args)
 #define iDPRINTF(args...) Kprintf(args)

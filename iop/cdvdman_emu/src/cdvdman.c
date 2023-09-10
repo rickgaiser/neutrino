@@ -16,7 +16,6 @@ struct cdvdman_settings_common cdvdman_settings = {MODULE_SETTINGS_MAGIC};
 //----------------------------------------------------
 extern struct irx_export_table _exp_cdvdman;
 extern struct irx_export_table _exp_cdvdstm;
-extern struct irx_export_table _exp_smsutils;
 
 // internal functions prototypes
 static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 out_size);
@@ -622,7 +621,6 @@ int _start(int argc, char **argv)
     // register exports
     RegisterLibraryEntries(&_exp_cdvdman);
     RegisterLibraryEntries(&_exp_cdvdstm);
-    RegisterLibraryEntries(&_exp_smsutils);
 
     DeviceInit();
 
