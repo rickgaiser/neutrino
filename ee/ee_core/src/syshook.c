@@ -109,7 +109,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
         CleanExecPS2((void *)elf.epc, (void *)elf.gp, argc, argv);
     }
 
-    DPRINTF(" failed\n");
+    DPRINTF(" failed, error code = -%x\n", -r);
 
     // Error
     GS_BGCOLOUR = 0xffffff; // White    - shouldn't happen.
