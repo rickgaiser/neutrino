@@ -119,6 +119,7 @@ copy:
 	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx           modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
 	cp ../../iop/isofs/irx/isofs.irx               modules
+	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
 	cp ../ee_core/ee_core.elf                      modules
 	cp $(PS2SDK)/iop/irx/eesync.irx                modules
