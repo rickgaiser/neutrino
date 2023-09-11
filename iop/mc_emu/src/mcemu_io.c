@@ -9,7 +9,7 @@
 
 int mc_configure(MemoryCard *mcds)
 {
-    register int i;
+    int i;
 
     DPRINTF("vmcSpec[0].active = %d\n", vmcSpec[0].active);
     DPRINTF("vmcSpec[1].active = %d\n", vmcSpec[1].active);

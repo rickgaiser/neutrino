@@ -264,7 +264,7 @@ static int cdvdman_readMechaconVersion(u8 *mname, u32 *stat)
 //-------------------------------------------------------------------------
 int sceCdRM(char *m, u32 *stat)
 {
-    register int r;
+    int r;
     u8 rdbuf[16];
     u8 wrbuf[16];
 

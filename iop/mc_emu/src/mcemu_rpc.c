@@ -17,7 +17,7 @@
 /* Replacement for MCMAN's library function #62 */
 int hookMcman62()
 {
-    register char *ptr;
+    char *ptr;
 
     /* checking if the memory block had been allocated */
     if (pFastBuf == NULL) {
@@ -55,11 +55,11 @@ int hookMcman63(int fd, u32 eeaddr, int nbyte)
 {
     int oldstate;
     SifDmaTransfer_t sdd;
-    register int rlen;
-    register int rval;
-    register int size;
-    register u32 id __attribute__((unused));
-    register char *rpcbuf, *fiobuf;
+    int rlen;
+    int rval;
+    int size;
+    u32 id __attribute__((unused));
+    char *rpcbuf, *fiobuf;
     SifRpcClientData_t *cldata;
 
     // DPRINTF("sceMcReadFast(%d, 0x%X, 0x%X)\n", fd, eeaddr, nbyte);
@@ -100,11 +100,11 @@ int hookMcman63(int fd, u32 eeaddr, int nbyte)
 int hookMcman68(int fd, u32 eeaddr, int nbyte)
 {
     SifRpcReceiveData_t od;
-    register int rval;
-    register int size;
-    register int wlen;
-    register u32 ea;
-    register char *fiobuf;
+    int rval;
+    int size;
+    int wlen;
+    u32 ea;
+    char *fiobuf;
 
     // DPRINTF("sceMcWriteFast(%d, 0x%X, 0x%X)\n", fd, eeaddr, nbyte);
 

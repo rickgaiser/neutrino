@@ -323,7 +323,7 @@ static void cdvdman_initDiskType(void)
 //-------------------------------------------------------------------------
 u32 sceCdPosToInt(sceCdlLOCCD *p)
 {
-    register u32 result;
+    u32 result;
 
     result = ((u32)p->minute >> 4) * 10 + ((u32)p->minute & 0xF);
     result *= 60;
@@ -340,7 +340,7 @@ u32 sceCdPosToInt(sceCdlLOCCD *p)
 //-------------------------------------------------------------------------
 sceCdlLOCCD *sceCdIntToPos(u32 i, sceCdlLOCCD *p)
 {
-    register u32 sc, se, mi;
+    u32 sc, se, mi;
 
     DPRINTF("%s(%d)\n", __FUNCTION__, i);
 

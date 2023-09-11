@@ -43,7 +43,7 @@ int _strncmp(const char *s1, const char *s2, int length)
 /* Do not link to strcmp() from libc */
 int _strcmp(const char *s1, const char *s2)
 {
-    register int i = 0;
+    int i = 0;
 
     while ((s1[i] != 0) && (s1[i] == s2[i]))
         i++;
@@ -302,7 +302,7 @@ u32 *find_pattern_with_mask(u32 *buf, unsigned int bufsize, const u32 *pattern, 
 void CopyToIop(const void *eedata, unsigned int size, void *iopptr)
 {
     SifDmaTransfer_t dmadata;
-    register int id;
+    int id;
 
     dmadata.src = (void *)eedata;
     dmadata.dest = iopptr;

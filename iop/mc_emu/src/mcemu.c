@@ -43,8 +43,8 @@ int _start(int argc, char *argv[])
 //---------------------------------------------------------------------------
 void StartNow(void *param)
 {
-    register int r;
-    register void *exp;
+    int r;
+    void *exp;
 
     DPRINTF("mcemu starting\n");
 
@@ -93,9 +93,9 @@ void StartNow(void *param)
 /* Installs SecrAuthCard handler for the enabled virtual memory cards */
 void InstallSecrmanHook(void *exp)
 {
-    register int i;
-    register void *old;
-    register MemoryCard *mcds;
+    int i;
+    void *old;
+    MemoryCard *mcds;
 
     /* hooking SecrAuthCard entry */
     old = HookExportEntry(exp, 6, hookSecrAuthCard);
@@ -127,7 +127,7 @@ void InstallSio2manHook(void *exp, int ver)
 /* Install hooks for MCMAN's sceMcReadFast & sceMcWriteFast */
 void InstallMcmanHook(void *exp)
 {
-    register void *mcman63, *mcman68;
+    void *mcman63, *mcman68;
 
     /* getting MCMAN's sceMcRead & sceMcWrite routines */
     pMcRead = GetExportEntry(exp, 8);
@@ -155,7 +155,7 @@ typedef struct
 int getModInfo(char *modname, modinfo_t *info)
 {
     iop_library_t *libptr;
-    register int i;
+    int i;
 
     libptr = GetLoadcoreInternalData()->let_next;
     while (libptr != 0) {
@@ -275,7 +275,7 @@ int DummySecrAuthCard(int port, int slot, int cnum)
 /* Hook for the LOADCORE's RegisterLibraryEntires call */
 int hookRegisterLibraryEntires(iop_library_t *lib)
 {
-    register int ret;
+    int ret;
 
     if (!strcmp(lib->name, "sio2man")) {
         ret = pRegisterLibraryEntires(lib);
@@ -340,7 +340,7 @@ void hookSio2man51(Sio2Packet *sd)
 /* SIO2MAN generic hook routine */
 void hookSio2man(Sio2Packet *sd, Sio2McProc sio2proc)
 {
-    register u32 ctrl;
+    u32 ctrl;
 
     /* getting first SIO2 control code */
     ctrl = sd->ctrl[0];
@@ -499,9 +499,9 @@ void Sio2McEmu(Sio2Packet *sd)
     psio2_transfer_reset();
 
     if ((sd->ctrl[0] & 0xF0) == 0x70) {
-        register u32 ddi, *pctl, result, length;
-        register u8 *wdma, *rdma;
-        register MemoryCard *mcd;
+        u32 ddi, *pctl, result, length;
+        u8 *wdma, *rdma;
+        MemoryCard *mcd;
 
         wdma = (u8 *)sd->wrmaddr; /* address of write buffers */
         rdma = (u8 *)sd->rdmaddr; /* address of read buffers */
@@ -643,8 +643,8 @@ void Sio2McEmu(Sio2Packet *sd)
 /* Generates a "0xFF 0xFF ... 0xFF 0x2B 0x55" sequence */
 void SioResponse(MemoryCard *mcd, void *buf, int length)
 {
-    register int i;
-    register u8 *p;
+    int i;
+    u8 *p;
 
     if (length < 2) {
         DPRINTF("invalid SIO2 data length.\n");
@@ -669,7 +669,7 @@ void SioResponse(MemoryCard *mcd, void *buf, int length)
 /* Erases memory card block */
 int MceEraseBlock(MemoryCard *mcd, int page)
 {
-    register int i, r;
+    int i, r;
 
     DPRINTF("erasing at 0x%X\n", page);
 
@@ -792,7 +792,7 @@ restart:
         mcd->wcoff += 3;
     }
     if (mcd->wroff == mcd->cspec.PageSize) {
-        register int r;
+        int r;
 
         buf += size;
         size = tot_size - size;

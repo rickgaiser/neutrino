@@ -16,8 +16,8 @@ void *GetExportTable(char *libname, int version)
 {
     if (libname != NULL) {
         iop_library_t lib;
-        register int i;
-        register char *psrc;
+        int i;
+        char *psrc;
 
         memset(&lib, 0, sizeof(iop_library_t));
         lib.version = version;
@@ -36,8 +36,8 @@ void *GetExportTable(char *libname, int version)
 /* Returns number of entries in the export table */
 u32 GetExportTableSize(void *table)
 {
-    register void **exp;
-    register u32 size;
+    void **exp;
+    u32 size;
 
     exp = (void **)table;
     size = 0;
@@ -55,7 +55,7 @@ u32 GetExportTableSize(void *table)
 void *GetExportEntry(void *table, u32 entry)
 {
     if (entry < GetExportTableSize(table)) {
-        register void **exp;
+        void **exp;
 
         exp = (void **)table;
 
@@ -72,7 +72,7 @@ void *HookExportEntry(void *table, u32 entry, void *func)
 {
     if (entry < GetExportTableSize(table)) {
         int oldstate;
-        register void **exp, *temp;
+        void **exp, *temp;
 
         exp = (void **)table;
         exp = &exp[entry];
@@ -95,7 +95,7 @@ void *HookExportEntry(void *table, u32 entry, void *func)
 void *_SysAlloc(u64 size)
 {
     int oldstate;
-    register void *p;
+    void *p;
 
     CpuSuspendIntr(&oldstate);
     p = AllocSysMemory(ALLOC_FIRST, size, NULL);
@@ -110,7 +110,7 @@ void *_SysAlloc(u64 size)
 int _SysFree(void *area)
 {
     int oldstate;
-    register int r;
+    int r;
 
     CpuSuspendIntr(&oldstate);
     r = FreeSysMemory(area);
@@ -124,7 +124,7 @@ int _SysFree(void *area)
 /* Makes an integer value */
 int GetInt(void *ptr)
 {
-    register u8 *p;
+    u8 *p;
 
     p = (u8 *)ptr;
 
@@ -136,8 +136,8 @@ int GetInt(void *ptr)
 /* Calculates a "checksum" */
 u32 CalculateEDC(u8 *buf, u32 size)
 {
-    register int i, x;
-    register u8 *p;
+    int i, x;
+    u8 *p;
 
     p = buf;
     i = x = 0;
@@ -152,8 +152,8 @@ u32 CalculateEDC(u8 *buf, u32 size)
 /* Calculates ECC for a 0x80 bytes of data */
 void CalculateECC(u8 *buf, void *chk)
 {
-    register u8 *ptr;
-    register int i, c1, c2, b, c3;
+    u8 *ptr;
+    int i, c1, c2, b, c3;
 
     ptr = buf;
     i = 0;

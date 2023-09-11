@@ -101,7 +101,7 @@ void cdvdman_fs_init(void)
 //--------------------------------------------------------------
 static FHANDLE *cdvdman_getfilefreeslot(void)
 {
-    register int i;
+    int i;
     FHANDLE *fh;
 
     for (i = 0; i < MAX_FDHANDLES; i++) {
@@ -385,8 +385,8 @@ static int cdrom_dopen(iop_file_t *f, const char *dirname)
 //--------------------------------------------------------------
 static int cdrom_dread(iop_file_t *f, iox_dirent_t *dirent)
 {
-    register int r = 0;
-    register u32 mode;
+    int r = 0;
+    u32 mode;
     FHANDLE *fh = (FHANDLE *)f->privdata;
     struct dirTocEntry *tocEntryPointer;
 
@@ -429,7 +429,7 @@ static int cdrom_dread(iop_file_t *f, iox_dirent_t *dirent)
 //--------------------------------------------------------------
 static int cdrom_ioctl(iop_file_t *f, u32 cmd, void *args)
 {
-    register int r = 0;
+    int r = 0;
 
     DPRINTF("cdrom_ioctl 0x%X\n", cmd);
 
