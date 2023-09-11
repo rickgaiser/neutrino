@@ -183,28 +183,38 @@ static int CheckPatchMc2_s1()
 {
     modinfo_t info;
     ModuleInfo_t *mod_table = GetLoadcoreInternalData()->image_info;
-    const char modname[8] = "mc2_s1";
+    const char *modname_s1 = "mc2_s1";
+    const char *modname_d  = "mc2_d "; // NOTE the extra space is needed!
     u32 start, end;
 
     getModInfo("modload\0", &info);
     if (info.version < 0x102)
-        goto not_found; // I'm sure mc2_s1 won't work with this old iop kernel
+        goto not_found; // I'm sure mc2_s1 / mc2_d won't work with this old iop kernel
 
     if (getModInfo("mcman", &info))
-        goto not_found; // mcman and mc2_s1 are mutually exclusive
+        goto not_found; // mcman and mc2_s1 / mc2_d are mutually exclusive
 
     while (mod_table) {
         int i;
-        for (i = 0; i < 8; i++) {
-            if (mod_table->name[i] != modname[i])
+
+        for (i = 0; i < 7; i++) {
+            if (mod_table->name[i] != modname_s1[i])
                 break;
         }
-        if (i == 8)
+        if (i == 7)
             break;
+
+        for (i = 0; i < 7; i++) {
+            if (mod_table->name[i] != modname_d[i])
+                break;
+        }
+        if (i == 7)
+            break;
+
         mod_table = mod_table->next;
     }
     if (!mod_table)
-        goto not_found_again; // mc2_s1 not found
+        goto not_found_again; // mc2_s1 and mc2_d not found
     start = mod_table->text_start;
     end = start + mod_table->text_size + mod_table->data_size + mod_table->bss_size;
 
@@ -217,7 +227,7 @@ static int CheckPatchMc2_s1()
     while (table) {
         stub = (struct irx_import_stub *)table->stubs;
         if (((u32)stub > start) && ((u32)stub < end)) {
-            DPRINTF("bad mc2_s1 found\n");
+            DPRINTF("bad mc2_s1 or mc2_d found\n");
             while (stub->jump) {
                 switch (stub->fno) {
                     case 0x1c: // dmac_request
@@ -237,13 +247,13 @@ static int CheckPatchMc2_s1()
         }
         table = table->next;
     }
-    DPRINTF("mc2_s1 found but no dmac imports\n");
+    DPRINTF("mc2_s1 or mc2_d found but no dmac imports\n");
     return 1;
 not_found:
-    DPRINTF("mc2_s1 not found\n");
+    DPRINTF("mc2_s1 and mc2_d not found\n");
     return 1;
 not_found_again:
-    DPRINTF("mc2_s1 and mcman not found, try again\n");
+    DPRINTF("mc2_s1 and mc2_d and mcman not found, try again\n");
     return 0;
 }
 
