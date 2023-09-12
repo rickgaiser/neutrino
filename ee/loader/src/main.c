@@ -706,11 +706,18 @@ int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
 
 int fhi_bdm_add_file(struct fhi_bdm *bdm, int fhi_fid, const char *name)
 {
-    int fd, rv;
+    int i, fd, rv;
 
     // Open file
     printf("Loading %s...\n", name);
-    fd = open(name, O_RDONLY);
+    for (i = 0; i < 1000; i++) {
+        fd = open(name, O_RDONLY);
+        if (fd >= 0)
+            break;
+
+        // Give low level drivers some time to init
+        nopdelay();
+    }
     if (fd < 0) {
         printf("Unable to open %s\n", name);
         return -1;
