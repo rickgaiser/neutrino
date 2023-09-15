@@ -170,7 +170,10 @@ static int Hook_SearchModuleByName(char *modname)
     mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        return mod->id;
+        if (mod->returnValue == MODULE_NO_RESIDENT_END)
+            return -202;
+        else
+            return mod->id;
     }
 
     return org_SearchModuleByName(modname);
