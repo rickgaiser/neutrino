@@ -19,26 +19,42 @@
 extern int _iop_reboot_count;
 extern void *ModStorageStart;
 
-static void ResetIopSpecial(const char *args, unsigned int arglen)
+/*----------------------------------------------------------------*/
+/* Reset IOP to include our modules.                              */
+/*----------------------------------------------------------------*/
+int New_Reset_Iop(const char *arg, int arglen)
 {
     int i;
     void *pIOP_buffer;
     const void *IOPRP_img, *imgdrv_irx;
-    unsigned int length_rounded, CommandLen, size_IOPRP_img, size_imgdrv_irx;
-    char command[RESET_ARG_MAX + 1];
+    unsigned int length_rounded, udnl_cmdlen = 5, size_IOPRP_img, size_imgdrv_irx;
+    char udnl_mod[10] = "rom0:UDNL";
+    char udnl_cmd[RESET_ARG_MAX + 1] = "img0:";
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
     static int imgdrv_offset = 0;
 
+    DPRINTF("New_Reset_Iop start!\n");
+    if (EnableDebug)
+        GS_BGCOLOUR = 0xFF00FF; // Purple
+
+    iop_reboot_count++;
+
+    SifInitRpc(0);
+    SifInitIopHeap();
+    SifLoadFileInit();
+    sbv_patch_enable_lmb();
+
     if (arglen > 0) {
-        strncpy(command, args, arglen);
-        command[arglen] = '\0'; /* In a normal IOP reset process, the IOP reset command line will be NULL-terminated properly somewhere.
-                        Since we're now taking things into our own hands, NULL terminate it here.
-                        Some games like SOCOM3 will use a command line that isn't NULL terminated, resulting in things like "cdrom0:\RUN\IRX\DNAS300.IMGG;1" */
-        _strcpy(&command[arglen + 1], "img0:");
-        CommandLen = arglen + 6;
-    } else {
-        _strcpy(command, "img0:");
-        CommandLen = 5;
+        // Copy: rom0:UDNL or rom1:UDNL
+        // - Are these the only update modules? Always 9 chars long?
+        strncpy(udnl_mod, &arg[0], 9);
+        udnl_mod[9] = '\0';
+
+        // Copy: arguments
+        strncpy(udnl_cmd, &arg[10], arglen-10);
+        udnl_cmd[arglen-10] = '\0';
+        _strcpy(&udnl_cmd[arglen - 10 + 1], "img0:");
+        udnl_cmdlen = arglen - 10 + 6;
     }
 
     // FIXED modules:
@@ -73,7 +89,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
     ee_kmode_exit();
     EIntr();
 
-    _SifLoadModule("rom0:UDNL", CommandLen, command, NULL, LF_F_MOD_LOAD, 1);
+    _SifLoadModule(udnl_mod, udnl_cmdlen, udnl_cmd, NULL, LF_F_MOD_LOAD, 1);
 
     DIntr();
     ee_kmode_enter();
@@ -103,34 +119,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
         irxptr_t p = irxtable->modules[i];
         SifExecModuleBuffer((void *)p.ptr, p.size, p.arg_len, p.args, NULL);
     }
-}
 
-/*----------------------------------------------------------------*/
-/* Reset IOP to include our modules.                              */
-/*----------------------------------------------------------------*/
-int New_Reset_Iop(const char *arg, int arglen)
-{
-    DPRINTF("New_Reset_Iop start!\n");
-    if (EnableDebug)
-        GS_BGCOLOUR = 0xFF00FF; // Purple
-
-    iop_reboot_count++;
-
-    // Fast IOP reboot:
-    // - 1 IOP reboot to desired state
-    SifInitRpc(0);
-    SifInitIopHeap();
-    SifLoadFileInit();
-    sbv_patch_enable_lmb();
-
-    if (arglen > 0) {
-        // Reset with IOPRP image
-        ResetIopSpecial(&arg[10], arglen - 10);
-    }
-    else {
-        // Reset without IOPRP image
-        ResetIopSpecial(NULL, 0);
-    }
     if (EnableDebug)
         GS_BGCOLOUR = 0x00FFFF; // Yellow
 
