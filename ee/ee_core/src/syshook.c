@@ -10,7 +10,6 @@
 #include "ee_core.h"
 #include "asm.h"
 #include "iopmgr.h"
-#include "modmgr.h"
 #include "util.h"
 #include "patches.h"
 #include "syshook.h"
@@ -18,6 +17,7 @@
 #include <syscallnr.h>
 #include <ee_regs.h>
 #include <ps2_reg_defs.h>
+#include <loadfile.h>
 
 int set_reg_hook;
 int set_reg_disabled;
@@ -68,7 +68,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
 
     SifInitRpc(0);
 #endif
-    LoadFileInit();
+    SifLoadFileInit();
 
     DPRINTF("t_loadElf: elf path = '%s'\n", filename);
 
@@ -87,7 +87,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
     DPRINTF(" done\n");
 
     DPRINTF("t_loadElf: loading elf...");
-    r = LoadElf(filename, &elf);
+    r = SifLoadElf(filename, &elf);
 
     if (!r) {
         DPRINTF(" done\n");
@@ -102,7 +102,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
         DPRINTF("t_loadElf: exiting services...\n");
         // exit services
         SifExitIopHeap();
-        LoadFileExit();
+        SifLoadFileExit();
         SifExitRpc();
 
         DPRINTF("t_loadElf: executing...\n");

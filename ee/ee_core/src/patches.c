@@ -11,7 +11,6 @@
 #include "ee_core.h"
 #include "util.h"
 #include "modules.h"
-#include "modmgr.h"
 
 #define ALL_MODE (0xffffffff)
 #define BDM_MODE (BDM_USB_MODE|BDM_M4S_MODE) // Only USB-like slow devices?

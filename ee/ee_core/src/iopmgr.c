@@ -8,11 +8,11 @@
 */
 
 #include <iopcontrol.h>
+#include <loadfile.h>
 
 #include "ee_core.h"
 #include "iopmgr.h"
 #include "modules.h"
-#include "modmgr.h"
 #include "util.h"
 #include "syshook.h"
 
@@ -64,7 +64,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
     *(u32   *)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset+8])) = size_IOPRP_img;
 
     // Load patched imgdrv.irx
-    LoadMemModule(0, imgdrv_irx, size_imgdrv_irx, 0, NULL);
+    SifExecModuleBuffer((void *)imgdrv_irx, size_imgdrv_irx, 0, NULL, NULL);
 
     // Trigger IOP reboot with update
     DIntr();
@@ -72,7 +72,9 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
     Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
     ee_kmode_exit();
     EIntr();
-    LoadModule("rom0:UDNL", SIF_RPC_M_NOWAIT, CommandLen, command);
+
+    _SifLoadModule("rom0:UDNL", CommandLen, command, NULL, LF_F_MOD_LOAD, 1);
+
     DIntr();
     ee_kmode_enter();
     Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_SIFINIT);
@@ -82,7 +84,7 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
     ee_kmode_exit();
     EIntr();
 
-    LoadFileExit(); // OPL's integrated LOADFILE RPC does not automatically unbind itself after IOP resets.
+    SifLoadFileExit(); // OPL's integrated LOADFILE RPC does not automatically unbind itself after IOP resets.
 
     _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
 
@@ -92,14 +94,14 @@ static void ResetIopSpecial(const char *args, unsigned int arglen)
 
     SifInitRpc(0);
     SifInitIopHeap();
-    LoadFileInit();
+    SifLoadFileInit();
     sbv_patch_enable_lmb();
 
     DPRINTF("Loading extra IOP modules...\n");
     // Skip the first 2 modules (IOPRP.IMG and imgdrv.irx)
     for (i = 2; i < irxtable->count; i++) {
         irxptr_t p = irxtable->modules[i];
-        LoadMemModule(0, p.ptr, p.size, p.arg_len, p.args);
+        SifExecModuleBuffer((void *)p.ptr, p.size, p.arg_len, p.args, NULL);
     }
 }
 
@@ -118,7 +120,7 @@ int New_Reset_Iop(const char *arg, int arglen)
     // - 1 IOP reboot to desired state
     SifInitRpc(0);
     SifInitIopHeap();
-    LoadFileInit();
+    SifLoadFileInit();
     sbv_patch_enable_lmb();
 
     if (arglen > 0) {
@@ -134,7 +136,7 @@ int New_Reset_Iop(const char *arg, int arglen)
 
     DPRINTF("Exiting services...\n");
     SifExitIopHeap();
-    LoadFileExit();
+    SifLoadFileExit();
     SifExitRpc();
 
     DPRINTF("New_Reset_Iop complete!\n");

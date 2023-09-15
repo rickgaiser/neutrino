@@ -8,7 +8,6 @@
 */
 
 #include "ee_core.h"
-#include "modmgr.h"
 #include "util.h"
 #include "syshook.h"
 #include "cheat_api.h"
