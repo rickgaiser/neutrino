@@ -14,7 +14,8 @@ struct FakeModule
     uint16_t prop;
     uint16_t version;
 
-    int16_t returnValue; // Typical return value of module. RESIDENT END (0), NO RESIDENT END (1) or REMOVABLE END (2).
+    int16_t returnLoad;  // Return value when loading the module
+    int16_t returnStart; // Return value of module start function: RESIDENT END (0), NO RESIDENT END (1) or REMOVABLE END (2)
     uint16_t fill;
 } __attribute__((packed));
 // Fake module properties

@@ -68,18 +68,53 @@ static struct FakeModule *checkFakemodById(int id, struct FakeModule *fakemod_li
     return NULL;
 }
 
+#ifdef DEBUG
+//--------------------------------------------------------------
+static void print_args(int arg_len, char *args)
+{
+    // Multiple null terminated strings together
+
+    // Print first string
+    if (arg_len > 0)
+        DPRINTF("- args[]=%s\n", args);
+
+    // Search for more strings
+    while(arg_len>1) {
+        if (*args == 0) {
+            DPRINTF("- args[]=%s\n", &args[1]);
+        }
+        arg_len--;
+        args++;
+    }
+}
+#endif
+
 //--------------------------------------------------------------
 static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *modres)
 {
     struct FakeModule *mod;
 
     DPRINTF("%s(%s)\n", __FUNCTION__, modpath);
+#ifdef DEBUG
+    print_args(arg_len, args);
+#endif
 
     mod = checkFakemodByFile(modpath, fmd.fake);
     if (mod != NULL) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        *modres = mod->returnValue;
-        return mod->id;
+        int rv;
+
+        if (mod->returnLoad == 0) {
+            // Fake module succesfully started
+            *modres = mod->returnStart;
+            rv = mod->id;
+        }
+        else {
+            // Fake module load error
+            rv = mod->returnLoad;
+        }
+
+        DPRINTF("- FAKING! id=0x%x, rv=%d, modres=%d\n", mod->id, rv, *modres);
+        return rv;
     }
 
     return org_LoadStartModule(modpath, arg_len, args, modres);
@@ -91,12 +126,26 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
     struct FakeModule *mod;
 
     DPRINTF("%s(0x%x, %s)\n", __FUNCTION__, id, modname);
+#ifdef DEBUG
+    print_args(arg_len, args);
+#endif
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        *modres = mod->returnValue;
-        return mod->id;
+        int rv;
+
+        if (mod->returnLoad == 0) {
+            // Fake module succesfully started
+            *modres = mod->returnStart;
+            rv = mod->id;
+        }
+        else {
+            // Fake cannot start a module that is not loaded
+            rv = -202; // KE_UNKNOWN_MODULE
+        }
+
+        DPRINTF("- FAKING! id=0x%x, rv=%d, modres=%d\n", mod->id, rv, *modres);
+        return rv;
     }
 
     return org_StartModule(id, modname, arg_len, args, modres);
@@ -106,13 +155,25 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 static int Hook_LoadModuleBuffer(void *ptr)
 {
     struct FakeModule *mod;
+    const char *modname = (const char *)ptr + 0x8e;
 
-    DPRINTF("%s() modname = %s\n", __FUNCTION__, ((char *)ptr + 0x8e));
+    DPRINTF("%s() modname = '%s'\n", __FUNCTION__, modname);
 
-    mod = checkFakemodByName(((char *)ptr + 0x8e), fmd.fake);
+    mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        return mod->id;
+        int rv;
+
+        if (mod->returnLoad == 0) {
+            // Fake module succesfully started
+            rv = mod->id;
+        }
+        else {
+            // Fake module load error
+            rv = mod->returnLoad;
+        }
+
+        DPRINTF("- FAKING! id=0x%x, rv=%d\n", mod->id, rv);
+        return rv;
     }
 
     return org_LoadModuleBuffer(ptr);
@@ -124,6 +185,9 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
     struct FakeModule *mod;
 
     DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
+#ifdef DEBUG
+    print_args(arg_len, args);
+#endif
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
@@ -169,11 +233,9 @@ static int Hook_SearchModuleByName(char *modname)
 
     mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
-        if (mod->returnValue == MODULE_NO_RESIDENT_END)
-            return -202;
-        else
-            return mod->id;
+        int rv = (mod->returnLoad == 0) ? mod->id : -202 /*KE_UNKNOWN_MODULE*/;
+        DPRINTF("- FAKING! id=0x%x rv=%d\n", mod->id, rv);
+        return rv;
     }
 
     return org_SearchModuleByName(modname);
@@ -187,7 +249,7 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
     DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
 
     mod = checkFakemodById(id, fmd.fake);
-    if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0) {
+    if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0 && mod->returnLoad == 0) {
         DPRINTF("- FAKING! id=0x%x\n", mod->id);
         memset(status, 0, sizeof(ModuleStatus));
         strcpy(status->name, mod->name);
@@ -222,7 +284,7 @@ int _start(int argc, char **argv)
         }
 
         if (fm->fname != NULL) {
-            DPRINTF("  %d: %12s | %-14s | 0x%3x | %d | 0x%x\n", i, fm->fname, fm->name, fm->version, fm->returnValue, fm->prop);
+            DPRINTF("  %d: %12s | %-14s | 0x%3x | %3d | %d | 0x%x\n", i, fm->fname, fm->name, fm->version, fm->returnLoad, fm->returnStart, fm->prop);
         }
     }
 
@@ -240,8 +302,8 @@ int _start(int argc, char **argv)
         struct FakeModule *modlist;
         // Change all REMOVABLE END values to RESIDENT END, if modload is old.
         for (modlist = fmd.fake; modlist->fname != NULL; modlist++) {
-            if (modlist->returnValue == MODULE_REMOVABLE_END)
-                modlist->returnValue = MODULE_RESIDENT_END;
+            if (modlist->returnStart == MODULE_REMOVABLE_END)
+                modlist->returnStart = MODULE_RESIDENT_END;
         }
     }
 

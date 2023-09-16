@@ -516,9 +516,12 @@ int fakelist_add(struct SFakeList *fl, toml_table_t *t)
     v = toml_int_in(t, "version");
     if (v.ok)
         f->version = v.u.i;
-    v = toml_int_in(t, "return");
+    v = toml_int_in(t, "loadrv");
     if (v.ok)
-        f->returnValue = v.u.i;
+        f->returnLoad = v.u.i;
+    v = toml_int_in(t, "startrv");
+    if (v.ok)
+        f->returnStart = v.u.i;
 
     return 0;
 }
@@ -1274,7 +1277,8 @@ int main(int argc, char *argv[])
             set_fakemod->fake[i].id          = 0xdead0 + i;
             set_fakemod->fake[i].prop        = drv.fake.fake[i].prop;
             set_fakemod->fake[i].version     = drv.fake.fake[i].version;
-            set_fakemod->fake[i].returnValue = drv.fake.fake[i].returnValue;
+            set_fakemod->fake[i].returnLoad  = drv.fake.fake[i].returnLoad;
+            set_fakemod->fake[i].returnStart = drv.fake.fake[i].returnStart;
         }
     }
 

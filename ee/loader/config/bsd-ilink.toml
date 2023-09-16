@@ -16,4 +16,4 @@ file = "ILINK.IRX"
 name = "iLINK_HW_Manager" # is this correct?
 replace = true            # is this correct?
 version = 0x0202          # is this correct?
-return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END # is this correct?
+startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END # is this correct?

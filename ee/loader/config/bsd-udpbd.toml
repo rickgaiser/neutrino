@@ -11,26 +11,29 @@ file = "ps2dev9.irx"
 file = "smap_udpbd.irx"
 args = "ip=192.168.1.10"
 
-# Modules of the game that are faked/blocked
+# Faking strategy
+# ---------------
+# To prevent games from trying to use networing:
+# - dev9 is not resident (startrvs 1) becouse it does not detect dev9 hardware
+# - all modules depending on dev9 fail to load becouse dev9 is not resident
 [[fake]]
 file = "DEV9.IRX"
 name = "dev9"
-replace = true
-version = 0x0208
-# NOTE: dev9 returns 1 when there is NO network adapter connected.
-#       This fixes games that try to use the network but also prevents games
-#       from using the HDD.
-#       Change to 0 to allow games to use a real or emulated HDD
-return = 1 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
-[[fake]]
-file = "SMAP.IRX"
-name = "INET_SMAP_driver"
 replace = false
-version = 0x0219
-return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+version = 0x0208
+loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
+startrv = 1 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 [[fake]]
 file = "ENT_SMAP.IRX"
 name = "ent_smap"
 replace = false
 version = 0x021f
-return = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1    # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "SMAP.IRX"
+name = "INET_SMAP_driver"
+replace = false
+version = 0x0219
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1    # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

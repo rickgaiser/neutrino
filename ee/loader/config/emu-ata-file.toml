@@ -11,4 +11,8 @@ file = "ATAD.IRX"
 name = "atad_driver"
 replace = true
 version = 0x0207
-return = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+
+# For booting rom0:OSDSYS, block the following?:
+# - rom0:ATAD (dev9 + atad combined driver)
+# - HDDLOAD

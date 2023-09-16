@@ -101,6 +101,8 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'CD/LEGO Racers 2 (E).iso' # uses a lot of IOP RAM for caching files (many iop debug printf's about it)
 #GAME = 'DVD/Metal Gear Solid 3 - Snake Eater (E).iso' # VMC unreliable
 #GAME = "DVD/Splinter Cell Pandora Tomorrow (E).iso"
+#GAME = "DVD/Splinter Cell - Double Agent (E).iso"
+#GAME = "DVD/Splinter Cell - Chaos Theory (E).iso"
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
