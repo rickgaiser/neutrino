@@ -22,10 +22,15 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Cy Girls (U) (Disc 2) (Aska).iso'
 #GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso'
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
+#GAME = "DVD/Disney's Treasure Planet (E).iso"
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
 #GAME = 'DVD/Metal Saga (U).iso'
+# Test SOCOM II with DLC on HDD
+# https://psrewired.com/guides/socom2#install-dlc-pcsx2
+#GAME = 'DVD/SOCOM II - U.S. Navy SEALs (E).iso'
+#ATA0 = 'HDD/SOCOM II HDD.raw'
 
 # These games allocate ALL IOP RAM as an anti-piracy method
 # Special IOP code is needed (in cdvdman?) to counter this
@@ -94,7 +99,17 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'CD/Star Wars - Racer Revenge (E).iso'
 #GAME = 'CD/Star Wars - Racer Revenge (U).iso'
 #GAME = 'CD/LEGO Racers 2 (E).iso' # uses a lot of IOP RAM for caching files (many iop debug printf's about it)
+#GAME = 'DVD/Metal Gear Solid 3 - Snake Eater (E).iso' # VMC unreliable
+#GAME = "DVD/Splinter Cell Pandora Tomorrow (E).iso"
 
+# Example arguments
+#-bsd=udpbd -dvd=mass:$(GAME)
+#-bsd=udpbd -dvd=mass:$(GAME) -mc0=mass:VMC/mymc.bin
+#-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0)
+#-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -mc0=mass:VMC/mymc.bin
+
+# Exmaple arguments (not working yet)
+#-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
 run: all copy
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -bsd=udpbd -dvd=mass:$(GAME)
