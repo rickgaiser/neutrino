@@ -113,7 +113,7 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
             rv = mod->returnLoad;
         }
 
-        DPRINTF("- FAKING! id=0x%x, rv=%d, modres=%d\n", mod->id, rv, *modres);
+        DPRINTF("- FAKING! id=0x%x, rv=%d(0x%x), modres=%d\n", mod->id, rv, rv, *modres);
         return rv;
     }
 
@@ -144,7 +144,7 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
             rv = -202; // KE_UNKNOWN_MODULE
         }
 
-        DPRINTF("- FAKING! id=0x%x, rv=%d, modres=%d\n", mod->id, rv, *modres);
+        DPRINTF("- FAKING! id=0x%x, rv=%d(0x%x), modres=%d\n", mod->id, rv, rv, *modres);
         return rv;
     }
 
@@ -172,7 +172,7 @@ static int Hook_LoadModuleBuffer(void *ptr)
             rv = mod->returnLoad;
         }
 
-        DPRINTF("- FAKING! id=0x%x, rv=%d\n", mod->id, rv);
+        DPRINTF("- FAKING! id=0x%x, rv=%d(0x%x)\n", mod->id, rv, rv);
         return rv;
     }
 
@@ -233,8 +233,10 @@ static int Hook_SearchModuleByName(char *modname)
 
     mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
-        int rv = (mod->returnLoad == 0) ? mod->id : -202 /*KE_UNKNOWN_MODULE*/;
-        DPRINTF("- FAKING! id=0x%x rv=%d\n", mod->id, rv);
+        int rv = mod->id;
+        if (mod->returnLoad != 0 || mod->returnStart == MODULE_NO_RESIDENT_END)
+            rv = -202; // KE_UNKNOWN_MODULE
+        DPRINTF("- FAKING! id=0x%x rv=%d(0x%x)\n", mod->id, rv, rv);
         return rv;
     }
 
