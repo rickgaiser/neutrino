@@ -73,18 +73,22 @@ static struct FakeModule *checkFakemodById(int id, struct FakeModule *fakemod_li
 static void print_args(int arg_len, char *args)
 {
     // Multiple null terminated strings together
+    int args_idx = 0;
+    int was_null = 1;
 
-    // Print first string
-    if (arg_len > 0)
-        DPRINTF("- args[]=%s\n", args);
-
-    // Search for more strings
-    while(arg_len>1) {
-        if (*args == 0) {
-            DPRINTF("- args[]=%s\n", &args[1]);
+    // Search strings
+    while(args_idx < arg_len) {
+        if (args[args_idx] == 0) {
+            if (was_null == 1) {
+                DPRINTF("- args[%d]=0\n", args_idx);
+            }
+            was_null = 1;
         }
-        arg_len--;
-        args++;
+        else if (was_null == 1) {
+            DPRINTF("- args[%d]='%s'\n", args_idx, &args[args_idx]);
+            was_null = 0;
+        }
+        args_idx++;
     }
 }
 #endif
