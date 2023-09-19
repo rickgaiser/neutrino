@@ -27,9 +27,9 @@ int New_Reset_Iop(const char *arg, int arglen)
     int i;
     void *pIOP_buffer;
     const void *IOPRP_img, *imgdrv_irx;
-    unsigned int length_rounded, udnl_cmdlen = 5, size_IOPRP_img, size_imgdrv_irx;
-    char udnl_mod[10] = "rom0:UDNL";
-    char udnl_cmd[RESET_ARG_MAX + 1] = "img0:";
+    unsigned int length_rounded, udnl_cmdlen, size_IOPRP_img, size_imgdrv_irx;
+    char udnl_mod[10];
+    char udnl_cmd[RESET_ARG_MAX + 1];
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
     static int imgdrv_offset = 0;
 
@@ -44,18 +44,32 @@ int New_Reset_Iop(const char *arg, int arglen)
     SifLoadFileInit();
     sbv_patch_enable_lmb();
 
+    udnl_cmdlen = 0;
     if (arglen > 0) {
         // Copy: rom0:UDNL or rom1:UDNL
         // - Are these the only update modules? Always 9 chars long?
-        strncpy(udnl_mod, &arg[0], 9);
+        strncpy(udnl_mod, &arg[0], 10);
+        // Make sure it's 0 terminated
         udnl_mod[9] = '\0';
 
-        // Copy: arguments
-        strncpy(udnl_cmd, &arg[10], arglen-10);
-        udnl_cmd[arglen-10] = '\0';
-        _strcpy(&udnl_cmd[arglen - 10 + 1], "img0:");
-        udnl_cmdlen = arglen - 10 + 6;
+        if (arglen > 10) {
+            // Copy: arguments
+            udnl_cmdlen = arglen-10; // length, including terminating 0
+            strncpy(udnl_cmd, &arg[10], udnl_cmdlen);
+
+            // Fix if 0 is not included
+            if (udnl_cmd[udnl_cmdlen-1] != 0) {
+                udnl_cmd[udnl_cmdlen] = '\0';
+                udnl_cmdlen++;
+            }
+        }
+    } else {
+        strncpy(udnl_mod, "rom0:UDNL", 10);
     }
+
+    // Add our own IOPRP image
+    strncpy(&udnl_cmd[udnl_cmdlen], "img0:", 6);
+    udnl_cmdlen += 6;
 
     // FIXED modules:
     // 0 = IOPRP image
