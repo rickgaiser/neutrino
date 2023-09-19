@@ -14,13 +14,12 @@ ioprp = "CDVDFSV"
 file = "CDVDFSV.IRX"
 name = "cdvd_ee_driver"
 replace = true
-unload = true
+#unload = true // FIXME this is broken, can be tested with Jak X
 version = 0x0202
 startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 [[fake]]
 file = "CDVDSTM.IRX"
 name = "cdvd_st_driver"
 replace = false
-unload = false
 version = 0x0202
 startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
