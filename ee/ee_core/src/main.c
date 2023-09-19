@@ -142,8 +142,16 @@ int main(int argc, char **argv)
         // LoadExecPS2 is patched so instead of running rom0:EELOAD, this ee_core is started
 
         // Ignore argv[0], as it contains the name of this module ("EELOAD")
+        int i;
+
         argv++;
         argc--;
+
+        DPRINTF("Starting ELF: %s\n", argv[0]);
+        for (i = 0; i < argc; i++) {
+            DPRINTF("- argv[%d]=%s\n", i, argv[i]);
+        }
+
 
         sysLoadElf(argv[0], argc, argv);
     }
