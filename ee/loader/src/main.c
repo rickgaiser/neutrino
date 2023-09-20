@@ -119,7 +119,8 @@ struct SModule
     off_t iSize;
     u8 *pData;
 
-    const char *args;
+    int arg_len;
+    char *args;
 };
 
 #define DRV_MAX_MOD 20
@@ -221,7 +222,7 @@ int module_start(struct SModule *mod)
         return -1;
     }
 
-    IRX_ID = SifExecModuleBuffer(mod->pData, mod->iSize, (mod->args == NULL) ? 0 : strlen(mod->args), mod->args, &rv);
+    IRX_ID = SifExecModuleBuffer(mod->pData, mod->iSize, mod->arg_len, mod->args, &rv);
     if (IRX_ID < 0 || rv == 1) {
         printf("ERROR: Could not load %s (ID+%d, rv=%d)\n", mod->sFileName, IRX_ID, rv);
         return -1;
@@ -272,6 +273,28 @@ struct SModule *modlist_get_by_udnlname(struct SModList *ml, const char *name)
     return NULL;
 }
 
+static void print_iop_args(int arg_len, char *args)
+{
+    // Multiple null terminated strings together
+    int args_idx = 0;
+    int was_null = 1;
+
+    // Search strings
+    while(args_idx < arg_len) {
+        if (args[args_idx] == 0) {
+            if (was_null == 1) {
+                printf("- args[%d]=0\n", args_idx);
+            }
+            was_null = 1;
+        }
+        else if (was_null == 1) {
+            printf("- args[%d]='%s'\n", args_idx, &args[args_idx]);
+            was_null = 0;
+        }
+        args_idx++;
+    }
+}
+
 static u8 * module_install(struct SModule *mod, u8 *addr, irxptr_t *irx)
 {
     if (mod == NULL) {
@@ -286,20 +309,13 @@ static u8 * module_install(struct SModule *mod, u8 *addr, irxptr_t *irx)
     addr += mod->iSize;
 
     // Install module arguments
-    if (mod->args == NULL) {
-        irx->arg_len = 0;
-        irx->args = NULL;
-    }
-    else {
-        irx->arg_len = strlen(mod->args) + 1;
-        memcpy(addr, mod->args, irx->arg_len);
-        irx->args = (char *)addr;
-        addr += irx->arg_len;
-    }
+    irx->arg_len = mod->arg_len;
+    memcpy(addr, mod->args, irx->arg_len);
+    irx->args = (char *)addr;
+    addr += irx->arg_len;
 
     printf("Module %s installed to 0x%p\n", mod->sFileName, irx->ptr);
-    if (mod->args != NULL)
-        printf("- args = \"%s\" installed to 0x%p\n", mod->args, irx->args);
+    print_iop_args(mod->arg_len, mod->args);
 
     // Align to 16 bytes
     return (u8 *)((u32)(addr + 0xf) & ~0xf);
@@ -446,6 +462,7 @@ static const struct ioprp_img_dvd ioprp_img_dvd = {
 int modlist_add(struct SModList *ml, toml_table_t *t)
 {
     toml_datum_t v;
+    toml_array_t *arr;
     struct SModule *m;
 
     if (ml->count >= DRV_MAX_MOD)
@@ -459,9 +476,19 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
     v = toml_string_in(t, "ioprp");
     if (v.ok)
         m->sUDNL = v.u.s; // NOTE: passing ownership of dynamic memory
-    v = toml_string_in(t, "args");
-    if (v.ok)
-        m->args = v.u.s; // NOTE: passing ownership of dynamic memory
+    arr = toml_array_in(t, "args");
+    if (arr != NULL) {
+        int i;
+        m->args = malloc(256); // NOTE: never freed, but we don't care
+        m->arg_len = 0;
+        for (i=0; i < toml_array_nelem(arr); i++) {
+            v = toml_string_at(arr, i);
+            if (v.ok) {
+                strcpy(&m->args[m->arg_len], v.u.s);
+                m->arg_len += strlen(v.u.s) + 1; // +1 for 0 termination
+            }
+        }
+    }
 
     return 0;
 }

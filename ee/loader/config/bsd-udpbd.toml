@@ -9,7 +9,7 @@ depends = "bdm"
 file = "ps2dev9.irx"
 [[module]]
 file = "smap_udpbd.irx"
-args = "ip=192.168.1.10"
+args = ["ip=192.168.1.10"]
 
 # Faking strategy
 # ---------------

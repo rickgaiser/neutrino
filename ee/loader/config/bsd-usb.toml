@@ -15,7 +15,20 @@ file = "usbd_mini.irx"
 # data to never be processed.
 #
 # This causes some games to 'need' MODE2 (sync reads) to work.
-args = "thpri=7,8"
+#
+# Supported parameters:
+# - dev   = maxDevices
+# - ed    = maxEndpoints
+# - gtd   = maxTransfDesc
+# - itd   = maxIsoTransfDesc
+# - ioreq = maxIoReqs
+# - conf  = maxStaticDescSize
+# - hub   = maxHubDevices
+# - port  = maxPortsPerHub
+# - thpri = hcdThreadPrio,cbThreadPrio
+args = ["dev=16", "ed=32", "gtd=64", "itd=64", "hub=4", "port=4", "thpri=7,8"]
+# Save 13KiB IOP RAM
+#args = ["dev=4", "ed=8", "gtd=16", "itd=16", "hub=2", "port=4", "thpri=7,8"]
 [[module]]
 file = "usbmass_bd_mini.irx"
 
