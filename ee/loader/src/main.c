@@ -849,9 +849,9 @@ int main(int argc, char *argv[])
 
     if (sMediaType != NULL) {
         if (!strncmp(sMediaType, "cdda", 4)) {
-            eMediaType = SCECdPS2CD;
-        } else if (!strncmp(sMediaType, "cd", 2)) {
             eMediaType = SCECdPS2CDDA;
+        } else if (!strncmp(sMediaType, "cd", 2)) {
+            eMediaType = SCECdPS2CD;
         } else if (!strncmp(sMediaType, "dvdv", 4)) {
             eMediaType = SCECdDVDV;
         } else if (!strncmp(sMediaType, "dvd", 3)) {
