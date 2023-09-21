@@ -2,7 +2,7 @@
 #define ELF_H
 
 
-#include <tamtypes.h>
+#include <stdint.h>
 
 
 #define ELF_MAGIC   0x464c457f // ".ELF"
@@ -11,32 +11,32 @@
 
 typedef struct
 {
-    u8 ident[16]; // struct definition for ELF object header
-    u16 type;
-    u16 machine;
-    u32 version;
-    u32 entry;
-    u32 phoff;
-    u32 shoff;
-    u32 flags;
-    u16 ehsize;
-    u16 phentsize;
-    u16 phnum;
-    u16 shentsize;
-    u16 shnum;
-    u16 shstrndx;
+    uint8_t ident[16]; // struct definition for ELF object header
+    uint16_t type;
+    uint16_t machine;
+    uint32_t version;
+    uint32_t entry;
+    uint32_t phoff;
+    uint32_t shoff;
+    uint32_t flags;
+    uint16_t ehsize;
+    uint16_t phentsize;
+    uint16_t phnum;
+    uint16_t shentsize;
+    uint16_t shnum;
+    uint16_t shstrndx;
 } elf_header_t;
 
 typedef struct
 {
-    u32 type; // struct definition for ELF program section header
-    u32 offset;
+    uint32_t type; // struct definition for ELF program section header
+    uint32_t offset;
     void *vaddr;
-    u32 paddr;
-    u32 filesz;
-    u32 memsz;
-    u32 flags;
-    u32 align;
+    uint32_t paddr;
+    uint32_t filesz;
+    uint32_t memsz;
+    uint32_t flags;
+    uint32_t align;
 } elf_pheader_t;
 
 
