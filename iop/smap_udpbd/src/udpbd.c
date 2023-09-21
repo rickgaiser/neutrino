@@ -347,10 +347,10 @@ static inline void _cmd_read_rdma(struct SUDPBDv2_Header *hdr)
 static inline void _cmd_write_done(struct SUDPBDv2_Header *hdr)
 {
     USE_SMAP_REGS;
-    int32_t g_errno = SMAP_REG32(SMAP_R_RXFIFO_DATA);
+    int32_t result = SMAP_REG32(SMAP_R_RXFIFO_DATA);
 
     // Done, wakeup caller
-    SetEventFlag(g_ev_done, (g_errno >= 0) ? 1 : 2);
+    SetEventFlag(g_ev_done, (result >= 0) ? 1 : 2);
     return;
 }
 
