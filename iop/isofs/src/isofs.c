@@ -7,12 +7,10 @@
 #include <sysclib.h>
 
 #include <irx.h>
+#include "mprintf.h"
 
-#ifdef DEBUG
-#define DPRINTF(args...) printf(args)
-#else
-#define DPRINTF(args...)
-#endif
+#define MODNAME "isofs"
+IRX_ID(MODNAME, 1, 1);
 
 struct dirTocEntry
 {
@@ -187,7 +185,7 @@ static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLen
     struct dirTocEntry *tocEntryPointer;
 
 lbl_startlocate:
-    DPRINTF("cdvdman_locatefile start locating, layer=%d\n", layer);
+    M_DEBUG("cdvdman_locatefile start locating, layer=%d\n", layer);
 
     while (*p == '/')
         p++;
@@ -235,7 +233,7 @@ lbl_startlocate:
 
     while (tocLength > 0) {
         cdEmuRead(tocLBA, 1, cdvdman_buf);
-        DPRINTF("cdvdman_locatefile tocLBA read done\n");
+        M_DEBUG("cdvdman_locatefile tocLBA read done\n");
 
         tocLength -= 2048;
         tocLBA++;
@@ -251,7 +249,7 @@ lbl_startlocate:
             if (filename_len) {
                 r = strcmp(cdvdman_dirname, tocEntryPointer->filename);
                 if ((!r) && (!slash)) { // we searched a file so it's found
-                    DPRINTF("cdvdman_locatefile found file! LBA=%d size=%d\n", (int)tocEntryPointer->fileLBA, (int)tocEntryPointer->fileSize);
+                    M_DEBUG("cdvdman_locatefile found file! LBA=%d size=%d\n", (int)tocEntryPointer->fileLBA, (int)tocEntryPointer->fileSize);
                     return tocEntryPointer;
                 } else if ((!r) && (tocEntryPointer->fileProperties & 2)) { // we found it but it's a directory
                     tocLBA = tocEntryPointer->fileLBA;
@@ -273,7 +271,7 @@ lbl_startlocate:
         } while (tocPos < 2016);
     }
 
-    DPRINTF("cdvdman_locatefile file not found!!!\n");
+    M_DEBUG("cdvdman_locatefile file not found!!!\n");
 
     return NULL;
 }
@@ -287,13 +285,13 @@ static int cdvdman_findfile(cd_file_t *pcdfile, const char *name, int layer)
     if ((!pcdfile) || (!name))
         return 0;
 
-    DPRINTF("cdvdman_findfile %s layer%d\n", name, layer);
+    M_DEBUG("cdvdman_findfile %s layer%d\n", name, layer);
 
     strncpy(cdvdman_filepath, name, sizeof(cdvdman_filepath));
     cdvdman_filepath[sizeof(cdvdman_filepath) - 1] = '\0';
     cdvdman_trimspaces(cdvdman_filepath);
 
-    DPRINTF("cdvdman_findfile cdvdman_filepath=%s\n", cdvdman_filepath);
+    M_DEBUG("cdvdman_findfile cdvdman_filepath=%s\n", cdvdman_filepath);
 
     if (layer < 2) {
         if (MountPoint.layer_info[layer].rootDirtocLBA == 0) {
@@ -319,7 +317,7 @@ static int cdvdman_findfile(cd_file_t *pcdfile, const char *name, int layer)
         return 0;
     }
 
-    DPRINTF("cdvdman_findfile found %s\n", name);
+    M_DEBUG("cdvdman_findfile found %s\n", name);
 
     return 1;
 }
@@ -335,7 +333,7 @@ static int IsofsOpen(iop_file_t *f, const char *name, int flags, int mode)
 
     WaitSema(MountPoint.sema);
 
-    DPRINTF("isofs_open %s mode=%d\n", name, mode);
+    M_DEBUG("isofs_open %s mode=%d\n", name, mode);
 
     fh = cdvdman_getfilefreeslot();
     if (fh) {
@@ -357,7 +355,7 @@ static int IsofsOpen(iop_file_t *f, const char *name, int flags, int mode)
     } else
         r = -EMFILE;
 
-    DPRINTF("isofs_open ret=%d lsn=%d size=%d\n", r, (int)fh->lsn, (int)fh->filesize);
+    M_DEBUG("isofs_open ret=%d lsn=%d size=%d\n", r, (int)fh->lsn, (int)fh->filesize);
 
     SignalSema(MountPoint.sema);
 
@@ -370,7 +368,7 @@ static int IsofsClose(iop_file_t *f)
 
     WaitSema(MountPoint.sema);
 
-    DPRINTF("isofs_close\n");
+    M_DEBUG("isofs_close\n");
 
     if (fh)
         memset(fh, 0, sizeof(FHANDLE));
@@ -389,7 +387,7 @@ static int IsofsRead(iop_file_t *f, void *buf, int size)
 
     WaitSema(MountPoint.sema);
 
-    DPRINTF("isofs_read size=%d file_position=%d\n", size, fh->position);
+    M_DEBUG("isofs_read size=%d file_position=%d\n", size, fh->position);
 
     if ((fh->position + size) > fh->filesize)
         size = fh->filesize - fh->position;
@@ -434,7 +432,7 @@ static int IsofsRead(iop_file_t *f, void *buf, int size)
         }
     }
 
-    DPRINTF("isofs_read ret=%d\n", rpos);
+    M_DEBUG("isofs_read ret=%d\n", rpos);
     SignalSema(MountPoint.sema);
 
     return rpos;
@@ -447,7 +445,7 @@ static int IsofsLseek(iop_file_t *f, int offset, int where)
 
     WaitSema(MountPoint.sema);
 
-    DPRINTF("isofs_lseek offset=%ld where=%d\n", offset, where);
+    M_DEBUG("isofs_lseek offset=%ld where=%d\n", offset, where);
 
     switch (where) {
         case SEEK_CUR:
@@ -477,7 +475,7 @@ static int IsofsLseek(iop_file_t *f, int offset, int where)
         fh->position = fh->filesize;
 
 ssema:
-    DPRINTF("isofs_lseek file offset=%d\n", (int)fh->position);
+    M_DEBUG("isofs_lseek file offset=%d\n", (int)fh->position);
     SignalSema(MountPoint.sema);
 
     return r;
@@ -589,7 +587,7 @@ static iop_device_t IsofsDevice = {
 int _start(int argc, char *argv[])
 {
     if (AddDrv(&IsofsDevice) == 0) {
-        DPRINTF("ISOFS driver start.\n");
+        M_DEBUG("ISOFS driver start.\n");
         return MODULE_RESIDENT_END;
     }
 

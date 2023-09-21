@@ -32,7 +32,7 @@ static void StmCallback(void)
         CpuResumeIntr(OldState);
     }
 
-    //DPRINTF("StmCallback: %08lx, wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    //M_DEBUG("StmCallback: %08lx, wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     StStartFillStreamBuffer();
 }
@@ -69,7 +69,7 @@ static int StFillStreamBuffer(void)
     CpuResumeIntr(OldState);
 
     if (result == 0) {
-        // iDPRINTF("Stream fill buffer: Stream lsn 0x%08x - %u sectors:%p\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr);
+        // M_DEBUG("Stream fill buffer: Stream lsn 0x%08x - %u sectors:%p\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr);
         if (sceCdRead_internal(cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr, NULL, ECS_STREAMING) == 0) {
             // Failed to start reading.
             cdvdman_stat.StreamingData.StIsReading = 0;
@@ -78,7 +78,7 @@ static int StFillStreamBuffer(void)
             result = 0;
         }
     } else {
-        iDPRINTF("Stream fill buffer: Stream full.\n");
+        M_DEBUG("Stream fill buffer: Stream full.\n");
         // Nothing else to read.
         cdvdman_stat.StreamingData.StIsReading = 0;
         result = 1;
@@ -92,7 +92,7 @@ static void StStartFillStreamBuffer(void)
     iop_sys_clock_t StmScheduleClock;
 
     if (StFillStreamBuffer() < 0) {
-        DPRINTF("StmCallback: Rescheduling read.\n");
+        M_DEBUG("StmCallback: Rescheduling read.\n");
         StmScheduleClock.lo = 0x00704000;
         StmScheduleClock.hi = 0;
         SetAlarm(&StmScheduleClock, &StmScheduleCb, &cdvdman_stat.StreamingData);
@@ -103,9 +103,9 @@ int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
 {
     int OldState;
 
-    DPRINTF("%s(%lu, %lu, 0x%X)\n", __FUNCTION__, bufmax, bankmax, iop_bufaddr);
+    M_DEBUG("%s(%lu, %lu, 0x%X)\n", __FUNCTION__, bufmax, bankmax, iop_bufaddr);
 
-    //DPRINTF("%s bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", __FUNCTION__, cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
+    //M_DEBUG("%s bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", __FUNCTION__, cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
 
     cdvdman_stat.err = SCECdErNO;
 
@@ -120,7 +120,7 @@ int sceCdStInit(u32 bufmax, u32 bankmax, void *iop_bufaddr)
 
     CpuResumeIntr(OldState);
 
-    //DPRINTF("sceCdStInit bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
+    //M_DEBUG("sceCdStInit bufmax: %u (%lu), bankmax: %lu, banksize: %u, buffer: %p\n", cdvdman_stat.StreamingData.StBufmax, bufmax, bankmax, cdvdman_stat.StreamingData.StBanksize, iop_bufaddr);
 
     return 1;
 }
@@ -130,7 +130,7 @@ static int AllocBank(void **pointer)
 {
     int result;
 
-    //iDPRINTF("%s\n", __FUNCTION__);
+    //M_DEBUG("%s\n", __FUNCTION__);
 
     if (cdvdman_stat.StreamingData.StBufmax - cdvdman_stat.StreamingData.StStreamed >= cdvdman_stat.StreamingData.StBanksize) {
         *pointer = cdvdman_stat.StreamingData.StIOP_bufaddr + cdvdman_stat.StreamingData.StWritePtr * 2048;
@@ -140,7 +140,7 @@ static int AllocBank(void **pointer)
         result = -ENOMEM;
     }
 
-    //iDPRINTF("AllocBank: wrptr: %u, rdptr: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    //M_DEBUG("AllocBank: wrptr: %u, rdptr: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     return result;
 }
@@ -152,7 +152,7 @@ static int ReadSectorsEE(int maxcount, void *buffer)
     SifDmaTransfer_t dmat[2];
     void *ptr;
 
-    //	DPRINTF("ReadSectors EE: wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    //	M_DEBUG("ReadSectors EE: wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     result = 0;
     ptr = buffer;
@@ -225,7 +225,7 @@ static int ReadSectors(int maxcount, void *buffer)
     unsigned short int SectorsToCopy;
     void *ptr;
 
-    //	DPRINTF("ReadSectors: wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    //	M_DEBUG("ReadSectors: wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     result = 0;
     ptr = buffer;
@@ -270,7 +270,7 @@ int sceCdStStart(u32 lsn, sceCdRMode *mode)
 {
     int OldState;
 
-    DPRINTF("%s(%lu, 0x%X)\n", __FUNCTION__, lsn, mode);
+    M_DEBUG("%s(%lu, 0x%X)\n", __FUNCTION__, lsn, mode);
 
     sceCdStStop();
 
@@ -291,7 +291,7 @@ int sceCdStStart(u32 lsn, sceCdRMode *mode)
 
 int sceCdStStat(void)
 {
-    DPRINTF("%s() StStreamed = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStreamed);
+    M_DEBUG("%s() StStreamed = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStreamed);
 
     cdvdman_stat.err = SCECdErNO;
     return cdvdman_stat.StreamingData.StStreamed;
@@ -301,7 +301,7 @@ int sceCdStStop(void)
 {
     int OldState;
 
-    DPRINTF("%s() StStat = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStat);
+    M_DEBUG("%s() StStat = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStat);
 
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
@@ -328,7 +328,7 @@ int sceCdStPause(void)
 {
     int OldState;
 
-    DPRINTF("%s() StStat = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStat);
+    M_DEBUG("%s() StStat = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStat);
 
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
@@ -353,7 +353,7 @@ int sceCdStResume(void)
 {
     int OldState;
 
-    DPRINTF("%s() StStat = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStat);
+    M_DEBUG("%s() StStat = 0x%x\n", __FUNCTION__, cdvdman_stat.StreamingData.StStat);
 
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
@@ -373,7 +373,7 @@ int sceCdStResume(void)
 
 int sceCdStSeek(u32 lsn)
 {
-    DPRINTF("%s(%lu)\n", __FUNCTION__, lsn);
+    M_DEBUG("%s(%lu)\n", __FUNCTION__, lsn);
 
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
@@ -389,8 +389,8 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
     int SectorsRead, SectorsToRead, result;
     void *ptr;
 
-    DPRINTF("%s(%lu, 0x%X, %lu, 0x%x)\n", __FUNCTION__, sectors, buffer, mode, error);
-    //DPRINTF("StRead called: sectors %lu:%p, mode: %lu, stat: %u,%u\n", sectors, buffer, mode, cdvdman_stat.StreamingData.StStat, cdvdman_stat.StreamingData.StIsReading);
+    M_DEBUG("%s(%lu, 0x%X, %lu, 0x%x)\n", __FUNCTION__, sectors, buffer, mode, error);
+    //M_DEBUG("StRead called: sectors %lu:%p, mode: %lu, stat: %u,%u\n", sectors, buffer, mode, cdvdman_stat.StreamingData.StStat, cdvdman_stat.StreamingData.StIsReading);
 
     cdvdman_stat.err = SCECdErNO;
     if (cdvdman_stat.StreamingData.StStat) {
@@ -399,15 +399,15 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
             WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE, WEF_AND, NULL);
             ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_STM_DONE);
 
-            //		DPRINTF("Sectors: %u:%p, mode: %lu", SectorsToRead, ptr, mode);
+            //		M_DEBUG("Sectors: %u:%p, mode: %lu", SectorsToRead, ptr, mode);
             if ((u32)buffer & 0x80000000)
                 SectorsRead = ReadSectorsEE(SectorsToRead, ptr);
             else
                 SectorsRead = ReadSectors(SectorsToRead, ptr);
-            //		DPRINTF(", Read: %u\n", SectorsRead);
+            //		M_DEBUG(", Read: %u\n", SectorsRead);
 
             if (SectorsRead == 0)
-                DPRINTF("StRead: buffer underrun. %u/%lu read.\n", result, sectors);
+                M_DEBUG("StRead: buffer underrun. %u/%lu read.\n", result, sectors);
 
             result += SectorsRead;
             // if(mode == STMNBLK) break;

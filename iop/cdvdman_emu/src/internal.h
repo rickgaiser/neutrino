@@ -23,14 +23,9 @@
 #include "ioman_add.h"
 
 #include <defs.h>
+#include "mprintf.h"
 
-#ifdef DEBUG
-#define DPRINTF(args...)  printf(args)
-#define iDPRINTF(args...) Kprintf(args)
-#else
-#define DPRINTF(args...)
-#define iDPRINTF(args...)
-#endif
+#define MODNAME "cdvd_driver"
 
 // Event flags
 #define CDVDEF_MAN_UNLOCKED  0x0001

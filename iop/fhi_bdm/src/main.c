@@ -8,12 +8,7 @@
 
 #include "fhi.h"
 #include "fhi_bdm.h"
-
-#ifdef DEBUG
-#define DPRINTF(args...) printf(args)
-#else
-#define DPRINTF(args...)
-#endif
+#include "mprintf.h"
 
 #define MODNAME "fhi" // give all fhi modules the same name
 IRX_ID(MODNAME, 1, 1);
@@ -29,20 +24,20 @@ extern struct irx_export_table _exp_fhi;
 // BDM export #4
 void bdm_connect_bd(struct block_device *bd)
 {
-    DPRINTF("connecting device %s%dp%d\n", bd->name, bd->devNr, bd->parNr);
+    M_DEBUG("connecting device %s%dp%d\n", bd->name, bd->devNr, bd->parNr);
 
     if (strncmp(bd->name, (char *)&fhi.drvName, 4)) {
-        DPRINTF("- skipping wrong driver\n");
+        M_DEBUG("- skipping wrong driver\n");
         return;
     }
 
     if (bd->devNr != fhi.devNr) {
-        DPRINTF("- skipping wrong device nr\n");
+        M_DEBUG("- skipping wrong device nr\n");
         return;
     }
 
     if (g_bd != NULL) {
-        DPRINTF("- ERROR: device already connected\n");
+        M_DEBUG("- ERROR: device already connected\n");
         return;
     }
 
@@ -55,7 +50,7 @@ void bdm_connect_bd(struct block_device *bd)
 // BDM export #5
 void bdm_disconnect_bd(struct block_device *bd)
 {
-    DPRINTF("disconnecting device %s%dp%d\n", bd->name, bd->devNr, bd->parNr);
+    M_DEBUG("disconnecting device %s%dp%d\n", bd->name, bd->devNr, bd->parNr);
 
     // Lock usage of block device
     WaitSema(bdm_io_sema);
@@ -70,7 +65,7 @@ u32 fhi_size(int file_handle)
     if (file_handle < 0 || file_handle >= BDM_MAX_FILES)
         return 0;
 
-    DPRINTF("%s(%d)\n", __func__, file_handle);
+    M_DEBUG("%s(%d)\n", __func__, file_handle);
 
     return fhi.fragfile[file_handle].size / 512;
 }
@@ -83,7 +78,7 @@ int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned 
     struct fhi_bdm_fragfile *ff;
 
     if (file_handle)
-        DPRINTF("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
+        M_DEBUG("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
 
     if (file_handle < 0 || file_handle >= BDM_MAX_FILES)
         return -1;
@@ -104,7 +99,7 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
     struct fhi_bdm_fragfile *ff;
 
     if (file_handle)
-        DPRINTF("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
+        M_DEBUG("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
 
     if (file_handle < 0 || file_handle >= BDM_MAX_FILES)
         return -1;
@@ -122,7 +117,7 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
 static void watchdog_thread()
 {
     while (1) {
-        DPRINTF("FHI alive\n");
+        M_DEBUG("FHI alive\n");
         DelayThread(5 * 1000 * 1000); // 5s
     }
 }
@@ -137,7 +132,7 @@ int _start(int argc, char **argv)
     iop_thread_t ThreadData;
 #endif
 
-    DPRINTF("%s\n", __func__);
+    M_DEBUG("%s\n", __func__);
 
 #ifdef DEBUG
     ThreadData.attr = TH_C;

@@ -11,7 +11,7 @@
 
 // Last SDK 3.1.0 has INET family version "2.26.0"
 // SMAP module is the same as "2.25.0"
-IRX_ID("SMAP_driver", 0x2, 0x1A);
+IRX_ID(MODNAME, 0x2, 0x1A);
 
 //While the header of the export table is small, the large size of the export table (as a whole) places it in data instead of sdata.
 extern struct irx_export_table _exp_smap __attribute__((section("data")));
@@ -22,7 +22,6 @@ uint32_t parse_ip(const char *sIP)
     uint32_t part[4] = {0,0,0,0};
 
     while(*sIP != 0) {
-        //printf("%s\n", sIP);
         if(*sIP == '.') {
             cp++;
             if (cp >= 4)
@@ -49,18 +48,18 @@ int _start(int argc, char *argv[])
     int i;
 
     if (RegisterLibraryEntries(&_exp_smap) != 0) {
-        PRINTF("smap: module already loaded\n");
+        M_DEBUG("smap: module already loaded\n");
         return MODULE_NO_RESIDENT_END;
     }
 
     if ((result = smap_init(argc, argv)) < 0) {
-        PRINTF("smap: smap_init -> %d\n", result);
+        M_DEBUG("smap: smap_init -> %d\n", result);
         ReleaseLibraryEntries(&_exp_smap);
         return MODULE_NO_RESIDENT_END;
     }
 
     for (i=1; i<argc; i++) {
-        PRINTF("argv[%d] = %s\n", i, argv[i]);
+        M_DEBUG("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "ip=", 3)) {
             uint32_t ip = parse_ip(&argv[i][3]);
             if (ip != 0)

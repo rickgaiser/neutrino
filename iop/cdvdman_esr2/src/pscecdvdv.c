@@ -8,12 +8,7 @@
 #include "esrimp.h"
 #include "ioplib.h"
 #include "../../cdvdman_esr1/src/scecdvdv.h"
-
-#ifdef DEBUG
-#define DPRINTF(args...) printf(args)
-#else
-#define DPRINTF(args...)
-#endif
+#include "mprintf.h"
 
 #define MODNAME "ESR_DVDV_PA"
 IRX_ID(MODNAME, 0x01, 0x01);
@@ -37,7 +32,7 @@ static void **def_sceCdCallback,
 
 static u8 cdvdRead(u8 num)
 {
-    DPRINTF("%s(%d)\n", __FUNCTION__, num);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, num);
 
     return (*(vu8 *)(0xbf402000 + num));
 }
@@ -47,7 +42,7 @@ static u8 cdvdRead(u8 num)
  */
 static int hook_sceCdGetDiskType()
 {
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     int ret = cdvdRead(0x0f);
     if (ret == SCECdDVDV)
@@ -59,7 +54,7 @@ int (*def_sceCdRead)(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode);
 
 static int readSync(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
 {
-    DPRINTF("%s(%d, %d, 0x%x, ...)\n", __FUNCTION__, lsn, sectors, buf);
+    M_DEBUG("%s(%d, %d, 0x%x, ...)\n", __FUNCTION__, lsn, sectors, buf);
 
     if (sceCdReadDVDV(lsn, sectors, buf, mode)) {
         sceCdSync(0);
@@ -75,7 +70,7 @@ static int readSync(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
 static u8 sectorData[2064];
 static int hook_sceCdRead(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
 {
-    DPRINTF("%s(%d, %d, 0x%x, ...)\n", __FUNCTION__, lsn, sectors, buf);
+    M_DEBUG("%s(%d, %d, 0x%x, ...)\n", __FUNCTION__, lsn, sectors, buf);
 
     if (cdvdRead(0x0f) == SCECdDVDV) {
         int i;
@@ -117,7 +112,7 @@ int _start(int argc, char **argv)
     u8 currentDiscType;
     iop_library_t *lib;
 
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     CpuSuspendIntr(&oldstate);
 
@@ -189,12 +184,12 @@ int _start(int argc, char **argv)
             // instead of lui+ori+lbu combo, but always make sure
             else if (*memAddr == 0x3c02bf40 && *(memAddr + 1) == 0x3442200f) // lui v0, 0xBF40; ori v0, 0x200F;
             {
-                DPRINTF("Found v0 at: 0x%08x\n", (u32)memAddr);
+                M_DEBUG("Found v0 at: 0x%08x\n", (u32)memAddr);
                 *memAddr = 0x3c020000 | ((((u32)discType) >> 16) & 0xFFFF);
                 *(memAddr + 1) = 0x34420000 | (((u32)discType) & 0xFFFF);
             } else if (*memAddr == 0x3c03bf40 && *(memAddr + 1) == 0x3463200f) // lui v1, 0xBF40; ori v1, 0x200F;
             {
-                DPRINTF("Found v1 at: 0x%08x\n", (u32)memAddr);
+                M_DEBUG("Found v1 at: 0x%08x\n", (u32)memAddr);
                 *memAddr = 0x3c030000 | ((((u32)discType) >> 16) & 0xFFFF);
                 *(memAddr + 1) = 0x34630000 | (((u32)discType) & 0xFFFF);
             }
@@ -205,7 +200,7 @@ int _start(int argc, char **argv)
             // label:
             // ori v0, 0x200F
             else if ((*memAddr & 0x10000000) && *(memAddr + 1) == 0x3c02bf40 && (*(memAddr + *(s16 *)memAddr + 1) == 0x3442200f)) { // it never happens with branch going back
-                DPRINTF("Found beqz v0 at: 0x%08x\n", (u32)memAddr);
+                M_DEBUG("Found beqz v0 at: 0x%08x\n", (u32)memAddr);
                 *(memAddr + 1) = 0x3c020000 | (((u32)discType >> 16) & 0xFFFF);
                 *(memAddr + *(s16 *)memAddr + 1) = 0x34420000 | (((u32)discType) & 0xFFFF);
                 if (*(memAddr + *(s16 *)memAddr) == 0x3c02bf40)

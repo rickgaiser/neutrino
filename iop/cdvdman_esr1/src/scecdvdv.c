@@ -5,14 +5,9 @@
 #include <sysmem.h>
 #include "scecdvdv.h"
 #include "libcdvd-common.h"
+#include "mprintf.h"
 
 extern struct irx_export_table _exp_esr_sl;
-
-#ifdef DEBUG
-#define DPRINTF(args...) printf(args)
-#else
-#define DPRINTF(args...)
-#endif
 
 #define MODNAME "ESR_DVDV_SL"
 IRX_ID(MODNAME, 0x01, 0x01);
@@ -23,7 +18,7 @@ IRX_ID(MODNAME, 0x01, 0x01);
 // busy but smaller
 void waitSync()
 {
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     while ((*(u8 *)(0xbf402005) & 0xC0) != 0x40)
         ;
@@ -67,11 +62,11 @@ static struct tAllValues allValues; // static, zero initialized
 
 int hookRegisterIntrHandler(int irq, int mode, int (*handler)(void *), void *arg)
 {
-    DPRINTF("%s(%d, %d, 0x%x, 0x%x)\n", __FUNCTION__, irq, mode, handler, arg);
+    M_DEBUG("%s(%d, %d, 0x%x, 0x%x)\n", __FUNCTION__, irq, mode, handler, arg);
 
     int ret = allValues.def_registerIntrHandler(irq, mode, handler, arg);
     if (irq == 2 && mode == 1) {
-        DPRINTF("Registered interrupt: %d, %d, %08lx, %08lx\n", irq, mode, (u32)handler, (u32)arg);
+        M_DEBUG("Registered interrupt: %d, %d, %08lx, %08lx\n", irq, mode, (u32)handler, (u32)arg);
         allValues.cdvdIntrData = (s32 *)arg;
         allValues.def_sceCdCallback(readCallback);
         allValues.origReadCallback = NULL;
@@ -98,8 +93,8 @@ void *hookAllocSysMemory(u32 mode, u32 size, void *ptr)
 {
     u32 freeMem = QueryMaxFreeMemSize();
 
-    DPRINTF("%s(%d, %d, 0x%x)\n", __FUNCTION__, mode, size, ptr);
-    DPRINTF("Free memory: %lu, size: %lu\n", freeMem, size);
+    M_DEBUG("%s(%d, %d, 0x%x)\n", __FUNCTION__, mode, size, ptr);
+    M_DEBUG("Free memory: %lu, size: %lu\n", freeMem, size);
 
     if (freeMem < size && allValues.readBuffSize > 1) {
         // there should be a proper synchronization and interrupts should be disabled,
@@ -117,7 +112,7 @@ void readRemaining()
     u32 i;
     int result;
 
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     if (allValues.consecutiveSectors > 0) {
         for (i = 0; i < allValues.consecutiveSectors; i++) {
@@ -143,14 +138,14 @@ void readRemaining()
     allValues.readPhase = rpNone;
     return;
 onError:
-    DPRINTF("Error readRemaining\n");
+    M_DEBUG("Error readRemaining\n");
     allValues.readPhase = rpNone;
     return;
 }
 
 void readCallback(int reason)
 {
-    DPRINTF("%s(%d) phase = %d, readType = %ld\n", __FUNCTION__, reason, allValues.readPhase, allValues.cdvdIntrData[3]);
+    M_DEBUG("%s(%d) phase = %d, readType = %ld\n", __FUNCTION__, reason, allValues.readPhase, allValues.cdvdIntrData[3]);
 
     if (reason == SCECdFuncRead && allValues.readPhase == rpStarted && allValues.cdvdIntrData[3] <= 0) {
         readRemaining();
@@ -165,7 +160,7 @@ int hooksceCdRead0(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
 {
     s32 readType = allValues.cdvdIntrData[3];
 
-    DPRINTF("%s(%d, %d, 0x%x, ...)\n", __FUNCTION__, lsn, sectors, buf);
+    M_DEBUG("%s(%d, %d, 0x%x, ...)\n", __FUNCTION__, lsn, sectors, buf);
 
     if (readDiscType() == SCECdDVDV /* || readDiscType() == SCECdPS2DVD*/) {
         allValues.consecutiveSectors = (sectors * 2048) / 2064;
@@ -190,13 +185,13 @@ int hooksceCdRead0(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
                 allValues.readBuffSize = 1;
                 allValues.readBuff = allValues.def_allocSysMemory(ALLOC_LAST, SECTOR_SIZE, NULL);
                 if (!allValues.readBuff) {
-                    DPRINTF("Allocate failed completely\n");
+                    M_DEBUG("Allocate failed completely\n");
                     while (1)
                         DelayThread(100000); // we can't do anything at this point
                 }
-                DPRINTF("Allocate failed: %u\n", allValues.readBuffSize);
+                M_DEBUG("Allocate failed: %u\n", allValues.readBuffSize);
             } else {
-                DPRINTF("Allocated: %u\n", allValues.readBuffSize);
+                M_DEBUG("Allocated: %u\n", allValues.readBuffSize);
             }
         }
 
@@ -215,7 +210,7 @@ int hooksceCdRead0(u32 lsn, u32 sectors, void *buf, cd_read_mode_t *mode)
         return allValues.def_sceCdRead0(lsn, sectors, buf, mode);
     }
 onError:
-    DPRINTF("Error\n");
+    M_DEBUG("Error\n");
     allValues.readPhase = rpNone;
     return 0;
 }
@@ -233,27 +228,27 @@ void streamCallbackMulti(int reason, void (*callback)(int reason))
 
 void hook_cdvdman_cdstm1cb(int reason)
 {
-    DPRINTF("cdstm1CB reason = %d, phase = %d, readType = %ld\n", reason, allValues.readPhase, allValues.cdvdIntrData[3]);
+    M_DEBUG("cdstm1CB reason = %d, phase = %d, readType = %ld\n", reason, allValues.readPhase, allValues.cdvdIntrData[3]);
     streamCallbackMulti(reason, allValues.streamCallback1);
 }
 
 void hook_cdvdman_cdstm0cb(int reason)
 {
-    DPRINTF("cdstm0CB reason = %d, phase = %d, readType = %ld\n", reason, allValues.readPhase, allValues.cdvdIntrData[3]);
+    M_DEBUG("cdstm0CB reason = %d, phase = %d, readType = %ld\n", reason, allValues.readPhase, allValues.cdvdIntrData[3]);
     streamCallbackMulti(reason, allValues.streamCallback0);
 }
 
 int hook_sceCdCallback(void (*p)(int reason))
 {
     int ret = (int)allValues.origReadCallback;
-    DPRINTF("_sceCdCallback(0x%08x)\n", (unsigned int)p);
+    M_DEBUG("_sceCdCallback(0x%08x)\n", (unsigned int)p);
     allValues.origReadCallback = p;
     return ret;
 }
 
 int hook_sceCdstm1Cb(void (*p)(int reason))
 {
-    DPRINTF("_sceCdstm1Cb(0x%08x)\n", (unsigned int)p);
+    M_DEBUG("_sceCdstm1Cb(0x%08x)\n", (unsigned int)p);
     allValues.streamCallback1 = p;
     allValues.def_sceCdstm1Cb(hook_cdvdman_cdstm1cb);
     return 0;
@@ -261,7 +256,7 @@ int hook_sceCdstm1Cb(void (*p)(int reason))
 
 int hook_sceCdstm0Cb(void (*p)(int reason))
 {
-    DPRINTF("_sceCdstm0Cb(0x%08x)\n", (unsigned int)p);
+    M_DEBUG("_sceCdstm0Cb(0x%08x)\n", (unsigned int)p);
     allValues.streamCallback0 = p;
     allValues.def_sceCdstm0Cb(hook_cdvdman_cdstm0cb);
     return 0;
@@ -269,7 +264,7 @@ int hook_sceCdstm0Cb(void (*p)(int reason))
 
 int hook_sceCdMmode(int mode)
 {
-    DPRINTF("sceCdMmode, val = %d\n", mode);
+    M_DEBUG("sceCdMmode, val = %d\n", mode);
     if (mode != CdMmodeDvd) {
         if (readDiscType() == SCECdDVDV || readDiscType() == SCECdPS2DVD)
             mode = CdMmodeDvd;
@@ -298,7 +293,7 @@ void cdTypeThread()
 
 int _start(int argc, char **argv)
 {
-    DPRINTF("%s\n", __FUNCTION__);
+    M_DEBUG("%s\n", __FUNCTION__);
 
     static struct _iop_thread param = {
         attr : 0x02000000,

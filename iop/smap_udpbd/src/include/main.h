@@ -3,14 +3,9 @@
 
 
 #include <thbase.h>
+#include "mprintf.h"
 
-
-// In the SONY original, all the calls to PRINTF() were to sceInetPrintf().
-#ifdef DEBUG
-#define PRINTF(args...) printf(args)
-#else
-#define PRINTF(args...)
-#endif
+#define MODNAME "SMAP_driver"
 
 struct SmapDriverData
 {

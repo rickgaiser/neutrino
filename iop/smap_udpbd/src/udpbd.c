@@ -9,14 +9,7 @@
 #include "udpbd.h"
 #include "ministack.h"
 #include "main.h"
-
-#ifdef DEBUG
-#define M_PRINTF(format, args...) printf("UDPBD: " format, ##args)
-#define M_DEBUG(format, args...)  printf("UDPBD: " format, ##args)
-#else
-#define M_PRINTF(format, args...)
-#define M_DEBUG(format, args...)
-#endif
+#include "mprintf.h"
 
 #define UDPBD_MAX_RETRIES         4
 

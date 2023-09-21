@@ -6,12 +6,7 @@
 #include "fakemod.h"
 #include "ioplib.h"
 #include "elf.h"
-
-#ifdef DEBUG
-#define DPRINTF(args...) printf(args)
-#else
-#define DPRINTF(args...)
-#endif
+#include "mprintf.h"
 
 #define MODNAME "fakemod"
 IRX_ID(MODNAME, 1, 1);
@@ -80,18 +75,18 @@ static void print_args(int arg_len, char *args)
     if (arg_len == 0)
         return;
 
-    DPRINTF("Module arguments (arg_len=%d):\n", arg_len);
+    M_DEBUG("Module arguments (arg_len=%d):\n", arg_len);
 
     // Search strings
     while(args_idx < arg_len) {
         if (args[args_idx] == 0) {
             if (was_null == 1) {
-                DPRINTF("- args[%d]=0\n", args_idx);
+                M_DEBUG("- args[%d]=0\n", args_idx);
             }
             was_null = 1;
         }
         else if (was_null == 1) {
-            DPRINTF("- args[%d]='%s'\n", args_idx, &args[args_idx]);
+            M_DEBUG("- args[%d]='%s'\n", args_idx, &args[args_idx]);
             was_null = 0;
         }
         args_idx++;
@@ -104,7 +99,7 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(%s, %d, ...)\n", __FUNCTION__, modpath, arg_len);
+    M_DEBUG("%s(%s, %d, ...)\n", __FUNCTION__, modpath, arg_len);
 #ifdef DEBUG
     print_args(arg_len, args);
 #endif
@@ -123,7 +118,7 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
             rv = mod->returnLoad;
         }
 
-        DPRINTF("- FAKING! id=0x%x, rv=%d(0x%x), modres=%d\n", mod->id, rv, rv, *modres);
+        M_DEBUG("- FAKING! id=0x%x, rv=%d(0x%x), modres=%d\n", mod->id, rv, rv, *modres);
         return rv;
     }
 
@@ -135,7 +130,7 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x, %s, %d, ...)\n", __FUNCTION__, id, modname, arg_len);
+    M_DEBUG("%s(0x%x, %s, %d, ...)\n", __FUNCTION__, id, modname, arg_len);
 #ifdef DEBUG
     print_args(arg_len, args);
 #endif
@@ -154,7 +149,7 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
             rv = -202; // KE_UNKNOWN_MODULE
         }
 
-        DPRINTF("- FAKING! id=0x%x, rv=%d(0x%x), modres=%d\n", mod->id, rv, rv, *modres);
+        M_DEBUG("- FAKING! id=0x%x, rv=%d(0x%x), modres=%d\n", mod->id, rv, rv, *modres);
         return rv;
     }
 
@@ -169,7 +164,7 @@ static int Hook_LoadModuleBuffer(void *ptr)
     elf_pheader_t *eph = (elf_pheader_t *)(ptr + eh->phoff);
     const char *modname = (const char *)ptr + eph->offset + 0x1a;
 
-    DPRINTF("%s() modname = '%s'\n", __FUNCTION__, modname);
+    M_DEBUG("%s() modname = '%s'\n", __FUNCTION__, modname);
 
     mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
@@ -184,7 +179,7 @@ static int Hook_LoadModuleBuffer(void *ptr)
             rv = mod->returnLoad;
         }
 
-        DPRINTF("- FAKING! id=0x%x, rv=%d(0x%x)\n", mod->id, rv, rv);
+        M_DEBUG("- FAKING! id=0x%x, rv=%d(0x%x)\n", mod->id, rv, rv);
         return rv;
     }
 
@@ -196,14 +191,14 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x, %d, ...)\n", __FUNCTION__, id, arg_len);
+    M_DEBUG("%s(0x%x, %d, ...)\n", __FUNCTION__, id, arg_len);
 #ifdef DEBUG
     print_args(arg_len, args);
 #endif
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
+        M_DEBUG("- FAKING! id=0x%x\n", mod->id);
 
         if ((mod->prop & FAKE_PROP_UNLOAD) == 0)
             *modres = MODULE_NO_RESIDENT_END;
@@ -221,11 +216,11 @@ static int Hook_UnloadModule(int id)
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
+    M_DEBUG("%s(0x%x)\n", __FUNCTION__, id);
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
+        M_DEBUG("- FAKING! id=0x%x\n", mod->id);
 
         if ((mod->prop & FAKE_PROP_UNLOAD) != 0)
             org_UnloadModule(org_SearchModuleByName(mod->name));
@@ -241,14 +236,14 @@ static int Hook_SearchModuleByName(char *modname)
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(%s)\n", __FUNCTION__, modname);
+    M_DEBUG("%s(%s)\n", __FUNCTION__, modname);
 
     mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
         int rv = mod->id;
         if (mod->returnLoad != 0 || mod->returnStart == MODULE_NO_RESIDENT_END)
             rv = -202; // KE_UNKNOWN_MODULE
-        DPRINTF("- FAKING! id=0x%x rv=%d(0x%x)\n", mod->id, rv, rv);
+        M_DEBUG("- FAKING! id=0x%x rv=%d(0x%x)\n", mod->id, rv, rv);
         return rv;
     }
 
@@ -260,11 +255,11 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x, ...)\n", __FUNCTION__, id);
+    M_DEBUG("%s(0x%x, ...)\n", __FUNCTION__, id);
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0 && mod->returnLoad == 0) {
-        DPRINTF("- FAKING! id=0x%x\n", mod->id);
+        M_DEBUG("- FAKING! id=0x%x\n", mod->id);
         memset(status, 0, sizeof(ModuleStatus));
         strcpy(status->name, mod->name);
         status->version = mod->version;
@@ -281,7 +276,7 @@ int _start(int argc, char **argv)
     int i;
 
     // Change string index to string pointers
-    DPRINTF("Fake module list:\n");
+    M_DEBUG("Fake module list:\n");
     for (i = 0; i < MODULE_SETTINGS_MAX_FAKE_COUNT; i++) {
         struct FakeModule *fm = &fmd.fake[i];
 
@@ -298,7 +293,7 @@ int _start(int argc, char **argv)
         }
 
         if (fm->fname != NULL) {
-            DPRINTF("  %d: %12s | %-14s | 0x%3x | %3d | %d | 0x%x\n", i, fm->fname, fm->name, fm->version, fm->returnLoad, fm->returnStart, fm->prop);
+            M_DEBUG("  %d: %12s | %-14s | 0x%3x | %3d | %d | 0x%x\n", i, fm->fname, fm->name, fm->version, fm->returnLoad, fm->returnStart, fm->prop);
         }
     }
 

@@ -9,7 +9,7 @@
 //-------------------------------------------------------------------------
 int sceCdSync(int mode)
 {
-    DPRINTF("%s(%d) locked = %d, ic=%d\n", __FUNCTION__, mode, sync_flag_locked, QueryIntrContext());
+    M_DEBUG("%s(%d) locked = %d, ic=%d\n", __FUNCTION__, mode, sync_flag_locked, QueryIntrContext());
 
     if (!sync_flag_locked)
         return 0; // Completed
@@ -39,7 +39,7 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 //-------------------------------------------------------------------------
 int sceCdReadCdda(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 {
-    DPRINTF("%s(%d, %d, %08x, %08x)\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)mode);
+    M_DEBUG("%s(%d, %d, %08x, %08x)\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)mode);
 
     return sceCdRead(lsn, sectors, buf, mode);
 }
@@ -81,7 +81,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 
     u8 discType = cdvdman_stat.disc_type_reg & 0xFF;
 
-    DPRINTF("cdvdman_fill_toc tocBuff=%08x discType=%02X\n", (int)tocBuff, discType);
+    M_DEBUG("cdvdman_fill_toc tocBuff=%08x discType=%02X\n", (int)tocBuff, discType);
 
     if (tocBuff == NULL) {
         return 0;
@@ -171,7 +171,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 
         default:
             // Not known type.
-            DPRINTF("cdvdman_fill_toc unimplemented for discType=%02X\n", discType);
+            M_DEBUG("cdvdman_fill_toc unimplemented for discType=%02X\n", discType);
             return 0;
     }
 
@@ -181,7 +181,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 //-------------------------------------------------------------------------
 int sceCdGetToc_internal(u8 *toc, enum ECallSource source)
 {
-    DPRINTF("%s(-)\n", __FUNCTION__);
+    M_DEBUG("%s(-)\n", __FUNCTION__);
 
     if (sync_flag_locked)
         return 0;
@@ -207,7 +207,7 @@ int sceCdGetToc(u8 *toc)
 //-------------------------------------------------------------------------
 int sceCdSeek_internal(u32 lsn, enum ECallSource source)
 {
-    DPRINTF("%s(%d)\n", __FUNCTION__, (int)lsn);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, (int)lsn);
 
     if (sync_flag_locked)
         return 0;
@@ -219,7 +219,7 @@ int sceCdSeek_internal(u32 lsn, enum ECallSource source)
     // Set the invalid parament error in case of trying to seek more than max lsn.
     if (mediaLsnCount) {
         if (lsn >= mediaLsnCount) {
-            DPRINTF("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
+            M_DEBUG("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
             cdvdman_stat.err = SCECdErIPI;
         }
     }
@@ -238,7 +238,7 @@ int sceCdSeek(u32 lsn)
 //-------------------------------------------------------------------------
 int sceCdStandby_internal(enum ECallSource source)
 {
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
@@ -257,7 +257,7 @@ int sceCdStandby(void)
 //-------------------------------------------------------------------------
 int sceCdStop_internal(enum ECallSource source)
 {
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     if (sync_flag_locked)
         return 0;
@@ -280,7 +280,7 @@ int sceCdStop(void)
 //-------------------------------------------------------------------------
 int sceCdPause_internal(enum ECallSource source)
 {
-    DPRINTF("%s()\n", __FUNCTION__);
+    M_DEBUG("%s()\n", __FUNCTION__);
 
     if (sync_flag_locked)
         return 0;
@@ -303,7 +303,7 @@ int sceCdPause(void)
 //-------------------------------------------------------------------------
 int sceCdDiskReady(int mode)
 {
-    DPRINTF("%s(%d) locked = %d\n", __FUNCTION__, mode, sync_flag_locked);
+    M_DEBUG("%s(%d) locked = %d\n", __FUNCTION__, mode, sync_flag_locked);
 
     cdvdman_stat.err = SCECdErNO;
 
@@ -323,7 +323,7 @@ int sceCdDiskReady(int mode)
 //-------------------------------------------------------------------------
 int sceCdReadDiskID(unsigned int *DiskID)
 {
-    DPRINTF("%s(-)\n", __FUNCTION__);
+    M_DEBUG("%s(-)\n", __FUNCTION__);
 
     int i;
     u8 *p = (u8 *)DiskID;

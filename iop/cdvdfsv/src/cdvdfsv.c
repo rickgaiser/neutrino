@@ -6,7 +6,6 @@
 
 #include "cdvdfsv-internal.h"
 
-#define MODNAME "cdvd_ee_driver"
 IRX_ID(MODNAME, 2, 2);
 
 typedef struct
@@ -83,7 +82,7 @@ int module_start(int argc, char *argv[])
     iop_library_t *lib_modload;
     iop_thread_t thread_param;
 
-    DPRINTF("%s\n", __FUNCTION__);
+    M_DEBUG("%s\n", __FUNCTION__);
 
     RegisterLibraryEntries(&_exp_cdvdfsv);
 
@@ -97,13 +96,13 @@ int module_start(int argc, char *argv[])
 
     lib_modload = ioplib_getByName("modload\0");
     if (lib_modload != NULL) {
-        DPRINTF("modload 0x%x detected\n", lib_modload->version);
+        M_DEBUG("modload 0x%x detected\n", lib_modload->version);
         // Newer modload versions allow modules to be unloaded
         // Let modload know we support unloading
         if (lib_modload->version > 0x102)
             return MODULE_REMOVABLE_END;
     } else {
-        DPRINTF("modload not detected!\n");
+        M_DEBUG("modload not detected!\n");
     }
 
     return MODULE_RESIDENT_END;
@@ -112,7 +111,7 @@ int module_start(int argc, char *argv[])
 //-------------------------------------------------------------------------
 int module_stop(int argc, char *argv[])
 {
-    DPRINTF("%s\n", __FUNCTION__);
+    M_DEBUG("%s\n", __FUNCTION__);
 
     DeleteThread(rpc_sd_thread_id);
     DeleteThread(rpc0_thread_id);
@@ -126,7 +125,7 @@ int module_stop(int argc, char *argv[])
 //-------------------------------------------------------------------------
 int _start(int argc, char *argv[])
 {
-    DPRINTF("%s\n", __FUNCTION__);
+    M_DEBUG("%s\n", __FUNCTION__);
 
     if (argc >= 0)
         return module_start(argc, argv);

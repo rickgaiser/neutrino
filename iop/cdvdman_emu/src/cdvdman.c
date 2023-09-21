@@ -7,7 +7,6 @@
 #include "internal.h"
 #include "xmodload.h"
 
-#define MODNAME "cdvd_driver"
 IRX_ID(MODNAME, 1, 1);
 
 //------------------ Patch Zone ----------------------
@@ -65,7 +64,7 @@ void cdvdman_init(void)
 
 int sceCdInit(int init_mode)
 {
-    DPRINTF("%s(%d)\n", __FUNCTION__, init_mode);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, init_mode);
 
     cdvdman_init();
     return 1;
@@ -84,20 +83,20 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     void *ptr;
     int endOfMedia = 0;
 
-    //DPRINTF("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
+    //M_DEBUG("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
     if (mediaLsnCount) {
 
         // If lsn to read is already bigger error already.
         if (lsn >= mediaLsnCount) {
-            DPRINTF("cdvdman_read eom lsn=%d sectors=%d leftsectors=%d MaxLsn=%d \n", lsn, sectors, mediaLsnCount - lsn, mediaLsnCount);
+            M_DEBUG("cdvdman_read eom lsn=%d sectors=%d leftsectors=%d MaxLsn=%d \n", lsn, sectors, mediaLsnCount - lsn, mediaLsnCount);
             cdvdman_stat.err = SCECdErIPI;
             return 1;
         }
 
         // As per PS2 mecha code continue to read what you can and then signal end of media error.
         if ((lsn + sectors) > mediaLsnCount) {
-            DPRINTF("cdvdman_read eom lsn=%d sectors=%d leftsectors=%d MaxLsn=%d \n", lsn, sectors, mediaLsnCount - lsn, mediaLsnCount);
+            M_DEBUG("cdvdman_read eom lsn=%d sectors=%d leftsectors=%d MaxLsn=%d \n", lsn, sectors, mediaLsnCount - lsn, mediaLsnCount);
             endOfMedia = 1;
             // Limit how much sectors we can read.
             sectors = mediaLsnCount - lsn;
@@ -245,7 +244,7 @@ static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf)
 //-------------------------------------------------------------------------
 u32 sceCdGetReadPos(void)
 {
-    DPRINTF("%s() = %d\n", __FUNCTION__, ReadPos);
+    M_DEBUG("%s() = %d\n", __FUNCTION__, ReadPos);
 
     return ReadPos;
 }
@@ -260,9 +259,9 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     IsIntrContext = QueryIntrContext();
 
     if (mode != NULL)
-        DPRINTF("%s(%d, %d, %08x, {%d, %d, %d}, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, mode->trycount, mode->spindlctrl, mode->datapattern, (int)source, IsIntrContext);
+        M_DEBUG("%s(%d, %d, %08x, {%d, %d, %d}, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, mode->trycount, mode->spindlctrl, mode->datapattern, (int)source, IsIntrContext);
     else
-        DPRINTF("%s(%d, %d, %08x, NULL, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, IsIntrContext);
+        M_DEBUG("%s(%d, %d, %08x, NULL, %d) ic=%d\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)source, IsIntrContext);
 
     // Is is NULL in our emulated cdvdman routines so check if valid.
     if (mode) {
@@ -277,14 +276,14 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     free = QueryTotalFreeMemSize();
     if (free != free_prev) {
         free_prev = free;
-        printf("- memory free = %dKiB\n", free / 1024);
+        M_PRINTF("- memory free = %dKiB\n", free / 1024);
     }
 
     CpuSuspendIntr(&OldState);
 
     if (sync_flag_locked) {
         CpuResumeIntr(OldState);
-        DPRINTF("%s: exiting (sync_flag_locked)...\n", __FUNCTION__);
+        M_DEBUG("%s: exiting (sync_flag_locked)...\n", __FUNCTION__);
         return 0;
     }
 
@@ -317,7 +316,7 @@ static void cdvdman_initDiskType(void)
     cdvdman_stat.err = SCECdErNO;
 
     cdvdman_stat.disc_type_reg = (int)cdvdman_settings.media;
-    DPRINTF("DiskType=0x%x\n", cdvdman_settings.media);
+    M_DEBUG("DiskType=0x%x\n", cdvdman_settings.media);
 }
 
 //-------------------------------------------------------------------------
@@ -332,7 +331,7 @@ u32 sceCdPosToInt(sceCdlLOCCD *p)
     result += ((u32)p->sector >> 4) * 10 + ((u32)p->sector & 0xF);
     result -= 150;
 
-    DPRINTF("%s({0x%X, 0x%X, 0x%X, 0x%X}) = %d\n", __FUNCTION__, p->minute, p->second, p->sector, p->track, result);
+    M_DEBUG("%s({0x%X, 0x%X, 0x%X, 0x%X}) = %d\n", __FUNCTION__, p->minute, p->second, p->sector, p->track, result);
 
     return result;
 }
@@ -342,7 +341,7 @@ sceCdlLOCCD *sceCdIntToPos(u32 i, sceCdlLOCCD *p)
 {
     u32 sc, se, mi;
 
-    DPRINTF("%s(%d)\n", __FUNCTION__, i);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, i);
 
     i += 150;
     se = i / 75;
@@ -362,7 +361,7 @@ sceCdCBFunc sceCdCallback(sceCdCBFunc func)
     int oldstate;
     void *old_cb;
 
-    DPRINTF("%s(0x%X)\n", __FUNCTION__, func);
+    M_DEBUG("%s(0x%X)\n", __FUNCTION__, func);
 
     if (sceCdSync(1))
         return NULL;
@@ -382,7 +381,7 @@ int sceCdSC(int code, int *param)
 {
     int result;
 
-    DPRINTF("%s(0x%X, 0x%X)\n", __FUNCTION__, code, *param);
+    M_DEBUG("%s(0x%X, 0x%X)\n", __FUNCTION__, code, *param);
 
     switch (code) {
         case CDSC_GET_INTRFLAG:
@@ -407,7 +406,7 @@ int sceCdSC(int code, int *param)
             result = cdvdman_stat.err = *param;
             break;
         default:
-            DPRINTF("%s(0x%X, 0x%X) unknown code\n", __FUNCTION__, code, *param);
+            M_DEBUG("%s(0x%X, 0x%X) unknown code\n", __FUNCTION__, code, *param);
             result = 1; // dummy result
     }
 
@@ -523,7 +522,7 @@ static void cdvdman_cdread_Thread(void *args)
         WaitSema(cdrom_rthread_sema);
         memcpy(&req, &cdvdman_stat.req, sizeof(req));
 
-        DPRINTF("%s() [%d, %d, %d, %08x, %d]\n", __FUNCTION__, (int)req.lba, (int)req.sectors, (int)req.sector_size, (int)req.buf, (int)req.source);
+        M_DEBUG("%s() [%d, %d, %d, %08x, %d]\n", __FUNCTION__, (int)req.lba, (int)req.sectors, (int)req.sector_size, (int)req.buf, (int)req.source);
 
         cdvdman_read(req.lba, req.sectors, req.sector_size, req.buf);
 
@@ -553,7 +552,7 @@ static void cdvdman_cdread_Thread(void *args)
                 break;
         }
 
-        DPRINTF("%s() done\n", __FUNCTION__);
+        M_DEBUG("%s() done\n", __FUNCTION__);
     }
 }
 

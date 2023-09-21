@@ -46,12 +46,12 @@ void StartNow(void *param)
     int r;
     void *exp;
 
-    DPRINTF("mcemu starting\n");
+    M_DEBUG("mcemu starting\n");
 
     /* looking for LOADCORE's library entry table */
     exp = GetExportTable("loadcore", 0x100);
     if (exp == NULL) {
-        DPRINTF("Unable to find loadcore exports.\n");
+        M_DEBUG("Unable to find loadcore exports.\n");
         readyToGo = MODULE_NO_RESIDENT_END;
         return;
     }
@@ -59,7 +59,7 @@ void StartNow(void *param)
     /* configuring the virtual memory cards */
     if (!(r = mc_configure(memcards))) {
         (void)r;
-        DPRINTF("mc_configure return %d.\n", r);
+        M_DEBUG("mc_configure return %d.\n", r);
         readyToGo = MODULE_NO_RESIDENT_END;
         return;
     }
@@ -73,7 +73,7 @@ void StartNow(void *param)
         /* hooking SIO2MAN's routines */
         InstallSio2manHook(exp, 1);
     } else {
-        DPRINTF("SIO2MAN exports not found.\n");
+        M_DEBUG("SIO2MAN exports not found.\n");
     }
 
     /* searching for a SECRMAN export table */
@@ -82,7 +82,7 @@ void StartNow(void *param)
         /* hooking SecrAuthCard entry */
         InstallSecrmanHook(exp);
     } else {
-        DPRINTF("SECRMAN exports not found.\n");
+        M_DEBUG("SECRMAN exports not found.\n");
     }
 
     readyToGo = MODULE_RESIDENT_END;
@@ -227,7 +227,7 @@ static int CheckPatchMc2_s1()
     while (table) {
         stub = (struct irx_import_stub *)table->stubs;
         if (((u32)stub > start) && ((u32)stub < end)) {
-            DPRINTF("bad mc2_s1 or mc2_d found\n");
+            M_DEBUG("bad mc2_s1 or mc2_d found\n");
             while (stub->jump) {
                 switch (stub->fno) {
                     case 0x1c: // dmac_request
@@ -247,13 +247,13 @@ static int CheckPatchMc2_s1()
         }
         table = table->next;
     }
-    DPRINTF("mc2_s1 or mc2_d found but no dmac imports\n");
+    M_DEBUG("mc2_s1 or mc2_d found but no dmac imports\n");
     return 1;
 not_found:
-    DPRINTF("mc2_s1 and mc2_d not found\n");
+    M_DEBUG("mc2_s1 and mc2_d not found\n");
     return 1;
 not_found_again:
-    DPRINTF("mc2_s1 and mc2_d and mcman not found, try again\n");
+    M_DEBUG("mc2_s1 and mc2_d and mcman not found, try again\n");
     return 0;
 }
 
@@ -261,7 +261,7 @@ not_found_again:
 int DummySecrAuthCard(int port, int slot, int cnum)
 {
     // port; slot; cnum;
-    DPRINTF("SecrAuthCard(0x%X, 0x%X, 0x%X)\n", port, slot, cnum);
+    M_DEBUG("SecrAuthCard(0x%X, 0x%X, 0x%X)\n", port, slot, cnum);
 
     /*
     if (slot != 0)
@@ -284,7 +284,7 @@ int hookRegisterLibraryEntires(iop_library_t *lib)
             /* hooking SIO2MAN's routines */
             InstallSio2manHook(&lib[1], GetExportTableSize(&lib[1]) >= 61);
         } else {
-            DPRINTF("registering library %s failed, error %d\n", lib->name, ret);
+            M_DEBUG("registering library %s failed, error %d\n", lib->name, ret);
             return ret;
         }
     } else if (!strcmp(lib->name, "secrman")) {
@@ -294,7 +294,7 @@ int hookRegisterLibraryEntires(iop_library_t *lib)
             /* hooking the SecrAuthCard() calls */
             InstallSecrmanHook(&lib[1]);
         } else {
-            DPRINTF("registering library %s failed, error %d\n", lib->name, ret);
+            M_DEBUG("registering library %s failed, error %d\n", lib->name, ret);
             return ret;
         }
     } else if (!strcmp(lib->name, "mcman")) {
@@ -305,7 +305,7 @@ int hookRegisterLibraryEntires(iop_library_t *lib)
             if (lib->version >= 0x208)
                 InstallMcmanHook(&lib[1]);
         } else {
-            DPRINTF("registering library %s failed, error %d\n", lib->name, ret);
+            M_DEBUG("registering library %s failed, error %d\n", lib->name, ret);
             return ret;
         }
 #ifdef PADEMU
@@ -314,7 +314,7 @@ int hookRegisterLibraryEntires(iop_library_t *lib)
 #endif
     }
 
-    DPRINTF("registering library %s\n", lib->name);
+    M_DEBUG("registering library %s\n", lib->name);
 
     return pRegisterLibraryEntires(lib);
 }
@@ -404,7 +404,7 @@ int hookDmac_request(u32 channel, void *addr, u32 size, u32 count, int dir)
     int i;
     int port = SIO2CMD[0] & 1;
 
-    DPRINTF("hookDmac_request port = %d, channel = %ld\n", port, channel);
+    M_DEBUG("hookDmac_request port = %d, channel = %ld\n", port, channel);
     if (memcards[port].mcnum == -1)
         return dmac_request(channel, addr, size, count, dir);
 
@@ -418,7 +418,7 @@ int hookDmac_request(u32 channel, void *addr, u32 size, u32 count, int dir)
             return 1;
         case 12: // sio2out
             if (temp_packet == NULL) {
-                DPRINTF("sio2out request without sio2in\n");
+                M_DEBUG("sio2out request without sio2in\n");
                 return 0;
             }
             temp_packet->rdmaddr = addr;
@@ -426,7 +426,7 @@ int hookDmac_request(u32 channel, void *addr, u32 size, u32 count, int dir)
             temp_packet->rdcount = count;
             for (i = 0; i < 16; i++)
                 temp_packet->ctrl[i] = SIO2CMD[i];
-            DPRINTF("hookDmac_request ctrl0 = %lX, cmd0 = %X, wrcount = %ld\n", temp_packet->ctrl[0], ((u8 *)temp_packet->wrmaddr)[1], temp_packet->wrcount);
+            M_DEBUG("hookDmac_request ctrl0 = %lX, cmd0 = %X, wrcount = %ld\n", temp_packet->ctrl[0], ((u8 *)temp_packet->wrmaddr)[1], temp_packet->wrcount);
             Sio2McEmu(temp_packet);
             SIO2CTRL |= 0x40; // reset it, pcsx2 suggests it's reset after every write
             _SysFree(temp_packet);
@@ -434,7 +434,7 @@ int hookDmac_request(u32 channel, void *addr, u32 size, u32 count, int dir)
             skip_sema_wait = 1;
             return 1;
         default:
-            DPRINTF("dmac_request invalid channel\n");
+            M_DEBUG("dmac_request invalid channel\n");
             return 0;
     }
 }
@@ -452,7 +452,7 @@ void hookDmac_transfer(u32 channel)
             if (temp_packet != NULL)
                 break;
         default:
-            DPRINTF("dmac_transfer invalid transfer\n");
+            M_DEBUG("dmac_transfer invalid transfer\n");
             break;
     }
     return;
@@ -475,7 +475,7 @@ u32 *hookSio2man67()
                     ra[0] = 0;          // there must a better way
                     ra[2] = 0x8c420000; // lw v0,0(v0)
                 } else
-                    DPRINTF("hookSio2man67 failed to find stat6c check, mc access may fail\n");
+                    M_DEBUG("hookSio2man67 failed to find stat6c check, mc access may fail\n");
                 FlushDcache();
                 FlushIcache();
             }
@@ -549,7 +549,7 @@ void Sio2McEmu(Sio2Packet *sd)
                             break;
                         /* 0x81 0x27 - Set new termination code */
                         case 0x27:
-                            DPRINTF("0x81 0x27 - 0x%02X\n", wdma[2]);
+                            M_DEBUG("0x81 0x27 - 0x%02X\n", wdma[2]);
                             mcd->tcode = wdma[2];
                             SioResponse(mcd, rdma, length);
                             result = 1;
@@ -566,7 +566,7 @@ void Sio2McEmu(Sio2Packet *sd)
                             if (result)
                                 result = MceWrite(mcd, &wdma[3], wdma[2]);
                             else
-                                DPRINTF("skipping write command after I/O error.\n");
+                                M_DEBUG("skipping write command after I/O error.\n");
                             break;
                         /* 0x81 0x43 - Read data from a memory card */
                         case 0x43:
@@ -575,7 +575,7 @@ void Sio2McEmu(Sio2Packet *sd)
                             if (result)
                                 result = MceRead(mcd, &rdma[4], length);
                             else
-                                DPRINTF("skipping read command after I/O error.\n");
+                                M_DEBUG("skipping read command after I/O error.\n");
                             if (!result)
                                 memset(&rdma[4], 0xFF, length);
                             rdma[length + 4] = CalculateEDC(&rdma[4], length);
@@ -592,19 +592,19 @@ void Sio2McEmu(Sio2Packet *sd)
                         case 0xBF:
                         /* 0x81 0xF3 - Reset Card Auth */
                         case 0xF3:
-                            DPRINTF("mc2 command 0x81 0x%02X\n", wdma[1]);
+                            M_DEBUG("mc2 command 0x81 0x%02X\n", wdma[1]);
                             SioResponse(mcd, rdma, length);
                             result = 1;
                             break;
                         /* Magic Gate command */
                         case 0xF0:
-                            DPRINTF("Magic Gate command 0x81 0xF0 0x%02X\n", wdma[2]);
+                            M_DEBUG("Magic Gate command 0x81 0xF0 0x%02X\n", wdma[2]);
                             SioResponse(mcd, rdma, length);
                             result = 0;
                             break;
                         /* unknown commands */
                         default:
-                            DPRINTF("unknown MC2 command 0x81 0x%02X\n", wdma[1]);
+                            M_DEBUG("unknown MC2 command 0x81 0x%02X\n", wdma[1]);
                             SioResponse(mcd, rdma, length);
                             result = 0;
                             break;
@@ -615,7 +615,7 @@ void Sio2McEmu(Sio2Packet *sd)
                 }
             } else {
                 result = 0;
-                DPRINTF("unsupported SIO2 command: 0x%02X\n", wdma[0]);
+                M_DEBUG("unsupported SIO2 command: 0x%02X\n", wdma[0]);
             }
 
             wdma = &wdma[sd->wrwords * 4]; /* set address of next dma write-buffer */
@@ -626,10 +626,10 @@ void Sio2McEmu(Sio2Packet *sd)
         sd->iostatus |= (ddi & 0xF) << 8;
     } else {
         sd->iostatus = 0x1D100;
-        /* DPRINTF("ctrl[0] = 0x%X\n", sd->ctrl[0]); */
+        /* M_DEBUG("ctrl[0] = 0x%X\n", sd->ctrl[0]); */
     }
 
-    /* DPRINTF("SIO2 status 0x%X\n", sd->iostatus); */
+    /* M_DEBUG("SIO2 status 0x%X\n", sd->iostatus); */
 
     /*
      * Lock SIO2 access again as the user expects it
@@ -647,7 +647,7 @@ void SioResponse(MemoryCard *mcd, void *buf, int length)
     u8 *p;
 
     if (length < 2) {
-        DPRINTF("invalid SIO2 data length.\n");
+        M_DEBUG("invalid SIO2 data length.\n");
         return;
     }
 
@@ -671,7 +671,7 @@ int MceEraseBlock(MemoryCard *mcd, int page)
 {
     int i, r;
 
-    DPRINTF("erasing at 0x%X\n", page);
+    M_DEBUG("erasing at 0x%X\n", page);
 
     /* creating clear buffer */
     r = (mcd->flags & 0x10) ? 0x0 : 0xFF;
@@ -680,7 +680,7 @@ int MceEraseBlock(MemoryCard *mcd, int page)
     for (i = 0; i < mcd->cspec.BlockSize; i++) {
         r = fhi_write(FHI_FID_MC0 + mcd->mcnum, mcd->dbufp, page + i, 1);
         if (r != 1) {
-            DPRINTF("erase error\n");
+            M_DEBUG("erase error\n");
             return 0;
         }
     }
@@ -698,7 +698,7 @@ static int do_read(MemoryCard *mcd)
 
     r = fhi_read(FHI_FID_MC0 + mcd->mcnum, mcd->dbufp, mcd->rpage, 1);
     if (r != 1) {
-        DPRINTF("read error\n");
+        M_DEBUG("read error\n");
         return 0;
     }
     for (r = 0, i = 0; r < mcd->cspec.PageSize; r += 128, i += 3)
@@ -722,7 +722,7 @@ int MceRead(MemoryCard *mcd, void *buf, u32 size)
 {
     u32 tot_size = size;
 restart:
-    DPRINTF("read sector %X size %ld\n", mcd->rpage, size);
+    M_DEBUG("read sector %X size %ld\n", mcd->rpage, size);
     if (mcd->rcoff && !mcd->rdoff) {
         u32 csize = (size < 16) ? size : 16;
         memcpy(buf, mcd->cbufp, csize);
@@ -774,7 +774,7 @@ int MceWrite(MemoryCard *mcd, void *buf, u32 size)
 {
     u32 tot_size = size;
 restart:
-    DPRINTF("write sector %X size %ld\n", mcd->wpage, size);
+    M_DEBUG("write sector %X size %ld\n", mcd->wpage, size);
     if (mcd->wcoff && !mcd->wroff) {
         u32 csize = (size < 16) ? size : 16;
         mcd->wcoff = (csize > 12) ? 0 : (mcd->wcoff - csize);
@@ -800,7 +800,7 @@ restart:
 
         r = fhi_write(FHI_FID_MC0 + mcd->mcnum, mcd->dbufp, mcd->wpage, 1);
         if (r != 1) {
-            DPRINTF("write error.\n");
+            M_DEBUG("write error.\n");
             return 0;
         }
 

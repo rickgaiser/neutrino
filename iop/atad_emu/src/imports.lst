@@ -8,11 +8,11 @@ loadcore_IMPORTS_start
 I_RegisterLibraryEntries
 loadcore_IMPORTS_end
 
-//#ifdef DEBUG
+#ifdef DEBUG
 stdio_IMPORTS_start
 I_printf
 stdio_IMPORTS_end
-//#endif
+#endif
 
 sysclib_IMPORTS_start
 I_memcpy

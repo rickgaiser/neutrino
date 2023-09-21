@@ -19,19 +19,11 @@
 #include <thbase.h>
 #include <thsemap.h>
 #include <dmacman.h>
+
 #include "fhi.h"
+#include "mprintf.h"
 
 #define MODNAME "mcemu"
-
-// debug output is handled elsewhere
-#ifdef DEBUG
-#define DPRINTF(format, args...) \
-    printf(MODNAME ": " format, ##args)
-#else
-#define DPRINTF(format, args...) \
-    do {                         \
-    } while (0)
-#endif
 
 /* mcemu.c */
 

@@ -82,7 +82,7 @@ static void _smap_write_phy(volatile u8 *emac3_regbase, unsigned int address, u1
     }
 
     if (i >= 100)
-        PRINTF("smap: %s: > %d ms\n", "_smap_write_phy", i);
+        M_DEBUG("smap: %s: > %d ms\n", "_smap_write_phy", i);
 }
 
 static u16 _smap_read_phy(volatile u8 *emac3_regbase, unsigned int address)
@@ -112,7 +112,7 @@ static u16 _smap_read_phy(volatile u8 *emac3_regbase, unsigned int address)
     } while (i < 100);
 
     if (i >= 100)
-        PRINTF("smap: %s: > %d ms\n", "_smap_read_phy", i);
+        M_DEBUG("smap: %s: > %d ms\n", "_smap_read_phy", i);
 
     return result;
 }
@@ -120,7 +120,7 @@ static u16 _smap_read_phy(volatile u8 *emac3_regbase, unsigned int address)
 static inline void RestartAutoNegotiation(volatile u8 *emac3_regbase, u16 bmsr)
 {
     if (EnableVerboseOutput)
-        PRINTF("smap: restarting auto nego (BMCR=0x%x, BMSR=0x%x)\n", _smap_read_phy(emac3_regbase, SMAP_DsPHYTER_BMCR), bmsr);
+        M_DEBUG("smap: restarting auto nego (BMCR=0x%x, BMSR=0x%x)\n", _smap_read_phy(emac3_regbase, SMAP_DsPHYTER_BMCR), bmsr);
     _smap_write_phy(emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_ANEN | SMAP_PHY_BMCR_RSAN);
 }
 
@@ -134,12 +134,12 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
 
     LinkSpeed100M = 0;
     if (EnableVerboseOutput != 0)
-        PRINTF("smap: Resetting PHY\n");
+        M_DEBUG("smap: Resetting PHY\n");
 
     _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_RST);
     for (i = 0; _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR) & SMAP_PHY_BMCR_RST; i++) {
         if (i <= 0) {
-            PRINTF("smap: PHY reset error\n");
+            M_DEBUG("smap: PHY reset error\n");
             return -1;
         }
         if (SmapDrivPrivData->NetDevStopFlag)
@@ -150,7 +150,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
 
     if (!EnableAutoNegotiation) {
         if (EnableVerboseOutput != 0)
-            PRINTF("smap: no auto mode (conf=0x%x)\n", SmapConfiguration);
+            M_DEBUG("smap: no auto mode (conf=0x%x)\n", SmapConfiguration);
 
         LinkSpeed100M = 0 < (SmapConfiguration & 0x180); /* Toggles between SMAP_PHY_BMCR_10M and SMAP_PHY_BMCR_100M. */
         value = LinkSpeed100M << 13;
@@ -159,7 +159,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
         _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, value);
 
     WaitLink:
-        PRINTF("smap: Waiting Valid Link for %dMbps\n", LinkSpeed100M ? 100 : 10);
+        M_DEBUG("smap: Waiting Valid Link for %dMbps\n", LinkSpeed100M ? 100 : 10);
 
         i = 0;
         while (1) {
@@ -187,11 +187,11 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
             if (!(value & 0x0800))
                 SmapConfiguration = SmapConfiguration & 0xFFFFFFDF; /* 10Base-TX HDX */
 
-            PRINTF("smap: no strap mode (conf=0x%x, bmsr=0x%x)\n", SmapConfiguration, value);
+            M_DEBUG("smap: no strap mode (conf=0x%x, bmsr=0x%x)\n", SmapConfiguration, value);
 
             value = _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_ANAR);
             value = (SmapConfiguration & 0x5E0) | (value & 0x1F);
-            PRINTF("smap: anar=0x%x\n", value);
+            M_DEBUG("smap: anar=0x%x\n", value);
             _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_ANAR, value);
             _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_ANEN | SMAP_PHY_BMCR_RSAN);
         } else {
@@ -200,7 +200,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
             }
         }
 
-        PRINTF("smap: auto mode (BMCR=0x%x ANAR=0x%x)\n", _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR), _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_ANAR));
+        M_DEBUG("smap: auto mode (BMCR=0x%x ANAR=0x%x)\n", _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR), _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_ANAR));
 
     RepeatAutoNegoProcess:
         for (AutoNegoRetries = 0; AutoNegoRetries < 3; AutoNegoRetries++) {
@@ -234,7 +234,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
         /* If automatic negotiation fails, manually figure out which speed and duplex mode to use. */
         if (AutoNegoRetries >= 3) {
             if (EnableVerboseOutput)
-                PRINTF("smap: waiting valid link for 100Mbps Half-Duplex\n");
+                M_DEBUG("smap: waiting valid link for 100Mbps Half-Duplex\n");
 
             _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_100M);
             for (i = 0; i < 5; i++) {
@@ -253,7 +253,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
 
             if (i >= 30) {
                 if (EnableVerboseOutput)
-                    PRINTF("smap: waiting valid link for 10Mbps Half-Duplex\n");
+                    M_DEBUG("smap: waiting valid link for 10Mbps Half-Duplex\n");
 
                 _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_10M);
                 for (i = 0; i < 5; i++) {
@@ -283,7 +283,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
         RegDump[i] = _smap_read_phy(SmapDrivPrivData->emac3_regbase, i);
 
     if (EnableVerboseOutput)
-        PRINTF("smap: PHY: %04x %04x %04x %04x %04x %04x\n", RegDump[SMAP_DsPHYTER_BMCR], RegDump[SMAP_DsPHYTER_BMSR], RegDump[SMAP_DsPHYTER_PHYIDR1], RegDump[SMAP_DsPHYTER_PHYIDR2], RegDump[SMAP_DsPHYTER_ANAR], RegDump[SMAP_DsPHYTER_ANLPAR]);
+        M_DEBUG("smap: PHY: %04x %04x %04x %04x %04x %04x\n", RegDump[SMAP_DsPHYTER_BMCR], RegDump[SMAP_DsPHYTER_BMSR], RegDump[SMAP_DsPHYTER_PHYIDR1], RegDump[SMAP_DsPHYTER_PHYIDR2], RegDump[SMAP_DsPHYTER_ANAR], RegDump[SMAP_DsPHYTER_ANLPAR]);
 
     /* Special initialization for the National Semiconductor DP83846A PHY. */
     if (RegDump[SMAP_DsPHYTER_PHYIDR1] == SMAP_PHY_IDR1_VAL && (RegDump[SMAP_DsPHYTER_PHYIDR2] & SMAP_PHY_IDR2_MSK) == SMAP_PHY_IDR2_VAL) {
@@ -295,13 +295,13 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
             value2 = _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_RECR);
             if ((value2 != 0) || (value >= 0x11)) {
                 if (EnableVerboseOutput)
-                    PRINTF("smap: FCSCR=%d RECR=%d\n", value, value2);
+                    M_DEBUG("smap: FCSCR=%d RECR=%d\n", value, value2);
                 _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, 0);
                 goto WaitLink;
             }
         }
 
-        PRINTF("smap: PHY chip: DP83846A%d\n", (RegDump[SMAP_DsPHYTER_PHYIDR2] & SMAP_PHY_IDR2_REV_MSK) + 1);
+        M_DEBUG("smap: PHY chip: DP83846A%d\n", (RegDump[SMAP_DsPHYTER_PHYIDR2] & SMAP_PHY_IDR2_REV_MSK) + 1);
 
         /* If operating in 10Mbit mode, disable the 10Mb/s Loopback mode. */
         if (!EnableAutoNegotiation) {
@@ -345,7 +345,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
     if (FlowControlEnabled)
         SmapDrivPrivData->LinkMode |= 0x40;
 
-    PRINTF("smap: %s %s Duplex Mode %s Flow Control\n", LinkSpeed100M ? "100BaseTX" : "10BaseT", LinkFDX ? "Full" : "Half", FlowControlEnabled ? "with" : "without");
+    M_DEBUG("smap: %s %s Duplex Mode %s Flow Control\n", LinkSpeed100M ? "100BaseTX" : "10BaseT", LinkFDX ? "Full" : "Half", FlowControlEnabled ? "with" : "without");
 
     emac3_regbase = SmapDrivPrivData->emac3_regbase;
     emac3_value = SMAP_EMAC3_GET32(SMAP_R_EMAC3_MODE1) & 0x67FFFFFF;
@@ -388,7 +388,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
     smap_regbase = SmapDrivPrivData->smap_regbase;
     while (1) {
         if ((result = WaitEventFlag(SmapDrivPrivData->Dev9IntrEventFlag, SMAP_EVENT_START | SMAP_EVENT_INTR | SMAP_EVENT_LINK_CHECK, WEF_OR | WEF_CLEAR, &EFBits)) != 0) {
-            PRINTF("smap: WaitEventFlag -> %d\n", result);
+            M_DEBUG("smap: WaitEventFlag -> %d\n", result);
             break;
         }
 
@@ -476,7 +476,7 @@ static inline int SetupNetDev(void)
     EventFlagData.bits = 0;
 
     if ((result = SmapDriverData.Dev9IntrEventFlag = CreateEventFlag(&EventFlagData)) < 0) {
-        PRINTF("smap: CreateEventFlag -> %d\n", result);
+        M_DEBUG("smap: CreateEventFlag -> %d\n", result);
         return -6;
     }
 
@@ -486,13 +486,13 @@ static inline int SetupNetDev(void)
     ThreadData.priority = ThreadPriority;
     ThreadData.stacksize = ThreadStackSize;
     if ((result = SmapDriverData.IntrHandlerThreadID = CreateThread(&ThreadData)) < 0) {
-        PRINTF("smap: CreateThread -> %d\n", result);
+        M_DEBUG("smap: CreateThread -> %d\n", result);
         DeleteEventFlag(SmapDriverData.Dev9IntrEventFlag);
         return result;
     }
 
     if ((result = StartThread(SmapDriverData.IntrHandlerThreadID, &SmapDriverData)) < 0) {
-        PRINTF("smap: StartThread -> %d\n", result);
+        M_DEBUG("smap: StartThread -> %d\n", result);
         DeleteThread(SmapDriverData.IntrHandlerThreadID);
         DeleteEventFlag(SmapDriverData.Dev9IntrEventFlag);
         return result;

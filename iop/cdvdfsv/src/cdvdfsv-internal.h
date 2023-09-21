@@ -19,14 +19,9 @@
 #include <cdvdman.h>
 
 #include "cdvdman_opl.h"
+#include "mprintf.h"
 
-#ifdef DEBUG
-#define DPRINTF(args...)  printf(args)
-#define iDPRINTF(args...) Kprintf(args)
-#else
-#define DPRINTF(args...)
-#define iDPRINTF(args...)
-#endif
+#define MODNAME "cdvd_ee_driver"
 
 extern void cdvdfsv_register_scmd_rpc(SifRpcDataQueue_t *rpc_DQ);
 extern void cdvdfsv_register_ncmd_rpc(SifRpcDataQueue_t *rpc_DQ);

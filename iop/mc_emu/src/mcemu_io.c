@@ -11,17 +11,17 @@ int mc_configure(MemoryCard *mcds)
 {
     int i;
 
-    DPRINTF("vmcSpec[0].active = %d\n", vmcSpec[0].active);
-    DPRINTF("vmcSpec[1].active = %d\n", vmcSpec[1].active);
+    M_DEBUG("vmcSpec[0].active = %d\n", vmcSpec[0].active);
+    M_DEBUG("vmcSpec[1].active = %d\n", vmcSpec[1].active);
 
     if (vmcSpec[0].active == 0 && vmcSpec[1].active == 0)
         return 0;
 
     for (i = 0; i < MCEMU_PORTS; i++, mcds++) {
-        DPRINTF("vmcSpec[%d].flags           = 0x%X\n", i, vmcSpec[i].flags);
-        DPRINTF("vmcSpec[%d].cspec.PageSize  = 0x%X\n", i, vmcSpec[i].cspec.PageSize);
-        DPRINTF("vmcSpec[%d].cspec.BlockSize = 0x%X\n", i, vmcSpec[i].cspec.BlockSize);
-        DPRINTF("vmcSpec[%d].cspec.CardSize  = 0x%X\n", i, (unsigned int)vmcSpec[i].cspec.CardSize);
+        M_DEBUG("vmcSpec[%d].flags           = 0x%X\n", i, vmcSpec[i].flags);
+        M_DEBUG("vmcSpec[%d].cspec.PageSize  = 0x%X\n", i, vmcSpec[i].cspec.PageSize);
+        M_DEBUG("vmcSpec[%d].cspec.BlockSize = 0x%X\n", i, vmcSpec[i].cspec.BlockSize);
+        M_DEBUG("vmcSpec[%d].cspec.CardSize  = 0x%X\n", i, (unsigned int)vmcSpec[i].cspec.CardSize);
 
         if (vmcSpec[i].active == 1) {
             // Set virtual memorycard informations

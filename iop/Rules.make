@@ -21,7 +21,7 @@ ASFLAGS_TARGET = -march=r3000
 endif
 
 # include dir
-IOP_INCS := $(IOP_INCS) -I$(IOP_SRC_DIR) -I$(IOP_SRC_DIR)include -I$(IOP_INC_DIR) -I$(PS2SDK)/iop/include -I$(PS2SDK)/common/include
+IOP_INCS := $(IOP_INCS) -I$(IOP_SRC_DIR) -I$(IOP_SRC_DIR)include -I$(IOP_INC_DIR) -I$(PS2SDK)/iop/include -I$(PS2SDK)/common/include -I../common
 
 # Optimization compiler flags
 IOP_OPTFLAGS ?= -Os
