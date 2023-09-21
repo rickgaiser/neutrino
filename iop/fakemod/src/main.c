@@ -76,6 +76,11 @@ static void print_args(int arg_len, char *args)
     int args_idx = 0;
     int was_null = 1;
 
+    if (arg_len == 0)
+        return;
+
+    DPRINTF("Module arguments (arg_len=%d):\n", arg_len);
+
     // Search strings
     while(args_idx < arg_len) {
         if (args[args_idx] == 0) {
@@ -98,7 +103,7 @@ static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *mod
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(%s)\n", __FUNCTION__, modpath);
+    DPRINTF("%s(%s, %d, ...)\n", __FUNCTION__, modpath, arg_len);
 #ifdef DEBUG
     print_args(arg_len, args);
 #endif
@@ -129,7 +134,7 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x, %s)\n", __FUNCTION__, id, modname);
+    DPRINTF("%s(0x%x, %s, %d, ...)\n", __FUNCTION__, id, modname, arg_len);
 #ifdef DEBUG
     print_args(arg_len, args);
 #endif
@@ -188,7 +193,7 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
+    DPRINTF("%s(0x%x, %d, ...)\n", __FUNCTION__, id, arg_len);
 #ifdef DEBUG
     print_args(arg_len, args);
 #endif
@@ -252,7 +257,7 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
 {
     struct FakeModule *mod;
 
-    DPRINTF("%s(0x%x)\n", __FUNCTION__, id);
+    DPRINTF("%s(0x%x, ...)\n", __FUNCTION__, id);
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0 && mod->returnLoad == 0) {

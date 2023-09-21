@@ -279,6 +279,11 @@ static void print_iop_args(int arg_len, char *args)
     int args_idx = 0;
     int was_null = 1;
 
+    if (arg_len == 0)
+        return;
+
+    printf("Module arguments (arg_len=%d):\n", arg_len);
+
     // Search strings
     while(args_idx < arg_len) {
         if (args[args_idx] == 0) {
