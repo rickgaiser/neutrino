@@ -2,13 +2,10 @@
 #define EE_CORE_CONFIG_H
 
 
-#include <tamtypes.h>
-#include <tcpip.h>
-
 #include "ee_core.h"
 
 
-#define bool u8
+#define bool unsigned char
 #define false 0
 #define true 1
 
@@ -22,12 +19,14 @@ struct SEECoreConfig
     const char **_sELFArgv;
     int _iELFArgc;
 
+    // Pointer values
+    const void * _eeloadCopy;
+    const void *_initUserMemory;
+    const void *_irxtable;
+    const void *_irxptr;
+
     // Integer values
-    u32 _eeloadCopy;
-    u32 _initUserMemory;
-    u32 _irxtable;
-    u32 _irxptr;
-    u32 _compatFlags;
+    unsigned int _compatFlags;
 
     // Enable bits
     bool _enableDebugColors;
@@ -51,9 +50,9 @@ void eecc_setELFName(struct SEECoreConfig *eecc, const char *elfname);
 void eecc_setELFArgs(struct SEECoreConfig *eecc, int argc, const char *argv[]);
 
 // Integer values
-void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory);
-void eecc_setModStorageConfig(struct SEECoreConfig *eecc, u32 irxtable, u32 irxptr);
-void eecc_setCompatFlags(struct SEECoreConfig *eecc, u32 compatFlags);
+void eecc_setKernelConfig(struct SEECoreConfig *eecc, const void *eeloadCopy, const void *initUserMemory);
+void eecc_setModStorageConfig(struct SEECoreConfig *eecc, const void *irxtable, const void *irxptr);
+void eecc_setCompatFlags(struct SEECoreConfig *eecc, unsigned int compatFlags);
 
 // Enable bits
 void eecc_setDebugColors(struct SEECoreConfig *eecc, bool enable);

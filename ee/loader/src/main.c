@@ -10,7 +10,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 // PS2SDK
 #include <kernel.h>
 #include <ps2sdkapi.h>
-#include <tamtypes.h>
+#include <stdint.h>
 #include <loadfile.h>
 #include <iopcontrol.h>
 #include <libcdvd-common.h>
@@ -117,7 +117,7 @@ struct SModule
     const char *sUDNL;
 
     off_t iSize;
-    u8 *pData;
+    void *pData;
 
     int arg_len;
     char *args;
@@ -300,7 +300,7 @@ static void print_iop_args(int arg_len, char *args)
     }
 }
 
-static u8 * module_install(struct SModule *mod, u8 *addr, irxptr_t *irx)
+static uint8_t * module_install(struct SModule *mod, uint8_t *addr, irxptr_t *irx)
 {
     if (mod == NULL) {
         printf("ERROR: mod == NULL\n");
@@ -323,7 +323,7 @@ static u8 * module_install(struct SModule *mod, u8 *addr, irxptr_t *irx)
     print_iop_args(mod->arg_len, mod->args);
 
     // Align to 16 bytes
-    return (u8 *)((u32)(addr + 0xf) & ~0xf);
+    return (uint8_t *)((uint32_t)(addr + 0xf) & ~0xf);
 }
 
 /*----------------------------------------------------------------------------------------
@@ -335,8 +335,8 @@ static u8 * module_install(struct SModule *mod, u8 *addr, irxptr_t *irx)
 static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const struct romdir_entry *romdir_in)
 {
     struct romdir_entry *romdir_out_org = romdir_out;
-    u8 *ioprp_in = (u8 *)romdir_in;
-    u8 *ioprp_out = (u8 *)romdir_out;
+    uint8_t *ioprp_in = (uint8_t *)romdir_in;
+    uint8_t *ioprp_out = (uint8_t *)romdir_out;
 
     while (romdir_in->name[0] != '\0') {
         struct SModule *mod = modlist_get_by_udnlname(&drv.mod_isys, romdir_in->name);
@@ -357,7 +357,7 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
         romdir_out++;
     }
 
-    return (ioprp_out - (u8 *)romdir_out_org);
+    return (ioprp_out - (uint8_t *)romdir_out_org);
 }
 
 struct ioprp_ext_full {
@@ -689,7 +689,7 @@ void *modlist_get_settings(struct SModList *ml, const char *name)
     if (mod != NULL) {
         int i;
         for (i = 0; i < mod->iSize; i += 4) {
-            if (*(u32 *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
+            if (*(uint32_t *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
                 settings = (void *)(mod->pData + i);
                 break;
             }
@@ -727,11 +727,11 @@ int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
     // Debug info
     printf("fragfile[%d] fragments: start=%u, count=%u\n", fhi_fid, frag->frag_start, frag->frag_count);
     for (i=0; i<frag->frag_count; i++)
-        printf("- frag[%d] start=%u, count=%u\n", i, (u32)bdm->frags[frag->frag_start+i].sector, bdm->frags[frag->frag_start+i].count);
+        printf("- frag[%d] start=%u, count=%u\n", i, (unsigned int)bdm->frags[frag->frag_start+i].sector, bdm->frags[frag->frag_start+i].count);
 
     // Set BDM driver name and number
     // NOTE: can be set only once! Check?
-    bdm->drvName = (u32)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+    bdm->drvName = (uint32_t)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
     fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
     char *drvName = (char *)&bdm->drvName;
     printf("Using BDM device: %s%d\n", drvName, (int)bdm->devNr);
@@ -767,7 +767,7 @@ int main(int argc, char *argv[])
 {
     irxtab_t *irxtable;
     irxptr_t *irxptr_tab;
-    u8 *irxptr;
+    uint8_t *irxptr;
     int i;
     void *eeloadCopy, *initUserMemory;
     char sGameID[12];
@@ -1191,7 +1191,7 @@ int main(int argc, char *argv[])
         if (iCompat & COMPAT_MODE_5)
             set_cdvdman->flags |= IOPCORE_COMPAT_EMU_DVDDL;
 
-        printf("Compat flags: 0x%X, IOP=0x%X\n", iCompat, set_cdvdman->flags);
+        printf("Compat flags: 0x%X, IOP=0x%X\n", (unsigned int)iCompat, set_cdvdman->flags);
     }
 
     /*
@@ -1332,7 +1332,7 @@ int main(int argc, char *argv[])
     if (irxtable == NULL)
         irxtable = (irxtab_t *)OPL_MOD_STORAGE;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
-    irxptr = (u8 *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
+    irxptr = (uint8_t *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
 
     irxtable->modules = irxptr_tab;
     irxtable->count = 0;
@@ -1378,7 +1378,7 @@ int main(int argc, char *argv[])
     //
     // Load EECORE ELF sections
     //
-    u8 *boot_elf = (u8 *)mod_ee_core.pData;
+    uint8_t *boot_elf = (uint8_t *)mod_ee_core.pData;
     elf_header_t *eh = (elf_header_t *)boot_elf;
     elf_pheader_t *eph = (elf_pheader_t *)(boot_elf + eh->phoff);
     for (i = 0; i < eh->phnum; i++) {
@@ -1389,7 +1389,7 @@ int main(int argc, char *argv[])
         memcpy(eph[i].vaddr, pdata, eph[i].filesz);
 
         if (eph[i].memsz > eph[i].filesz)
-            memset((u8 *)eph[i].vaddr + eph[i].filesz, 0, eph[i].memsz - eph[i].filesz);
+            memset((uint8_t *)eph[i].vaddr + eph[i].filesz, 0, eph[i].memsz - eph[i].filesz);
     }
 
     //
@@ -1409,8 +1409,8 @@ int main(int argc, char *argv[])
         eecc_setGameID(&eeconf, sGameID);
     eecc_setELFName(&eeconf, sELFFile);
     eecc_setELFArgs(&eeconf, argc-iELFArgcStart, (const char **)&argv[iELFArgcStart]);
-    eecc_setKernelConfig(&eeconf, (u32)eeloadCopy, (u32)initUserMemory);
-    eecc_setModStorageConfig(&eeconf, (u32)irxtable, (u32)irxptr);
+    eecc_setKernelConfig(&eeconf, eeloadCopy, initUserMemory);
+    eecc_setModStorageConfig(&eeconf, irxtable, irxptr);
     eecc_setCompatFlags(&eeconf, iCompat);
     eecc_setDebugColors(&eeconf, bEnableDebugColors);
     eecc_setPS2Logo(&eeconf, bEnablePS2Logo);

@@ -11,9 +11,11 @@ void eecc_init(struct SEECoreConfig *eecc)
     eecc_setELFName(eecc, NULL);
     eecc_setELFArgs(eecc, 0, NULL);
 
+    // Pointer values
+    eecc_setKernelConfig(eecc, NULL, NULL);
+    eecc_setModStorageConfig(eecc, NULL, NULL);
+
     // Integer values
-    eecc_setKernelConfig(eecc, 0, 0);
-    eecc_setModStorageConfig(eecc, 0, 0);
     eecc_setCompatFlags(eecc, 0);
 
     // Enable bits
@@ -50,20 +52,22 @@ void eecc_setELFArgs(struct SEECoreConfig *eecc, int argc, const char *argv[])
 }
 
 //---------------------------------------------------------------------------
-// Integer values
-void eecc_setKernelConfig(struct SEECoreConfig *eecc, u32 eeloadCopy, u32 initUserMemory)
+// Pointer values
+void eecc_setKernelConfig(struct SEECoreConfig *eecc, const void *eeloadCopy, const void *initUserMemory)
 {
     eecc->_eeloadCopy = eeloadCopy;
     eecc->_initUserMemory = initUserMemory;
 }
 
-void eecc_setModStorageConfig(struct SEECoreConfig *eecc, u32 irxtable, u32 irxptr)
+void eecc_setModStorageConfig(struct SEECoreConfig *eecc, const void *irxtable, const void *irxptr)
 {
     eecc->_irxtable = irxtable;
     eecc->_irxptr = irxptr;
 }
 
-void eecc_setCompatFlags(struct SEECoreConfig *eecc, u32 compatFlags)
+//---------------------------------------------------------------------------
+// Integer values
+void eecc_setCompatFlags(struct SEECoreConfig *eecc, unsigned int compatFlags)
 {
     eecc->_compatFlags = compatFlags;
 }
@@ -152,13 +156,13 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
     }
 
     // Kernel config
-    snprintf(psConfig, maxStrLen, "-kernel=%u %u", eecc->_eeloadCopy, eecc->_initUserMemory);
+    snprintf(psConfig, maxStrLen, "-kernel=%u %u", (unsigned int)eecc->_eeloadCopy, (unsigned int)eecc->_initUserMemory);
     eecc->_argv[eecc->_argc++] = psConfig;
     maxStrLen -= strlen(psConfig) + 1;
     psConfig += strlen(psConfig) + 1;
 
     // Module storage config
-    snprintf(psConfig, maxStrLen, "-mod=%u %u", eecc->_irxtable, eecc->_irxptr);
+    snprintf(psConfig, maxStrLen, "-mod=%u %u", (unsigned int)eecc->_irxtable, (unsigned int)eecc->_irxptr);
     eecc->_argv[eecc->_argc++] = psConfig;
     maxStrLen -= strlen(psConfig) + 1;
     psConfig += strlen(psConfig) + 1;

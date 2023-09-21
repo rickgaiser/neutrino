@@ -31,7 +31,7 @@
 #define PARAM_MIPS_DCACHE_ON           (0x10)
 #define PARAM_CACHE_FLASH_CHANNELS     (0x11)
 
-#define GM_IF ((vu32 *)0x1F801450)
+#define GM_IF ((volatile uint32_t *)0x1F801450)
 
 void ResetDeckardXParams();
 void ApplyDeckardXParam(const char *title);

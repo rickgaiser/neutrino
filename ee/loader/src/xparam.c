@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 // PS2SDK
-#include <tamtypes.h>
+#include <stdint.h>
 #include <loadfile.h>
 
 // Other
@@ -152,7 +152,7 @@ void ResetDeckardXParams()
         return;
     }
 
-    u32 default_values[] = {
+    uint32_t default_values[] = {
         0x01F4, // PARAM_MDEC_DELAY_CYCLE
         0x07D0, // PARAM_SPU_INT_DELAY_LIMIT
         0x0023, // PARAM_SPU_INT_DELAY_PPC_COEFF
@@ -182,7 +182,7 @@ void ResetDeckardXParams()
         for (i = 0; i < 0x12; i++) {
             sprintf(&params[12], "0X%02X", i);
             params[16] = 0;
-            sprintf(&params[17], "0X%08X", default_values[i]);
+            sprintf(&params[17], "0X%08X", (unsigned int)default_values[i]);
             params[27] = 0;
             SifLoadModule("rom0:XPARAM", 28, params);
         }

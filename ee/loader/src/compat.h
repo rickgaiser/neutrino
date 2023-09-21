@@ -2,10 +2,10 @@
 #define COMPAT_H
 
 
-#include <tamtypes.h>
+#include <stdint.h>
 
 
-u32 get_compat(const char *id);
+uint32_t get_compat(const char *id);
 void *get_modstorage(const char *id);
 
 

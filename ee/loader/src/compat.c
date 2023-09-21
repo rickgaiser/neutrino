@@ -20,7 +20,7 @@
 typedef struct
 {
     char *game;
-    u32 flags;
+    uint32_t flags;
 } gamecompat_t;
 
 static const gamecompat_t default_game_compat[] = {
@@ -31,7 +31,7 @@ static const gamecompat_t default_game_compat[] = {
     {NULL, 0},
 };
 
-u32 get_compat(const char *id)
+uint32_t get_compat(const char *id)
 {
     const gamecompat_t *p = &default_game_compat[0];
     while (p->game != NULL) {
