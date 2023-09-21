@@ -1277,8 +1277,6 @@ int main(int argc, char *argv[])
             printf("ERROR: fakemod not found!\n");
             return -1;
         }
-        // Clear UDNL name so this module gets loaded
-        mod_fakemod->sUDNL = NULL;
 
         printf("Faking modules:\n");
         for (i = 0; i < drv.fake.count; i++) {
@@ -1327,6 +1325,8 @@ int main(int argc, char *argv[])
         if (drv.mod_isys.mod[i].sUDNL == NULL)
             modcount++;
     }
+    if (drv.fake.count > 0)
+        modcount++;
 
     irxtable = (irxtab_t *)get_modstorage(sGameID);
     if (irxtable == NULL)
@@ -1367,6 +1367,11 @@ int main(int argc, char *argv[])
     }
     for (i = 0; i < drv.mod_drv.count; i++) {
         irxptr = module_install(&drv.mod_drv.mod[i], irxptr, irxptr_tab++);
+        irxtable->count++;
+    }
+    // Load FAKEMOD last, to prevent it from faking our own modules
+    if (drv.fake.count > 0) {
+        irxptr = module_install(mod_fakemod, irxptr, irxptr_tab++);
         irxtable->count++;
     }
 

@@ -5,6 +5,7 @@
 
 #include "fakemod.h"
 #include "ioplib.h"
+#include "elf.h"
 
 #ifdef DEBUG
 #define DPRINTF(args...) printf(args)
@@ -164,7 +165,9 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
 static int Hook_LoadModuleBuffer(void *ptr)
 {
     struct FakeModule *mod;
-    const char *modname = (const char *)ptr + 0x8e;
+    elf_header_t *eh = (elf_header_t *)ptr;
+    elf_pheader_t *eph = (elf_pheader_t *)(ptr + eh->phoff);
+    const char *modname = (const char *)ptr + eph->offset + 0x1a;
 
     DPRINTF("%s() modname = '%s'\n", __FUNCTION__, modname);
 
