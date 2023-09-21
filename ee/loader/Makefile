@@ -6,8 +6,8 @@ EE_NEWLIB_NANO = 1
 EE_COMPACT_EXECUTABLE = 1
 
 EE_BIN_NAME = neutrino
-EE_BIN = $(EE_BIN_NAME).elf
-EE_BIN_PACKED = $(EE_BIN_NAME)_packed.elf
+EE_BIN = $(EE_BIN_NAME)_unpacked.elf
+EE_BIN_PACKED = $(EE_BIN_NAME).elf
 
 $(EE_BIN_PACKED): $(EE_BIN)
 	ps2-packer $< $@ > /dev/null
