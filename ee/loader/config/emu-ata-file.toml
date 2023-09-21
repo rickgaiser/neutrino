@@ -16,3 +16,10 @@ startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 # For booting rom0:OSDSYS, block the following?:
 # - rom0:ATAD (dev9 + atad combined driver)
 # - HDDLOAD
+#
+# What do these libraries do? Also block?:
+# - rom0:XDEV9 ?
+# - rom0:XDEV9SERV ?
+# - rom0:PS1ID ?
+# - rom0:PS1VERE ?
+# - rom1:DVDIDE ?
