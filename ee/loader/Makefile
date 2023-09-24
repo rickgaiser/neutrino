@@ -23,7 +23,6 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso'
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
 #GAME = "DVD/Disney's Treasure Planet (E).iso"
-#GAME = "DVD/Splinter Cell (E).iso" # Skips FMV
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
@@ -105,6 +104,9 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = "DVD/Splinter Cell - Double Agent (E).iso"
 #GAME = "DVD/Splinter Cell - Chaos Theory (E).iso"
 #GAME = "DVD/Jak X (E).iso"
+#GAME = "DVD/007 - Nightfire (E).iso"
+#GAME = "DVD/Splinter Cell (E).iso" # Skips FMV (IOP memory overrun issue? fixed!)
+#GAME = "DVD/Splashdown (E).iso" # IOP memory allocation issue: allocates too little for the DVD reads that follow (fixed!)
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
