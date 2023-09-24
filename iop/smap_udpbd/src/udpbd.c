@@ -81,7 +81,7 @@ static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, u
     iop_sys_clock_t clock;
     udpbd_pkt_rw_t pkt;
 
-    //M_DEBUG("%s: sector=%d, count=%d\n", __func__, sector, count);
+    //M_DEBUG("%s: sector=%d, count=%d\n", __func__, (uint32_t)sector, count);
 
     g_cmdid         = (g_cmdid + 1) & 0x7;
     g_buffer        = buffer;
@@ -121,7 +121,7 @@ static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, u
             //M_DEBUG("%s(%d, %d): ok\n", __func__);
             break;
         case 1:
-            M_DEBUG("%s(%d, %d): ERROR: timeout\n", __func__, sector, count);
+            M_DEBUG("%s(%d, %d): ERROR: timeout\n", __func__, (uint32_t)sector, count);
             break;
         //case 2:
         //    M_DEBUG("%s(%d, %d): ERROR: invalid packet order!\n", __func__, sector, count);
@@ -130,7 +130,7 @@ static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, u
         //    M_DEBUG("%s(%d, %d): ERROR: invalid packet size!\n", __func__, sector, count);
         //    break;
         default:
-            M_DEBUG("%s(%d, %d): ERROR: unknown %d\n", __func__, sector, count, g_errno);
+            M_DEBUG("%s(%d, %d): ERROR: unknown %d\n", __func__, (uint32_t)sector, count, g_errno);
             break;
     }
 
@@ -148,7 +148,7 @@ static int udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, ui
     int retries;
     uint16_t count_left = count;
 
-    //M_DEBUG("%s: sector=%d, count=%d\n", __func__, sector, count);
+    //M_DEBUG("%s: sector=%d, count=%d\n", __func__, (uint32_t)sector, count);
 
     if (bdm_connected == 0)
         return -EIO;
@@ -184,7 +184,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
 {
     uint32_t EFBits;
 
-    M_DEBUG("%s: sector=%d, count=%d\n", __func__, sector, count);
+    M_DEBUG("%s: sector=%d, count=%d\n", __func__, (uint32_t)sector, count);
 
     g_cmdid = (g_cmdid + 1) & 0x7;
 
@@ -199,7 +199,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
         pkt.rw.sector_nr = sector;
 
         if (udp_packet_send(udpbd_socket, (udp_packet_t *)&pkt, sizeof(struct SUDPBDv2_RWRequest)) < 0) {
-            M_DEBUG("%s(%d, %d): ERROR\n", __func__, sector, count);
+            M_DEBUG("%s(%d, %d): ERROR\n", __func__, (uint32_t)sector, count);
             return -1;
         }
     }
@@ -218,7 +218,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
         while (count_left--) {
             pkt.hdr.cmdpkt++;
             if (udp_packet_send_ll(udpbd_socket, (udp_packet_t *)&pkt, sizeof(struct SUDPBDv2_Header) + sizeof(union block_type), buffer, 512) < 0) {
-                M_DEBUG("%s(%d, %d): ERROR\n", __func__, sector, count);
+                M_DEBUG("%s(%d, %d): ERROR\n", __func__, (uint32_t)sector, count);
                 return -1;
             }
             buffer = (const uint8_t *)buffer + 512;
@@ -247,7 +247,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
             //M_DEBUG("%s(%d, %d): ok\n", __func__);
             break;
         case 1:
-            M_DEBUG("%s(%d, %d): ERROR: timeout\n", __func__, sector, count);
+            M_DEBUG("%s(%d, %d): ERROR: timeout\n", __func__, (uint32_t)sector, count);
             break;
         case 2:
             //M_DEBUG("%s(%d, %d): ERROR: invalid packet order!\n", __func__, sector, count);
@@ -256,7 +256,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
             //M_DEBUG("%s(%d, %d): ERROR: invalid packet size!\n", __func__, sector, count);
             break;
         default:
-            M_DEBUG("%s(%d, %d): ERROR: unknown %d\n", __func__, sector, count, g_errno);
+            M_DEBUG("%s(%d, %d): ERROR: unknown %d\n", __func__, (uint32_t)sector, count, g_errno);
             break;
     }
 
@@ -265,7 +265,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
         return count;
     }
 
-    M_DEBUG("%s(%d, %d): ERROR\n", __func__, sector, count);
+    M_DEBUG("%s(%d, %d): ERROR\n", __func__, (uint32_t)sector, count);
     g_errno = 0;
     return -EIO;
 }
