@@ -1,5 +1,6 @@
 #include <loadcore.h>
 #include <stdio.h>
+#include <string.h>
 #include <atahw.h>
 
 #include "atad.h"
@@ -140,6 +141,11 @@ int ata_device_idle(int device, int period)
 int ata_device_sce_identify_drive(int device, void *data)
 {
     M_DEBUG("(%d)\n", device);
+
+    // return zero filled response even if hdd id is not present
+    memset(data, 0, 512);
+    fhi_read(FHI_FID_ATA0ID, data, 0, 1);
+
     return 0;
 }
 

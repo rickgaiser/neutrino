@@ -8,7 +8,7 @@
 
 
 #define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
-#define BDM_MAX_FILES 5
+#define BDM_MAX_FILES 6
 #define BDM_MAX_FRAGS 64 // 64 * 12bytes = 768bytes
 
 struct fhi_bdm_fragfile
