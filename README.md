@@ -63,6 +63,10 @@ Options:
                     - <file>
                     NOTE: only both emulated, or both real.
                           mixing not possible
+  -ata0id=<mode>    ATA 0 HDD ID emulation mode, supported are:
+                    - no (default)
+                    - <file>
+                    NOTE: only supported if ata0 is present
   -ata1=<mode>      See -ata0=<mode>
 
   -mc0=<mode>       MC0 emulation mode, supported are:
