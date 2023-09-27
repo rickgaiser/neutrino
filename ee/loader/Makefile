@@ -113,6 +113,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #-bsd=udpbd -dvd=mass:$(GAME) -mc0=mass:VMC/mymc.bin
 #-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0)
 #-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -mc0=mass:VMC/mymc.bin
+#-bsd=udpbd -dvd=mass:"DVD/Splinter Cell (E).iso" -elf="cdrom0:\\LOADER.PS2;1" --b 0_0_2 -wantload -ll -diskimage -restart -l=1 -v=13117
 
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser

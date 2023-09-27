@@ -20,20 +20,16 @@ stdio_IMPORTS_end
 #endif
 
 sysclib_IMPORTS_start
-I_memcpy
-I_bzero
 I_strncmp
 sysclib_IMPORTS_end
 
 intrman_IMPORTS_start
 I_CpuSuspendIntr
 I_CpuResumeIntr
-I_QueryIntrContext
 intrman_IMPORTS_end
 
 ioman_IMPORTS_start
 I_open
-//I_write
 I_close
 I_AddDrv
 I_DelDrv
@@ -54,7 +50,6 @@ thevent_IMPORTS_end
 
 thsemap_IMPORTS_start
 I_CreateSema
-//I_DeleteSema
 I_SignalSema
 I_WaitSema
 thsemap_IMPORTS_end
