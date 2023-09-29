@@ -23,6 +23,7 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso'
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
 #GAME = "DVD/Disney's Treasure Planet (E).iso"
+#GAME = "CD/Pink Pong (E).iso" # BSOD on USB only. In PCSX2 with USB it works?
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
