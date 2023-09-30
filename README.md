@@ -26,9 +26,11 @@ The following backing storage devices are supported:
 These are all BDM drivers, or "Block Devices". On all devices the following partitioning schemes are supported:
 - MBR (Master Boot Record)
 - GPT (GUID Partition Table)
+
 And the following file systems:
 - exFat
 - FAT32
+
 During the loading phase, these drivers will be loaded and all files are accessable as `mass0:<file>` or `mass1:<file>`.
 
 For the ATA device there is also read-ony HDLoader compatibility. HDLoader uses APA partitioning and puts the iso files directly into the partitions, without using a filesystem.
