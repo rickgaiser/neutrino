@@ -9,6 +9,7 @@ all:
 	$(MAKE) -C iop/cdvdman_esr2 all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fakemod      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_bdm      all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/hdlfs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/mc_emu       all DEBUG=$(IOPCORE_DEBUG)
@@ -30,6 +31,7 @@ clean:
 	$(MAKE) -C iop/cdvdman_esr2 clean
 	$(MAKE) -C iop/fakemod      clean
 	$(MAKE) -C iop/fhi_bdm      clean
+	$(MAKE) -C iop/hdlfs        clean
 	$(MAKE) -C iop/imgdrv       clean
 	$(MAKE) -C iop/isofs        clean
 	$(MAKE) -C iop/mc_emu       clean

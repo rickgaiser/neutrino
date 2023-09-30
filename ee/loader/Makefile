@@ -140,6 +140,7 @@ copy:
 	cp ../../iop/cdvdman_esr2/irx/cdvdman_esr2.irx modules
 	cp ../../iop/fakemod/irx/fakemod.irx           modules
 	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx           modules
+	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
 	cp ../../iop/isofs/irx/isofs.irx               modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
