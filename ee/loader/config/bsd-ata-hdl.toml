@@ -1,0 +1,42 @@
+# Name of loaded config, to show to user
+name = "ATA via DEV9 HDLoader driver"
+
+# Modules to load in load environment
+[[module-le]]
+file = "iomanX.irx"
+[[module-le]]
+file = "fileXio.irx"
+[[module-le]]
+file = "isofs.irx"
+[[module-le]]
+file = "ps2dev9.irx"
+[[module-le]]
+file = "ps2atad.irx"
+[[module-le]]
+file = "ps2hdd-osd.irx"
+args = ["-o", "4", "-n", "20"]
+[[module-le]]
+file = "hdlfs.irx"
+
+# Modules to load in emulation environment
+[[module-ee]]
+file = "fhi_bdm.irx"
+ioprp = "FHI" # ID used by loader
+[[module-ee]]
+file = "ps2dev9.irx"
+[[module-ee]]
+file = "ata_bd.irx"
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "DEV9.IRX"
+name = "dev9"
+replace = true
+version = 0x0208
+startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "ATAD.IRX"
+name = "atad_driver"
+replace = true
+version = 0x0207
+startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

@@ -60,6 +60,7 @@ void print_usage()
     printf("  -bsd=<driver>     Backing store drivers, supported are:\n");
     printf("                    - no (default)\n");
     printf("                    - ata\n");
+    printf("                    - ata-hdl\n");
     printf("                    - usb\n");
     printf("                    - mx4sio\n");
     printf("                    - udpbd\n");
@@ -110,9 +111,8 @@ void print_usage()
     printf("\n");
     printf("Usage examples:\n");
     printf("  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf\n");
-    printf("  neutrino.elf -dvd=esr\n");
-    printf("  neutrino.elf -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser\n");
+    printf("  neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=ata-hdl -dvd=hdl:filename.iso\n");
 }
 
 struct SModule
