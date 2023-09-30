@@ -2,7 +2,7 @@
 name = "ATA emulation using image file"
 
 # Modules to load
-[[module-emu]]
+[[module-ee]]
 file = "atad_emu.irx"
 
 # Modules of the game that are faked/blocked

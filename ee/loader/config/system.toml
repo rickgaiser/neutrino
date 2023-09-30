@@ -17,11 +17,11 @@ name = "System settings and drivers"
 #disk_id = [0x00, 0x00, 0x00, 0x00, 0x00]
 
 # Modules to load in emulation environment
-[[module-emu]]
+[[module-ee]]
 file = "eesync.irx"
 ioprp = "EESYNC"
-[[module-emu]]
+[[module-ee]]
 file = "imgdrv.irx"
-[[module-emu]]
+[[module-ee]]
 file = "fakemod.irx"
 ioprp = "FAKEMOD" # ID used by loader

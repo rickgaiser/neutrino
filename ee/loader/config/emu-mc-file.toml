@@ -2,5 +2,5 @@
 name = "MC emulation using image file"
 
 # Modules to load
-[[module-emu]]
+[[module-ee]]
 file = "mc_emu.irx"

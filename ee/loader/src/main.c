@@ -151,12 +151,12 @@ struct SSystemSettings {
 } sys;
 
 struct SDriver {
-    // System drivers for load environment
-    struct SModList mod_lsys;
-    // System drivers for emulation environment
-    struct SModList mod_isys;
-    // Device drivers (for both environments)
-    struct SModList mod_drv;
+    // Drivers for load environment
+    struct SModList mod_l_env;
+    // Drivers for emulation environment
+    struct SModList mod_e_env;
+    // Drivers for all environments
+    struct SModList mod_all_env;
     // Module faking for emulation environment
     struct SFakeList fake;
 } drv;
@@ -343,7 +343,7 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
     uint8_t *ioprp_out = (uint8_t *)romdir_out;
 
     while (romdir_in->name[0] != '\0') {
-        struct SModule *mod = modlist_get_by_udnlname(&drv.mod_isys, romdir_in->name);
+        struct SModule *mod = modlist_get_by_udnlname(&drv.mod_e_env, romdir_in->name);
         if (mod != NULL) {
             printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
             memcpy(ioprp_out, mod->pData, mod->iSize);
@@ -591,12 +591,12 @@ void driver_init()
 {
     // Initialize driver structure
     memset(&drv, 0, sizeof(struct SDriver));
-    drv.mod_drv.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
-    memset(drv.mod_drv.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
-    drv.mod_isys.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
-    memset(drv.mod_isys.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
-    drv.mod_lsys.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
-    memset(drv.mod_lsys.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
+    drv.mod_all_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
+    memset(drv.mod_all_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
+    drv.mod_e_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
+    memset(drv.mod_e_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
+    drv.mod_l_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
+    memset(drv.mod_l_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
     drv.fake.fake = malloc(MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule)); // NOTE: never freed, but we don't care
     memset(drv.fake.fake, 0, MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule));
 }
@@ -667,9 +667,9 @@ int load_driver(const char * type, const char * subtype)
         free(arr);
     }
 
-    modlist_add_array(&drv.mod_drv, tbl_root, "module");
-    modlist_add_array(&drv.mod_isys, tbl_root, "module-emu");
-    modlist_add_array(&drv.mod_lsys, tbl_root, "module-load");
+    modlist_add_array(&drv.mod_all_env, tbl_root, "module");
+    modlist_add_array(&drv.mod_e_env, tbl_root, "module-ee");
+    modlist_add_array(&drv.mod_l_env, tbl_root, "module-le");
     fakelist_add_array(&drv.fake, tbl_root);
     free(tbl_root);
 
@@ -955,11 +955,11 @@ int main(int argc, char *argv[])
      */
     if (module_load(&mod_ee_core) < 0)
         return -1;
-    if (modlist_load(&drv.mod_isys) < 0)
+    if (modlist_load(&drv.mod_e_env) < 0)
         return -1;
-    if (modlist_load(&drv.mod_lsys) < 0)
+    if (modlist_load(&drv.mod_l_env) < 0)
         return -1;
-    if (modlist_load(&drv.mod_drv) < 0)
+    if (modlist_load(&drv.mod_all_env) < 0)
         return -1;
 
     /*
@@ -983,34 +983,34 @@ int main(int argc, char *argv[])
     /*
      * Start load environment modules
      */
-    if (modlist_start(&drv.mod_lsys) < 0)
+    if (modlist_start(&drv.mod_l_env) < 0)
         return -1;
-    if (modlist_start(&drv.mod_drv) < 0)
+    if (modlist_start(&drv.mod_all_env) < 0)
         return -1;
-    if (modlist_get_by_name(&drv.mod_lsys, "fileXio.irx") != NULL)
+    if (modlist_get_by_name(&drv.mod_l_env, "fileXio.irx") != NULL)
         fileXioInit();
 
     // FAKEMOD optional module
     // Only loaded when modules need to be faked
-    struct SModule *mod_fakemod = modlist_get_by_udnlname(&drv.mod_isys, "FAKEMOD");
+    struct SModule *mod_fakemod = modlist_get_by_udnlname(&drv.mod_e_env, "FAKEMOD");
 
     // FHI optional module
     // Only loaded when file access is needed
     // NOTE: FHI is an abstraction to FHI_BDM, FHI_FILE, etc...
-    struct SModule *mod_fhi = modlist_get_by_udnlname(&drv.mod_isys, "FHI");
+    struct SModule *mod_fhi = modlist_get_by_udnlname(&drv.mod_e_env, "FHI");
 
     // Load module settings for fhi_bdm backing store
-    struct fhi_bdm *set_fhi_bdm = modlist_get_settings(&drv.mod_isys, "fhi_bdm.irx");
+    struct fhi_bdm *set_fhi_bdm = modlist_get_settings(&drv.mod_e_env, "fhi_bdm.irx");
     if (set_fhi_bdm != NULL)
         memset((void *)set_fhi_bdm, 0, sizeof(struct fhi_bdm));
 
     // Load module settings for cdvd emulator
-    struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod_isys, "cdvdman_emu.irx");
+    struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod_e_env, "cdvdman_emu.irx");
     if (set_cdvdman != NULL)
         memset((void *)set_cdvdman, 0, sizeof(struct cdvdman_settings_common));
 
     // Load module settings for module faker
-    struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod_isys, "fakemod.irx");
+    struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod_e_env, "fakemod.irx");
     if (set_fakemod != NULL)
         memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
 
@@ -1051,6 +1051,8 @@ int main(int argc, char *argv[])
         }
         // Get ISO file size
         iso_size = lseek64(fd_iso, 0, SEEK_END);
+        printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
+
         char buffer[6];
         // Validate this is an ISO
         lseek64(fd_iso, 16 * 2048, SEEK_SET);
@@ -1078,7 +1080,6 @@ int main(int argc, char *argv[])
                 printf("- DVD-DL detected\n");
             }
         }
-        printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
 
         if (eMediaType == SCECdNODISC)
             eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
@@ -1332,9 +1333,9 @@ int main(int argc, char *argv[])
 
     // Count the number of modules to pass to the ee_core
     int modcount = 1; // IOPRP
-    modcount += drv.mod_drv.count;
-    for (i = 0; i < drv.mod_isys.count; i++) {
-        if (drv.mod_isys.mod[i].sUDNL == NULL)
+    modcount += drv.mod_all_env.count;
+    for (i = 0; i < drv.mod_e_env.count; i++) {
+        if (drv.mod_e_env.mod[i].sUDNL == NULL)
             modcount++;
     }
     if (drv.fake.count > 0)
@@ -1370,15 +1371,15 @@ int main(int argc, char *argv[])
     //
     // Load modules into place
     //
-    for (i = 0; i < drv.mod_isys.count; i++) {
+    for (i = 0; i < drv.mod_e_env.count; i++) {
         // Load only the modules that are not part of IOPRP / UDNL
-        if (drv.mod_isys.mod[i].sUDNL == NULL) {
-            irxptr = module_install(&drv.mod_isys.mod[i], irxptr, irxptr_tab++);
+        if (drv.mod_e_env.mod[i].sUDNL == NULL) {
+            irxptr = module_install(&drv.mod_e_env.mod[i], irxptr, irxptr_tab++);
             irxtable->count++;
         }
     }
-    for (i = 0; i < drv.mod_drv.count; i++) {
-        irxptr = module_install(&drv.mod_drv.mod[i], irxptr, irxptr_tab++);
+    for (i = 0; i < drv.mod_all_env.count; i++) {
+        irxptr = module_install(&drv.mod_all_env.mod[i], irxptr, irxptr_tab++);
         irxtable->count++;
     }
     // Load FAKEMOD last, to prevent it from faking our own modules

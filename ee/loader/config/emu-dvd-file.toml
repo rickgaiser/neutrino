@@ -2,10 +2,10 @@
 name = "CD/DVD emulation using image file"
 
 # Modules to load
-[[module-emu]]
+[[module-ee]]
 file = "cdvdman_emu.irx"
 ioprp = "CDVDMAN"
-[[module-emu]]
+[[module-ee]]
 file = "cdvdfsv.irx"
 ioprp = "CDVDFSV"
 

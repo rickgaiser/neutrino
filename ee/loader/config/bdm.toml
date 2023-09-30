@@ -4,23 +4,23 @@ name = "Block Device Manager (with exFat and FHI)"
 # Modules to load in load environment
 # the end result of these drivers (in combination with the BDM BD drivers) must
 # result in the "mass:" path being available to the load environment
-[[module-load]]
+[[module-le]]
 file = "bdm.irx"
-[[module-load]]
+[[module-le]]
 file = "bdmfs_fatfs.irx"
 # These 3 drivers are needed for isofs
 # it would be nice if we could remove that dependency
-[[module-load]]
+[[module-le]]
 file = "iomanX.irx"
-[[module-load]]
+[[module-le]]
 file = "fileXio.irx"
-[[module-load]]
+[[module-le]]
 file = "isofs.irx"
 
 # Modules to load in emulation environment
 # the end result of these drivers (in combination with the BDM BD drivers) must
 # result in the file handle interface (fhi) to be available to the emulation
 # environment
-[[module-emu]]
+[[module-ee]]
 file = "fhi_bdm.irx"
 ioprp = "FHI" # ID used by loader
