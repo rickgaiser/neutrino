@@ -621,8 +621,6 @@ int _start(int argc, char **argv)
     RegisterLibraryEntries(&_exp_cdvdman);
     RegisterLibraryEntries(&_exp_cdvdstm);
 
-    DeviceInit();
-
     // Setup the callback timer.
     USec2SysClock((cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) ? 5000 : 0, &gCallbackSysClock);
 

@@ -7,19 +7,6 @@
 // FHI exported function pointer
 uint32_t (*fp_fhi_size)(int file_handle);
 int (*fp_fhi_read)(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count);
-int (*fp_fhi_write)(int file_handle, const void *buffer, unsigned int sector_start, unsigned int sector_count);
-
-void DeviceInit(void)
-{
-    M_DEBUG("%s\n", __func__);
-}
-
-int DeviceReady(void)
-{
-    //M_DEBUG("%s\n", __func__);
-
-    return SCECdComplete; // SCECdNotReady
-}
 
 void DeviceFSInit(void)
 {
@@ -30,7 +17,6 @@ void DeviceFSInit(void)
     lib = ioplib_getByName("fhi\0\0\0\0\0");
     fp_fhi_size = lib->exports[4];
     fp_fhi_read = lib->exports[5];
-    fp_fhi_write = lib->exports[6];
 
     M_DEBUG("Waiting for device...\n");
 
