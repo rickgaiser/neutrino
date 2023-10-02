@@ -258,7 +258,7 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
     M_DEBUG("%s(0x%x, ...)\n", __FUNCTION__, id);
 
     mod = checkFakemodById(id, fmd.fake);
-    if (mod != NULL && (mod->prop & FAKE_PROP_REPLACE) == 0 && mod->returnLoad == 0) {
+    if (mod != NULL && mod->returnLoad == 0) {
         M_DEBUG("- FAKING! id=0x%x\n", mod->id);
         memset(status, 0, sizeof(ModuleStatus));
         strcpy(status->name, mod->name);

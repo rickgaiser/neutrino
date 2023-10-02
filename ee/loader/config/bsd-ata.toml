@@ -14,12 +14,10 @@ file = "ata_bd.irx"
 [[fake]]
 file = "DEV9.IRX"
 name = "dev9"
-replace = true
 version = 0x0208
 startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 [[fake]]
 file = "ATAD.IRX"
 name = "atad_driver"
-replace = true
 version = 0x0207
 startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

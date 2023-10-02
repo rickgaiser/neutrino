@@ -19,7 +19,6 @@ struct FakeModule
     uint16_t fill;
 } __attribute__((packed));
 // Fake module properties
-#define FAKE_PROP_REPLACE (1<<0) /// 'fake' module is replacement module (can be used by the game)
 #define FAKE_PROP_UNLOAD  (1<<1) /// 'fake' module can be unloaded (note that re-loading is not possible!)
 
 #define MODULE_SETTINGS_MAGIC 0xf1f2f3f4

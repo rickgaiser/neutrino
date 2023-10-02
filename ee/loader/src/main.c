@@ -543,9 +543,6 @@ int fakelist_add(struct SFakeList *fl, toml_table_t *t)
     v = toml_string_in(t, "name");
     if (v.ok)
         f->name = v.u.s; // NOTE: passing ownership of dynamic memory
-    v = toml_bool_in(t, "replace");
-    if (v.ok)
-        f->prop |= (v.u.b != 0) ? FAKE_PROP_REPLACE : 0;
     v = toml_bool_in(t, "unload");
     if (v.ok)
         f->prop |= (v.u.b != 0) ? FAKE_PROP_UNLOAD : 0;

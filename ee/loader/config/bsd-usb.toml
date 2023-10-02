@@ -36,6 +36,5 @@ file = "usbmass_bd_mini.irx"
 [[fake]]
 file = "USBD.IRX"
 name = "USB_driver"
-replace = true
 version = 0x0204
 startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

@@ -19,21 +19,18 @@ args = ["ip=192.168.1.10"]
 [[fake]]
 file = "DEV9.IRX"
 name = "dev9"
-replace = true
 version = 0x0208
 loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
 startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 [[fake]]
 file = "ENT_SMAP.IRX"
 name = "ent_smap"
-replace = false
 version = 0x021f
 loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
 startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 [[fake]]
 file = "SMAP.IRX"
 name = "INET_SMAP_driver"
-replace = false
 version = 0x0219
 loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
 startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
