@@ -17,7 +17,7 @@ I_sceCdApplySCmd
 I_sceCdPause
 I_sceCdBreak
 I_sceCdGetReadPos
-I_sceGetFsvRbuf
+I_sceGetFsvRbuf2
 I_sceCdSC
 I_sceCdStInit
 I_sceCdStRead

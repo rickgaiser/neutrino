@@ -17,6 +17,7 @@ struct cdvdman_settings_common
     u32 magic;
 
     u8 media;
+    u8 fs_sectors; // Number of sectors to allocate for sector buffer
     u16 flags;
     u32 layer1_start;
 

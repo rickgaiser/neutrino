@@ -116,6 +116,8 @@ extern struct cdvdman_settings_common cdvdman_settings;
 // Normally this buffer is only used by 'searchfile', only 1 sector used
 #define CDVDMAN_BUF_SECTORS 1
 extern u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
+#define CDVDMAN_FS_BUF_ALIGNMENT 64
+extern u8 *cdvdman_fs_buf;
 
 extern int cdrom_io_sema;
 extern int cdvdman_searchfilesema;

@@ -139,6 +139,8 @@ struct SFakeList {
 };
 
 struct SSystemSettings {
+    uint8_t fs_sectors;
+
     union {
         uint8_t ilink_id[8];
         uint64_t ilink_id_int;
@@ -638,6 +640,11 @@ int load_driver(const char * type, const char * subtype)
         free(v.u.s);
     }
 
+    // Number of sectors for fs buffer in cdvdman_emu
+    v = toml_string_in(tbl_root, "cdvdman_fs_sectors");
+    if (v.ok)
+        sys.fs_sectors = v.u.i;
+
     arr = toml_array_in(tbl_root, "ilink_id");
     if (arr != NULL) {
         if (toml_array_nelem(arr) == 8) {
@@ -1097,6 +1104,7 @@ int main(int argc, char *argv[])
 
         set_cdvdman->media = eMediaType;
         set_cdvdman->layer1_start = layer1_lba_start;
+        set_cdvdman->fs_sectors = sys.fs_sectors;
         if (sys.ilink_id_int != 0) {
             printf("Overriding i.Link ID: %2x %2x %2x %2x %2x %2x %2x %2x\n"
             , sys.ilink_id[0]
