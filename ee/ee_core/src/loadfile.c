@@ -370,14 +370,19 @@ int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int 
     /* Round the size up to the nearest 16 bytes. */
     size = (size + 15) & -16;
 
-    // Estimate free IOP RAM
+    // Estimate largest free IOP RAM block up to 256 byte accuracy
+    // 12 iterations are needed
     void *ptemp = NULL;
-    u32 freemem = 1800*1024;
-    do {
-        freemem -= 4*1024;
-        ptemp = SifAllocIopHeap(freemem);
-    } while (ptemp == NULL);
-    SifFreeIopHeap(ptemp);
+    u32 freemem = 0;
+    u32 freecheck = 1024*1024;
+    while (freecheck > 256) {
+        ptemp = SifAllocIopHeap(freemem+freecheck);
+        if (ptemp != NULL) {
+            freemem += freecheck;
+            SifFreeIopHeap(ptemp);
+        }
+        freecheck /= 2;
+    }
 
     // Allocate large buffer, forcing the module buffer to be allocated in 'middle' memory
     ptemp = SifAllocIopHeap((freemem - size) / 2);
