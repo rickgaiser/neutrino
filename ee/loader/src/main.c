@@ -279,7 +279,7 @@ struct SModule *modlist_get_by_udnlname(struct SModList *ml, const char *name)
     return NULL;
 }
 
-static void print_iop_args(int arg_len, char *args)
+static void print_iop_args(int arg_len, const char *args)
 {
     // Multiple null terminated strings together
     int args_idx = 0;
