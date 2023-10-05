@@ -1,6 +1,21 @@
 # Name of loaded config, to show to user
 name = "System settings and drivers"
 
+# Default argument values
+# Overwrite these from the command line
+default_bsd = "no"
+default_dvd = "no"
+#default_ata0 = "mass:mydrive0.bin"
+#default_ata0id = "mass:mydrive0_id.bin"
+#default_ata1 = "mass:mydrive1.bin"
+#default_mc0 = "mass:mymc0.bin"
+#default_mc1 = "mass:mymc1.bin"
+default_elf = "auto"
+#default_mt = "dvd"
+#default_gc = "12"
+default_dbc = false
+default_logo = false
+
 # Select the number of sectors for the FS buffer
 # A small value can increase game compatibility
 # A large value can increase performce

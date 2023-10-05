@@ -104,8 +104,8 @@ void print_usage()
     printf("                    - 5: IOP: Emulate DVD-DL\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
-    printf("  -eC               Enable debug colors\n");
-    printf("  -eL               Enable logo (adds rom0:PS2LOGO to arguments)\n");
+    printf("  -dbc              Enable debug colors\n");
+    printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
     printf("\n");
     printf("  --b               Break, all following parameters are passed to the ELF\n");
     printf("\n");
@@ -139,6 +139,19 @@ struct SFakeList {
 };
 
 struct SSystemSettings {
+    char *sBSD;
+    char *sDVDMode;
+    char *sATA0File;
+    char *sATA0IDFile;
+    char *sATA1File;
+    char *sMC0File;
+    char *sMC1File;
+    char *sELFFile;
+    char *sMT;
+    char *sGC;
+    int bDebugColors;
+    int bLogo;
+
     uint8_t fs_sectors;
 
     union {
@@ -588,6 +601,9 @@ int fakelist_add_array(struct SFakeList *fl, toml_table_t *tbl_root)
 
 void driver_init()
 {
+    // Initialize system structure
+    memset(&sys, 0, sizeof(struct SSystemSettings));
+
     // Initialize driver structure
     memset(&drv, 0, sizeof(struct SDriver));
     drv.mod_all_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
@@ -598,6 +614,23 @@ void driver_init()
     memset(drv.mod_l_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
     drv.fake.fake = malloc(MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule)); // NOTE: never freed, but we don't care
     memset(drv.fake.fake, 0, MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule));
+}
+
+void toml_string_in_overwrite(toml_table_t *t, const char *name, char **dest)
+{
+    toml_datum_t v = toml_string_in(t, name);
+    if (v.ok) {
+        if (*dest != NULL)
+            free (*dest);
+        *dest = v.u.s;
+    }
+}
+
+void toml_bool_in_overwrite(toml_table_t *t, const char *name, int *dest)
+{
+    toml_datum_t v = toml_bool_in(t, name);
+    if (v.ok)
+        *dest = v.u.b;
 }
 
 int load_driver(const char * type, const char * subtype)
@@ -640,8 +673,21 @@ int load_driver(const char * type, const char * subtype)
         free(v.u.s);
     }
 
+    toml_string_in_overwrite(tbl_root, "default_bsd",    &sys.sBSD);
+    toml_string_in_overwrite(tbl_root, "default_dvd",    &sys.sDVDMode);
+    toml_string_in_overwrite(tbl_root, "default_ata0",   &sys.sATA0File);
+    toml_string_in_overwrite(tbl_root, "default_ata0id", &sys.sATA0IDFile);
+    toml_string_in_overwrite(tbl_root, "default_ata1",   &sys.sATA1File);
+    toml_string_in_overwrite(tbl_root, "default_mc0",    &sys.sMC0File);
+    toml_string_in_overwrite(tbl_root, "default_mc1",    &sys.sMC1File);
+    toml_string_in_overwrite(tbl_root, "default_elf",    &sys.sELFFile);
+    toml_string_in_overwrite(tbl_root, "default_mt",     &sys.sMT);
+    toml_string_in_overwrite(tbl_root, "default_gc",     &sys.sGC);
+    toml_bool_in_overwrite  (tbl_root, "default_dbc",    &sys.bDebugColors);
+    toml_bool_in_overwrite  (tbl_root, "default_logo",   &sys.bLogo);
+
     // Number of sectors for fs buffer in cdvdman_emu
-    v = toml_string_in(tbl_root, "cdvdman_fs_sectors");
+    v = toml_int_in(tbl_root, "cdvdman_fs_sectors");
     if (v.ok)
         sys.fs_sectors = v.u.i;
 
@@ -788,50 +834,54 @@ int main(int argc, char *argv[])
     printf("-         By Maximus32         -\n");
     printf("--------------------------------\n");
 
-    const char *sBSD = "no";
-    const char *sDVDMode = "no";
+    /*
+     * Initialiaze main driver structure before filling it from config files
+     */
+    driver_init();
+
+    /*
+     * Load system settings
+     */
+    if (load_driver("system", NULL) < 0) {
+        printf("ERROR: failed to load system settings\n");
+        return -1;
+    }
+
+    /*
+     * Parse user commands
+     */
     const char *sDVDFile = NULL;
     const char *sATAMode = "no";
-    const char *sATA0File = NULL;
-    const char *sATA0IDFile = NULL;
-    const char *sATA1File = NULL;
     const char *sMCMode = "no";
-    const char *sMC0File = NULL;
-    const char *sMC1File = NULL;
-    const char *sELFFile = "auto";
     int iELFArgcStart = -1;
-    const char *sMediaType = NULL;
-    const char *sCompat = NULL;
     u32 iCompat = 0;
     enum SCECdvdMediaType eMediaType = SCECdNODISC;
-    bool bEnableDebugColors = false;
-    bool bEnablePS2Logo = false;
     for (i=1; i<argc; i++) {
         //printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-bsd=", 5))
-            sBSD = &argv[i][5];
+            sys.sBSD = &argv[i][5];
         else if (!strncmp(argv[i], "-dvd=", 5))
-            sDVDMode = &argv[i][5];
+            sys.sDVDMode = &argv[i][5];
         else if (!strncmp(argv[i], "-ata0=", 6))
-            sATA0File = &argv[i][6];
+            sys.sATA0File = &argv[i][6];
         else if (!strncmp(argv[i], "-ata0id=", 8))
-            sATA0IDFile = &argv[i][8];
+            sys.sATA0IDFile = &argv[i][8];
         else if (!strncmp(argv[i], "-ata1=", 6))
-            sATA1File = &argv[i][6];
+            sys.sATA1File = &argv[i][6];
         else if (!strncmp(argv[i], "-mc0=", 5))
-            sMC0File = &argv[i][5];
+            sys.sMC0File = &argv[i][5];
         else if (!strncmp(argv[i], "-mc1=", 5))
-            sMC1File = &argv[i][5];
+            sys.sMC1File = &argv[i][5];
         else if (!strncmp(argv[i], "-elf=", 5))
-            sELFFile = &argv[i][5];
+            sys.sELFFile = &argv[i][5];
         else if (!strncmp(argv[i], "-mt=", 4))
-            sMediaType = &argv[i][4];
+            sys.sMT = &argv[i][4];
         else if (!strncmp(argv[i], "-gc=", 4))
-            sCompat = &argv[i][4];
-        else if (!strncmp(argv[i], "-eC", 3))
-            bEnableDebugColors = true;
-        else if (!strncmp(argv[i], "-eL", 3))
-            bEnablePS2Logo = true;
+            sys.sGC = &argv[i][4];
+        else if (!strncmp(argv[i], "-dbc", 4))
+            sys.bDebugColors = true;
+        else if (!strncmp(argv[i], "-logo", 5))
+            sys.bLogo = true;
         else if (!strncmp(argv[i], "--b", 3)) {
             iELFArgcStart = i + 1;
             break;
@@ -848,40 +898,40 @@ int main(int argc, char *argv[])
         iELFArgcStart = argc;
 
     // Check for "file" mode of dvd emulation
-    if (strstr(sDVDMode, ":")) {
-        sDVDFile = sDVDMode;
-        sDVDMode = "file";
+    if (strstr(sys.sDVDMode, ":")) {
+        sDVDFile = sys.sDVDMode;
+        sys.sDVDMode = "file";
     }
 
     // Check for "file" mode of ata emulation
-    if (sATA0File != NULL || sATA1File != NULL) {
+    if (sys.sATA0File != NULL || sys.sATA1File != NULL) {
         sATAMode = "file";
     }
 
     // Check for "file" mode of mc emulation
-    if (sMC0File != NULL || sMC1File != NULL) {
+    if (sys.sMC0File != NULL || sys.sMC1File != NULL) {
         sMCMode = "file";
     }
 
-    if (sMediaType != NULL) {
-        if (!strncmp(sMediaType, "cdda", 4)) {
+    if (sys.sMT != NULL) {
+        if (!strncmp(sys.sMT, "cdda", 4)) {
             eMediaType = SCECdPS2CDDA;
-        } else if (!strncmp(sMediaType, "cd", 2)) {
+        } else if (!strncmp(sys.sMT, "cd", 2)) {
             eMediaType = SCECdPS2CD;
-        } else if (!strncmp(sMediaType, "dvdv", 4)) {
+        } else if (!strncmp(sys.sMT, "dvdv", 4)) {
             eMediaType = SCECdDVDV;
-        } else if (!strncmp(sMediaType, "dvd", 3)) {
+        } else if (!strncmp(sys.sMT, "dvd", 3)) {
             eMediaType = SCECdPS2DVD;
         } else {
-            printf("ERROR: media type %s not supported\n", sMediaType);
+            printf("ERROR: media type %s not supported\n", sys.sMT);
             print_usage();
             return -1;
         }
     }
 
-    if (sCompat != NULL) {
-        while (*sCompat != 0) {
-            char c = *sCompat;
+    if (sys.sGC != NULL) {
+        while (*sys.sGC != 0) {
+            char c = *sys.sGC;
             switch (c) {
                 case '0':
                     iCompat |= 1U << 31; // Set dummy flag
@@ -897,40 +947,27 @@ int main(int argc, char *argv[])
                     print_usage();
                     return -1;
             }
-            sCompat++;
+            sys.sGC++;
         }
-    }
-
-    /*
-     * Initialiaze main driver structure before filling it from config files
-     */
-    driver_init();
-
-    /*
-     * Load system settings
-     */
-    if (load_driver("system", NULL) < 0) {
-        printf("ERROR: failed to load system settings\n");
-        return -1;
     }
 
     /*
      * Load backing store driver settings
      */
-    if (!strcmp(sBSD, "no")) {
+    if (!strcmp(sys.sBSD, "no")) {
         // Load nothing
-    } else if (load_driver("bsd", sBSD) < 0) {
-        printf("ERROR: driver %s failed\n", sBSD);
+    } else if (load_driver("bsd", sys.sBSD) < 0) {
+        printf("ERROR: driver %s failed\n", sys.sBSD);
         return -1;
     }
 
     /*
      * Load CD/DVD emulation driver settings
      */
-    if (!strcmp(sDVDMode, "no")) {
+    if (!strcmp(sys.sDVDMode, "no")) {
         // Load nothing
-    } else if (load_driver("emu-dvd", sDVDMode) < 0) {
-        printf("ERROR: dvd driver %s failed\n", sDVDMode);
+    } else if (load_driver("emu-dvd", sys.sDVDMode) < 0) {
+        printf("ERROR: dvd driver %s failed\n", sys.sDVDMode);
         return -1;
     }
 
@@ -1141,7 +1178,7 @@ int main(int argc, char *argv[])
     /*
      * Figure out the the elf file to start automatically from the SYSTEM.CNF
      */
-    if (strcmp(sELFFile, "auto") == 0) {
+    if (strcmp(sys.sELFFile, "auto") == 0) {
         if (sDVDFile != NULL) {
             /*
             * Mount as ISO so we can get ELF name to boot
@@ -1165,16 +1202,16 @@ int main(int argc, char *argv[])
         read(fd_system_cnf, system_cnf_data, 128);
 
         // Locate and set ELF file name
-        sELFFile = strstr(system_cnf_data, "cdrom0:");
+        sys.sELFFile = strstr(system_cnf_data, "cdrom0:");
         char *fname_end = strstr(system_cnf_data, ";1");
-        if (sELFFile == NULL || fname_end == NULL) {
+        if (sys.sELFFile == NULL || fname_end == NULL) {
             printf("ERROR: file name not found in SYSTEM.CNF\n");
             return -1;
         }
         fname_end[2] = '\0';
 
         // Locate and set GameID
-        memcpy(sGameID, &sELFFile[8], 11);
+        memcpy(sGameID, &sys.sELFFile[8], 11);
         sGameID[11] = '\0';
         close(fd_system_cnf);
 
@@ -1216,7 +1253,7 @@ int main(int argc, char *argv[])
     /*
      * Enable ATA0 emulation
      */
-    if (sATA0File != NULL) {
+    if (sys.sATA0File != NULL) {
         // Check for FHI backing store
         if (set_fhi_bdm == NULL || mod_fhi == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
@@ -1225,11 +1262,11 @@ int main(int argc, char *argv[])
         // Make sure the FHI module gets loaded
         mod_fhi->sUDNL = NULL;
         // Load fragfile
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0, sATA0File) < 0)
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0, sys.sATA0File) < 0)
             return -1;
         // if ata 0 is ok, load HDD ID file
-        if (sATA0IDFile != NULL) {
-            if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0ID, sATA0IDFile) < 0)
+        if (sys.sATA0IDFile != NULL) {
+            if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
                 return -1;
         }
     }
@@ -1237,7 +1274,7 @@ int main(int argc, char *argv[])
     /*
      * Enable ATA1 emulation
      */
-    if (sATA1File != NULL) {
+    if (sys.sATA1File != NULL) {
         // Check for FHI backing store
         if (set_fhi_bdm == NULL || mod_fhi == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
@@ -1246,14 +1283,14 @@ int main(int argc, char *argv[])
         // Make sure the FHI module gets loaded
         mod_fhi->sUDNL = NULL;
         // Load fragfile
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA1, sATA1File) < 0)
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA1, sys.sATA1File) < 0)
             return -1;
     }
 
     /*
      * Enable MC0 emulation
      */
-    if (sMC0File != NULL) {
+    if (sys.sMC0File != NULL) {
         // Check for FHI backing store
         if (set_fhi_bdm == NULL || mod_fhi == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
@@ -1262,14 +1299,14 @@ int main(int argc, char *argv[])
         // Make sure the FHI module gets loaded
         mod_fhi->sUDNL = NULL;
         // Load fragfile
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC0, sMC0File) < 0)
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC0, sys.sMC0File) < 0)
             return -1;
     }
 
     /*
      * Enable MC1 emulation
      */
-    if (sMC1File != NULL) {
+    if (sys.sMC1File != NULL) {
         // Check for FHI backing store
         if (set_fhi_bdm == NULL || mod_fhi == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
@@ -1278,11 +1315,11 @@ int main(int argc, char *argv[])
         // Make sure the FHI module gets loaded
         mod_fhi->sUDNL = NULL;
         // Load fragfile
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC1, sMC1File) < 0)
+        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC1, sys.sMC1File) < 0)
             return -1;
     }
 
-    printf("ELF file: %s\n", sELFFile);
+    printf("ELF file: %s\n", sys.sELFFile);
     printf("GameID:   %s\n", sGameID);
 
     /*
@@ -1425,13 +1462,13 @@ int main(int argc, char *argv[])
     //eecc_setGameMode(&eeconf, "-"); // FIXME: implement or remove
     if (sGameID[0] != 0)
         eecc_setGameID(&eeconf, sGameID);
-    eecc_setELFName(&eeconf, sELFFile);
+    eecc_setELFName(&eeconf, sys.sELFFile);
     eecc_setELFArgs(&eeconf, argc-iELFArgcStart, (const char **)&argv[iELFArgcStart]);
     eecc_setKernelConfig(&eeconf, eeloadCopy, initUserMemory);
     eecc_setModStorageConfig(&eeconf, irxtable, irxptr);
     eecc_setCompatFlags(&eeconf, iCompat);
-    eecc_setDebugColors(&eeconf, bEnableDebugColors);
-    eecc_setPS2Logo(&eeconf, bEnablePS2Logo);
+    eecc_setDebugColors(&eeconf, sys.bDebugColors);
+    eecc_setPS2Logo(&eeconf, sys.bLogo);
     printf("Starting ee_core with following arguments:\n");
     eecc_print(&eeconf);
 
