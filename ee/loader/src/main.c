@@ -1046,11 +1046,136 @@ int main(int argc, char *argv[])
             printf("Unable to open %s\n", sDVDFile);
             return -1;
         }
+
+       /*
+        * Check and parse cue file
+        */
+        char buffer[6];
+        if (read(fd_iso, buffer, sizeof(buffer)) != sizeof(buffer)) {
+            printf("Unable to read file\n");
+            close(fd_iso);
+            return -1;
+        }
+
+        // Check if the buffer equals "FILE" - currently assume that "FILE" is first keyword in the cue file
+        if (memcmp(buffer, "FILE", 4) == 0) {
+            char line[1024];
+            lseek(fd_iso, 0, SEEK_SET);
+            if (read(fd_iso, line, sizeof(line)) == -1) {
+                printf("Error reading file\n");
+                close(fd_iso);
+                return -1;
+            }
+
+            // Find the position of the first double quote
+            char *openQuote = strchr(line, '"');
+            if (openQuote == NULL) {
+                printf("No opening quote found\n");
+                close(fd_iso);
+                return -1;
+            }
+
+            // Find the position of the second double quote
+            char *closeQuote = strchr(openQuote + 1, '"');
+            while (closeQuote != NULL && closeQuote[-1] == ' ') {
+                // Skip over consecutive spaces before the closing quote
+                closeQuote = strchr(closeQuote + 1, '"');
+            }
+
+            if (closeQuote == NULL) {
+                printf("No closing quote found\n");
+                close(fd_iso);
+                return -1;
+            }
+
+            // Extract the filename between the quotes
+            size_t filenameLen = closeQuote - openQuote - 1;
+            char extractedFilename[MAX_FILENAME];
+            strncpy(extractedFilename, openQuote + 1, filenameLen);
+            extractedFilename[filenameLen] = '\0';  // Null-terminate the extracted filename
+
+            // Extract the folder path from sDVDFile
+            char folderPath[MAX_FILENAME];
+            strncpy(folderPath, sDVDFile, sizeof(folderPath));
+            char *lastSlash = strrchr(folderPath, '/');
+            if (lastSlash != NULL) {
+                *lastSlash = '\0';  // Null-terminate to get the folder path
+            }
+
+            // Concatenate the folder path and filename to get the bin file path
+            char binFilePath[MAX_FILENAME * 2];
+            snprintf(binFilePath, sizeof(binFilePath), "%s/%s", folderPath, extractedFilename);
+
+            // Replace sDVDFile with the new bin file name
+            sDVDFile = strdup(binFilePath);
+
+            // Search for the keyword "TRACK 01 "
+            int offset = 0;
+            u8 trackFound = 0;
+            lseek(fd_iso, closeQuote - line + 1, SEEK_SET);
+            while (read(fd_iso, line, sizeof(line)) > 0) {
+                offset += sizeof(line);
+                if (strstr(line, "TRACK 01 ") != NULL) {
+                    trackFound = 1;
+                    break;
+                }
+            }
+            if (!(trackFound)) {
+                printf("No TRACK 01 found in cue file\n");
+                return -1;
+            }
+
+            // Search for TRACK 02 AUDIO, PS2CDDA
+            trackFound = 0;
+            while (read(fd_iso, line, sizeof(line)) > 0) {
+                offset += sizeof(line);
+                if (strstr(line, "TRACK 02 AUDIO") != NULL) {
+                    trackFound = 1;
+                    break;
+                }
+            }
+
+            // Move to the offset after "TRACK 01 " and check for the specified keywords
+            lseek(fd_iso, offset, SEEK_SET);
+            if (read(fd_iso, line, sizeof(line)) == -1) {
+                printf("Error reading file\n");
+                close(fd_iso);
+                return -1;
+            }
+
+            // Close the cue file
+            close(fd_iso);
+
+            // Check for the three possible disk types
+            if (strstr(line, "AUDIO") != NULL) {
+                eMediaType = SCECdCDDA;
+                printf("Cue type CDDA, currently not supported");
+                return -1;
+            } else if (trackFound) {
+                eMediaType = SCECdPS2CDDA;
+                printf("Cue type PS2 CD with CDDA tracks, currently not supported");
+                return -1;
+            } else if (strstr(line, "MODE2/2352") != NULL) {
+                eMediaType = SCECdPS2CD;
+                printf("Cue type PS2 CD with no CDDA tracks, currently not supported");
+                return -1;
+            } else if (strstr(line, "MODE1/2048") != NULL) {
+                printf("Found keyword: MODE1/2048, currently it can be either PS2 DVD, DVD Video or PS2 CD to DVD convert");
+            }
+
+            // Open the bin file with the same descriptor
+            printf("Loading bin file: %s...\n", sDVDFile);
+            fd_iso = open(sDVDFile, O_RDONLY);
+            if (fd_iso < 0) {
+                printf("Unable to open %s\n", sDVDFile);
+                return -1;
+            }
+        }
+
         // Get ISO file size
         iso_size = lseek64(fd_iso, 0, SEEK_END);
         printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
 
-        char buffer[6];
         // Validate this is an ISO
         lseek64(fd_iso, 16 * 2048, SEEK_SET);
         if (read(fd_iso, buffer, sizeof(buffer)) != sizeof(buffer)) {
