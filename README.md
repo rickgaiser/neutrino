@@ -100,6 +100,8 @@ Options:
                     - 5: IOP: Emulate DVD-DL
                     Multiple options possible, for example -gc=23
 
+  -cfg=<file>       Load extra user/game specific config file (without .toml extension)
+
   -dbc              Enable debug colors
   -logo             Enable logo (adds rom0:PS2LOGO to arguments)
 

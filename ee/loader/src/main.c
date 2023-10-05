@@ -104,6 +104,8 @@ void print_usage()
     printf("                    - 5: IOP: Emulate DVD-DL\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
+    printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
+    printf("\n");
     printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
     printf("\n");
@@ -149,6 +151,7 @@ struct SSystemSettings {
     char *sELFFile;
     char *sMT;
     char *sGC;
+    char *sCFGFile;
     int bDebugColors;
     int bLogo;
 
@@ -683,6 +686,7 @@ int load_driver(const char * type, const char * subtype)
     toml_string_in_overwrite(tbl_root, "default_elf",    &sys.sELFFile);
     toml_string_in_overwrite(tbl_root, "default_mt",     &sys.sMT);
     toml_string_in_overwrite(tbl_root, "default_gc",     &sys.sGC);
+    toml_string_in_overwrite(tbl_root, "default_cfg",    &sys.sCFGFile);
     toml_bool_in_overwrite  (tbl_root, "default_dbc",    &sys.bDebugColors);
     toml_bool_in_overwrite  (tbl_root, "default_logo",   &sys.bLogo);
 
@@ -889,6 +893,16 @@ int main(int argc, char *argv[])
         else {
             printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
             print_usage();
+            return -1;
+        }
+    }
+
+    /*
+     * Load user/game settings
+     */
+    if (sys.sCFGFile != NULL) {
+        if (load_driver(sys.sCFGFile, NULL) < 0) {
+            printf("ERROR: failed to load %s\n", sys.sCFGFile);
             return -1;
         }
     }
