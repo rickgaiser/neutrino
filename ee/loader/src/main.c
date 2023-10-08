@@ -852,6 +852,14 @@ int main(int argc, char *argv[])
     }
 
     /*
+     * Debugging / testing
+     * Becouse PSX2 does not support command line arguments, create a file
+     * `config/pcsx2.toml` and put all arguments there. See `config/system.toml`
+     * for a list of supported arguments.
+     */
+    //sys.sCFGFile = "pcsx2";
+
+    /*
      * Parse user commands
      */
     const char *sDVDFile = NULL;
@@ -882,6 +890,8 @@ int main(int argc, char *argv[])
             sys.sMT = &argv[i][4];
         else if (!strncmp(argv[i], "-gc=", 4))
             sys.sGC = &argv[i][4];
+        else if (!strncmp(argv[i], "-cfg=", 5))
+            sys.sCFGFile = &argv[i][5];
         else if (!strncmp(argv[i], "-dbc", 4))
             sys.bDebugColors = true;
         else if (!strncmp(argv[i], "-logo", 5))
