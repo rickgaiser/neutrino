@@ -17,9 +17,6 @@ typedef struct
 #define MAX_FDHANDLES 64
 FHANDLE cdvdman_fdhandles[MAX_FDHANDLES];
 
-#define CDVDFSV_ALIGNMENT 64
-static u8 cdvdman_fs_buf[CDVDMAN_FS_SECTORS * 2048 + CDVDFSV_ALIGNMENT];
-
 // for "cdrom" ioctl2
 #define CIOCSTREAMPAUSE  0x630D
 #define CIOCSTREAMRESUME 0x630E
@@ -575,8 +572,9 @@ static int cdrom_ioctl2(iop_file_t *f, int cmd, void *args, unsigned int arglen,
 }
 
 //-------------------------------------------------------------------------
-void *sceGetFsvRbuf(void)
+void *sceGetFsvRbuf2(int *size)
 {
+    *size = cdvdman_settings.fs_sectors * 2048 + CDVDMAN_FS_BUF_ALIGNMENT;
     return cdvdman_fs_buf;
 }
 

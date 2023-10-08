@@ -3,6 +3,7 @@
 
 #include <irx.h>
 
+#define I_sceGetFsvRbuf2 DECLARE_IMPORT(47, sceGetFsvRbuf2)
 #include <cdvdman.h>
 #include <intrman.h>
 #include <loadcore.h>

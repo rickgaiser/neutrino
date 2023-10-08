@@ -19,6 +19,35 @@
 extern int _iop_reboot_count;
 extern void *ModStorageStart;
 
+#ifdef __EESIO_DEBUG
+static void print_iop_args(int arg_len, const char *args)
+{
+    // Multiple null terminated strings together
+    int args_idx = 0;
+    int was_null = 1;
+
+    if (arg_len == 0)
+        return;
+
+    DPRINTF("IOP reboot arguments (arg_len=%d):\n", arg_len);
+
+    // Search strings
+    while(args_idx < arg_len) {
+        if (args[args_idx] == 0) {
+            if (was_null == 1) {
+                DPRINTF("- args[%d]=0\n", args_idx);
+            }
+            was_null = 1;
+        }
+        else if (was_null == 1) {
+            DPRINTF("- args[%d]='%s'\n", args_idx, &args[args_idx]);
+            was_null = 0;
+        }
+        args_idx++;
+    }
+}
+#endif
+
 /*----------------------------------------------------------------*/
 /* Reset IOP to include our modules.                              */
 /*----------------------------------------------------------------*/
@@ -33,7 +62,11 @@ int New_Reset_Iop(const char *arg, int arglen)
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
     static int imgdrv_offset = 0;
 
-    DPRINTF("New_Reset_Iop start!\n");
+    DPRINTF("%s()\n", __FUNCTION__);
+#ifdef __EESIO_DEBUG
+    print_iop_args(arglen, arg);
+#endif
+
     if (EnableDebug)
         GS_BGCOLOUR = 0xFF00FF; // Purple
 
@@ -45,20 +78,20 @@ int New_Reset_Iop(const char *arg, int arglen)
     sbv_patch_enable_lmb();
 
     udnl_cmdlen = 0;
-    if (arglen > 0) {
+    if (arglen >= 10) {
         // Copy: rom0:UDNL or rom1:UDNL
         // - Are these the only update modules? Always 9 chars long?
         strncpy(udnl_mod, &arg[0], 10);
         // Make sure it's 0 terminated
-        udnl_mod[9] = '\0';
+        udnl_mod[10-1] = '\0';
 
         if (arglen > 10) {
             // Copy: arguments
             udnl_cmdlen = arglen-10; // length, including terminating 0
             strncpy(udnl_cmd, &arg[10], udnl_cmdlen);
 
-            // Fix if 0 is not included
-            if (udnl_cmd[udnl_cmdlen-1] != 0) {
+            // Fix if 0 is not included in length
+            if (udnl_cmd[udnl_cmdlen-1] != '\0') {
                 udnl_cmd[udnl_cmdlen] = '\0';
                 udnl_cmdlen++;
             }

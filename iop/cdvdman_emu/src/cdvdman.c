@@ -43,6 +43,7 @@ static iop_sys_clock_t gCallbackSysClock;
 
 // buffers
 u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
+u8 *cdvdman_fs_buf;
 
 #define CDVDMAN_MODULE_VERSION 0x225
 static int cdvdman_debug_print_flag = 0;
@@ -623,6 +624,13 @@ int _start(int argc, char **argv)
 
     // Setup the callback timer.
     USec2SysClock((cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) ? 5000 : 0, &gCallbackSysClock);
+
+    // Limit min/max sectors
+    if (cdvdman_settings.fs_sectors < 2)
+        cdvdman_settings.fs_sectors = 2;
+    if (cdvdman_settings.fs_sectors > 128)
+        cdvdman_settings.fs_sectors = 128;
+    cdvdman_fs_buf = AllocSysMemory(0, cdvdman_settings.fs_sectors * 2048 + CDVDMAN_FS_BUF_ALIGNMENT, NULL);
 
     // create SCMD/searchfile semaphores
     cdvdman_create_semaphores();

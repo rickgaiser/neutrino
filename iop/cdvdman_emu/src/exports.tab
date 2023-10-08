@@ -58,7 +58,7 @@ DECLARE_EXPORT_TABLE(cdvdman, 1, 1)
     DECLARE_EXPORT(sceCdGetReadPos)
     DECLARE_EXPORT(_dummy)           // sceCdCtrlADout
     DECLARE_EXPORT(_dummy)           // sceCdNop
-    DECLARE_EXPORT(sceGetFsvRbuf)
+    DECLARE_EXPORT(sceGetFsvRbuf2)
     DECLARE_EXPORT(_dummy)           // sceCdstm0Cb
     DECLARE_EXPORT(_dummy)           // sceCdstm1Cb
     DECLARE_EXPORT(sceCdSC)          // 50

@@ -22,11 +22,10 @@ I_EnableIntr
 I_RegisterIntrHandler
 intrman_IMPORTS_end
 
-//#ifdef DEBUG
 sysmem_IMPORTS_start
+I_AllocSysMemory
 I_QueryTotalFreeMemSize
 sysmem_IMPORTS_end
-//#endif
 
 loadcore_IMPORTS_start
 I_FlushDcache
