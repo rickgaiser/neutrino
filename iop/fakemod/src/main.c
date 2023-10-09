@@ -22,6 +22,54 @@ static int (*org_UnloadModule)(int id);
 static int (*org_SearchModuleByName)(const char *modname);
 static int (*org_ReferModuleStatus)(int mid, ModuleStatus *status);
 
+#if 0 //def DEBUG // Too much text output, enable when needed
+//--------------------------------------------------------------
+static void print_libs()
+{
+    ModuleInfo_t *m = GetLoadcoreInternalData()->image_info;
+    M_DEBUG("Module list:\n");
+    M_DEBUG("  name                   |    start |   text |  data |   bss\n");
+    while (m != NULL) {
+        M_DEBUG("  %-22s | 0x%6x | %6d | %5d | %5d\n", m->name, m->text_start, m->text_size, m->data_size, m->bss_size);
+        m = m->next;
+    }
+}
+#else
+static inline void print_libs() {}
+#endif
+
+#ifdef DEBUG
+//--------------------------------------------------------------
+static void print_args(int arg_len, char *args)
+{
+    // Multiple null terminated strings together
+    int args_idx = 0;
+    int was_null = 1;
+
+    if (arg_len == 0)
+        return;
+
+    M_DEBUG("Module arguments (arg_len=%d):\n", arg_len);
+
+    // Search strings
+    while(args_idx < arg_len) {
+        if (args[args_idx] == 0) {
+            if (was_null == 1) {
+                M_DEBUG("- args[%d]=0\n", args_idx);
+            }
+            was_null = 1;
+        }
+        else if (was_null == 1) {
+            M_DEBUG("- args[%d]='%s'\n", args_idx, &args[args_idx]);
+            was_null = 0;
+        }
+        args_idx++;
+    }
+}
+#else
+static inline void print_args(int arg_len, char *args) {}
+#endif
+
 //--------------------------------------------------------------
 static struct FakeModule *checkFakemodByFile(const char *path, struct FakeModule *fakemod_list)
 {
@@ -64,45 +112,14 @@ static struct FakeModule *checkFakemodById(int id, struct FakeModule *fakemod_li
     return NULL;
 }
 
-#ifdef DEBUG
-//--------------------------------------------------------------
-static void print_args(int arg_len, char *args)
-{
-    // Multiple null terminated strings together
-    int args_idx = 0;
-    int was_null = 1;
-
-    if (arg_len == 0)
-        return;
-
-    M_DEBUG("Module arguments (arg_len=%d):\n", arg_len);
-
-    // Search strings
-    while(args_idx < arg_len) {
-        if (args[args_idx] == 0) {
-            if (was_null == 1) {
-                M_DEBUG("- args[%d]=0\n", args_idx);
-            }
-            was_null = 1;
-        }
-        else if (was_null == 1) {
-            M_DEBUG("- args[%d]='%s'\n", args_idx, &args[args_idx]);
-            was_null = 0;
-        }
-        args_idx++;
-    }
-}
-#endif
-
 //--------------------------------------------------------------
 static int Hook_LoadStartModule(char *modpath, int arg_len, char *args, int *modres)
 {
     struct FakeModule *mod;
 
+    print_libs();
     M_DEBUG("%s(%s, %d, ...)\n", __FUNCTION__, modpath, arg_len);
-#ifdef DEBUG
     print_args(arg_len, args);
-#endif
 
     mod = checkFakemodByFile(modpath, fmd.fake);
     if (mod != NULL) {
@@ -131,9 +148,7 @@ static int Hook_StartModule(int id, char *modname, int arg_len, char *args, int 
     struct FakeModule *mod;
 
     M_DEBUG("%s(0x%x, %s, %d, ...)\n", __FUNCTION__, id, modname, arg_len);
-#ifdef DEBUG
     print_args(arg_len, args);
-#endif
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
@@ -164,7 +179,8 @@ static int Hook_LoadModuleBuffer(void *ptr)
     elf_pheader_t *eph = (elf_pheader_t *)(ptr + eh->phoff);
     const char *modname = (const char *)ptr + eph->offset + 0x1a;
 
-    M_DEBUG("%s() modname = '%s'\n", __FUNCTION__, modname);
+    print_libs();
+    M_DEBUG("%s(0x%x) modname = '%s'\n", __FUNCTION__, ptr, modname);
 
     mod = checkFakemodByName(modname, fmd.fake);
     if (mod != NULL) {
@@ -192,9 +208,7 @@ static int Hook_StopModule(int id, int arg_len, char *args, int *modres)
     struct FakeModule *mod;
 
     M_DEBUG("%s(0x%x, %d, ...)\n", __FUNCTION__, id, arg_len);
-#ifdef DEBUG
     print_args(arg_len, args);
-#endif
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL) {
@@ -255,11 +269,11 @@ static int Hook_ReferModuleStatus(int id, ModuleStatus *status)
 {
     struct FakeModule *mod;
 
-    M_DEBUG("%s(0x%x, ...)\n", __FUNCTION__, id);
+    //M_DEBUG("%s(0x%x, ...)\n", __FUNCTION__, id);
 
     mod = checkFakemodById(id, fmd.fake);
     if (mod != NULL && mod->returnLoad == 0) {
-        M_DEBUG("- FAKING! id=0x%x\n", mod->id);
+        //M_DEBUG("- FAKING! id=0x%x\n", mod->id);
         memset(status, 0, sizeof(ModuleStatus));
         strcpy(status->name, mod->name);
         status->version = mod->version;
@@ -275,8 +289,11 @@ int _start(int argc, char **argv)
 {
     int i;
 
+    print_libs();
+
     // Change string index to string pointers
     M_DEBUG("Fake module list:\n");
+    M_DEBUG("         fname | name           | vers. |  rl | rs | prop\n");
     for (i = 0; i < MODULE_SETTINGS_MAX_FAKE_COUNT; i++) {
         struct FakeModule *fm = &fmd.fake[i];
 
@@ -293,7 +310,7 @@ int _start(int argc, char **argv)
         }
 
         if (fm->fname != NULL) {
-            M_DEBUG("  %d: %12s | %-14s | 0x%3x | %3d | %d | 0x%x\n", i, fm->fname, fm->name, fm->version, fm->returnLoad, fm->returnStart, fm->prop);
+            M_DEBUG("  %12s | %-14s | 0x%3x | %3d | %2d | 0x%x\n", fm->fname, fm->name, fm->version, fm->returnLoad, fm->returnStart, fm->prop);
         }
     }
 
