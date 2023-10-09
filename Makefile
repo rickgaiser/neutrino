@@ -13,6 +13,7 @@ all:
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/mc_emu       all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/patch_rc_uya all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/smap_udpbd   all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C ee/ee_core       all EESIO_DEBUG=$(EESIO_DEBUG)
 	$(MAKE) -C ee/loader        all DEBUG=0
@@ -35,6 +36,7 @@ clean:
 	$(MAKE) -C iop/imgdrv       clean
 	$(MAKE) -C iop/isofs        clean
 	$(MAKE) -C iop/mc_emu       clean
+	$(MAKE) -C iop/patch_rc_uya clean
 	$(MAKE) -C iop/smap_udpbd   clean
 	$(MAKE) -C ee/ee_core       clean
 	$(MAKE) -C ee/loader        clean
