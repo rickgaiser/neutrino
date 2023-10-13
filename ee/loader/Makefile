@@ -24,6 +24,10 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
 #GAME = "DVD/Disney's Treasure Planet (E).iso"
 #GAME = "CD/Pink Pong (E).iso" # BSOD on USB only. In PCSX2 with USB it works?
+#[SLUS_208.51] Ace Combat 5 - The Unsung War: If you try to load this save there will be no music in the Briefing and if you skip the cutscene you will get a black screen, the last working OPL was r726
+#[SLPM_659.98] Vampire - Darkstalkers Collection: If you try to select a game you will get black screen
+#[SLUS_202.13] Test Drive: Start any race and then restart, the graphics will glitch and also the game will freeze at some point (the last OPL that worked well with this game is r790)
+#[SLUS_202.33] Mobile Suit Gundam Zeonic Front: I believe the last working OPL is r726 (only for USB, it won't render the graphics on SMB), you will get black screen if you select the mission and if you're not pressing X constantly and even then the game will not render the graphics
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
@@ -147,6 +151,7 @@ copy:
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
 	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
+	cp ../../iop/usbd_null/irx/usbd_null.irx       modules
 	cp ../ee_core/ee_core.elf                      modules
 	cp $(PS2SDK)/iop/irx/eesync.irx                modules
 	cp $(PS2SDK)/iop/irx/iomanX.irx                modules
