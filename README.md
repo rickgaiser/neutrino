@@ -34,7 +34,10 @@ And the following file systems:
 During the loading phase, these drivers will be loaded and all files are accessable as `mass0:<file>` or `mass1:<file>`.
 
 For the ATA device there is also read-ony HDLoader compatibility. HDLoader uses APA partitioning and puts the iso files directly into the partitions, without using a filesystem.
-During the loading phase, the drivers will be loaded and the iso's are accessable as `hdl:<file>`.
+During the loading phase, the drivers will be loaded and the iso's are accessable as `hdl:<file>`. The `<file>` can be referenced as:
+- APA partition name (both with and without `.iso` extension)
+- HDLoader game name (both with and without `.iso` extension)
+
 Note that the HDLoader backing store is currently read-ony, and limited to only emulating the DVD.
 
 ## CD/DVD emulation

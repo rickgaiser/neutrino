@@ -110,7 +110,7 @@ int hdl_open(iomanX_iop_file_t *f, const char *name, int mode, int unk)
                 M_DEBUG("  - part[%d] dstart=%04uMiB, poffset=%04uMiB, psize=%04uMiB\n", i, file_hdl.part_specs[i].data_start / 2048, file_hdl.part_specs[i].part_offset / 512, file_hdl.part_specs[i].part_size / (1024*1024));
             }
 
-            if (strcmp(file_hdl.gamename, name) == 0) {
+            if ((strcmp(file_hdl.gamename, name) == 0) || (strcmp(dirent.name, name) == 0)) {
                 // "open" the file
                 file_offset = 0;
                 file_size = 0;
