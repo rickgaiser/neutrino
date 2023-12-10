@@ -36,6 +36,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
 DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
 PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
+void _libcglue_timezone_update() {}; // Disable timezone update
 
 #define OPL_MOD_STORAGE 0x00097000 //(default) Address of the module storage region
 /*
