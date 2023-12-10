@@ -14,6 +14,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include <loadfile.h>
 #include <iopcontrol.h>
 #include <libcdvd-common.h>
+#include <file-advanced.h>
 
 // Other
 #include "elf.h"
@@ -37,6 +38,8 @@ DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
 DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
 PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
 void _libcglue_timezone_update() {}; // Disable timezone update
+
+FILE_SWAP_PS2SDK_FUNCTIONS(); // Swap PS2SDK functions from fileIO to fileXio once the IOP modules are loaded
 
 #define OPL_MOD_STORAGE 0x00097000 //(default) Address of the module storage region
 /*
@@ -1036,7 +1039,7 @@ int main(int argc, char *argv[])
      */
     printf("Reboot IOP into Load Environment (LE)\n");
 #if 1
-    //fileXioExit();
+    //swapToFileIO();
     SifExitIopHeap();
     SifLoadFileExit();
     SifExitRpc();
@@ -1057,7 +1060,7 @@ int main(int argc, char *argv[])
     if (modlist_start(&drv.mod_all_env) < 0)
         return -1;
     if (modlist_get_by_name(&drv.mod_l_env, "fileXio.irx") != NULL)
-        fileXioInit();
+        swapToFileXio();
 
     // FAKEMOD optional module
     // Only loaded when modules need to be faked
