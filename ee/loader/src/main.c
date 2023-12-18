@@ -759,10 +759,13 @@ void *modlist_get_settings(struct SModList *ml, const char *name)
 
 int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
 {
-    int i;
+    int i, iop_fd;
     off_t size;
     unsigned int frag_start = 0;
     struct fhi_bdm_fragfile *frag = &bdm->fragfile[fhi_fid];
+
+    // Get actual IOP fd
+    iop_fd = ps2sdk_get_iop_fd(fd);
 
     // Get file size
     size = lseek64(fd, 0, SEEK_END);
@@ -773,7 +776,7 @@ int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
 
     // Set fragment file
     frag->frag_start = frag_start;
-    frag->frag_count = fileXioIoctl2(fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
+    frag->frag_count = fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
     frag->size = size;
 
     // Check for max fragments
@@ -789,8 +792,8 @@ int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
 
     // Set BDM driver name and number
     // NOTE: can be set only once! Check?
-    bdm->drvName = (uint32_t)fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-    fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
+    bdm->drvName = (uint32_t)fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+    fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
     char *drvName = (char *)&bdm->drvName;
     printf("Using BDM device: %s%d\n", drvName, (int)bdm->devNr);
 
