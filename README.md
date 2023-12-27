@@ -28,15 +28,8 @@ These are all BDM drivers, or "Block Devices". On all devices the following part
 - GPT (GUID Partition Table)
 
 And the following file systems:
-- exFat
-- FAT32
-
-During the loading phase, these drivers will be loaded and all files are accessable as `mass0:<file>` or `mass1:<file>`.
-
-For the ATA device there is also read-ony HDLoader compatibility. HDLoader uses APA partitioning and puts the iso files directly into the partitions, without using a filesystem.
-During the loading phase, the drivers will be loaded and the iso's are accessable as `hdl:<file>`. The `<file>` can be referenced as:
-- APA partition name (both with and without `.iso` extension)
-- HDLoader game name (both with and without `.iso` extension)
+- exFat/FAT32, accessable as `mass:<file>.iso`
+- HDLoader, accessable as `hdl:<file>`, `hdl:<file>.iso`, `hdl:<part>` or `hdl:<part>.iso`
 
 Note that the HDLoader backing store is currently read-ony, and limited to only emulating the DVD.
 
@@ -59,11 +52,14 @@ Options:
   -bsd=<driver>     Backing store drivers, supported are:
                     - no (default)
                     - ata
-                    - ata-hdl
                     - usb
                     - mx4sio
                     - udpbd
                     - ilink
+
+  -bsdfs=<driver>   Backing store fileystem drivers, supported are:
+                    - exfat (default)
+                    - hdl
 
   -dvd=<mode>       DVD emulation mode, supported are:
                     - no (default)
@@ -113,5 +109,5 @@ Options:
 Usage examples:
   neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso
   neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=ata-hdl -dvd=hdl:filename.iso
+  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso
 ```

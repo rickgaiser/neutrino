@@ -4,6 +4,7 @@ name = "System settings and drivers"
 # Default argument values
 # Overwrite these from the command line
 default_bsd = "no"
+default_bsdfs = "exfat"
 default_dvd = "no"
 #default_ata0 = "mass:mydrive0.bin"
 #default_ata0id = "mass:mydrive0_id.bin"

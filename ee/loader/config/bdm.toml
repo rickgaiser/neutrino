@@ -1,13 +1,9 @@
 # Name of loaded config, to show to user
-name = "Block Device Manager (with exFat and FHI)"
+name = "Block Device Manager (with FHI)"
 
 # Modules to load in load environment
-# the end result of these drivers (in combination with the BDM BD drivers) must
-# result in the "mass:" path being available to the load environment
 [[module-le]]
 file = "bdm.irx"
-[[module-le]]
-file = "bdmfs_fatfs.irx"
 # These 3 drivers are needed for isofs
 # it would be nice if we could remove that dependency
 [[module-le]]

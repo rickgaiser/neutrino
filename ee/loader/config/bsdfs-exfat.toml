@@ -1,0 +1,6 @@
+# Name of loaded config, to show to user
+name = "exFat filesystem driver"
+
+# Modules to load in load environment
+[[module-le]]
+file = "bdmfs_fatfs.irx"

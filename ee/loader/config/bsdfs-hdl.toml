@@ -1,0 +1,9 @@
+# Name of loaded config, to show to user
+name = "HDLoader filesystem driver"
+
+# Modules to load in load environment
+[[module-le]]
+file = "ps2hdd-bdm.irx"
+args = ["-o", "4", "-n", "20"]
+[[module-le]]
+file = "hdlfs.irx"

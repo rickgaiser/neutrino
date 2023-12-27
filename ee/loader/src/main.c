@@ -64,11 +64,14 @@ void print_usage()
     printf("  -bsd=<driver>     Backing store drivers, supported are:\n");
     printf("                    - no (default)\n");
     printf("                    - ata\n");
-    printf("                    - ata-hdl\n");
     printf("                    - usb\n");
     printf("                    - mx4sio\n");
     printf("                    - udpbd\n");
     printf("                    - ilink\n");
+    printf("\n");
+    printf("  -bsdfs=<driver>   Backing store fileystem drivers, supported are:\n");
+    printf("                    - exfat (default)\n");
+    printf("                    - hdl\n");
     printf("\n");
     printf("  -dvd=<mode>       DVD emulation mode, supported are:\n");
     printf("                    - no (default)\n");
@@ -118,7 +121,7 @@ void print_usage()
     printf("Usage examples:\n");
     printf("  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=ata-hdl -dvd=hdl:filename.iso\n");
+    printf("  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso\n");
 }
 
 struct SModule
@@ -146,6 +149,7 @@ struct SFakeList {
 
 struct SSystemSettings {
     char *sBSD;
+    char *sBSDFS;
     char *sDVDMode;
     char *sATA0File;
     char *sATA0IDFile;
@@ -681,6 +685,7 @@ int load_driver(const char * type, const char * subtype)
     }
 
     toml_string_in_overwrite(tbl_root, "default_bsd",    &sys.sBSD);
+    toml_string_in_overwrite(tbl_root, "default_bsdfs",    &sys.sBSDFS);
     toml_string_in_overwrite(tbl_root, "default_dvd",    &sys.sDVDMode);
     toml_string_in_overwrite(tbl_root, "default_ata0",   &sys.sATA0File);
     toml_string_in_overwrite(tbl_root, "default_ata0id", &sys.sATA0IDFile);
@@ -879,6 +884,8 @@ int main(int argc, char *argv[])
         //printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-bsd=", 5))
             sys.sBSD = &argv[i][5];
+        else if (!strncmp(argv[i], "-bsdfs=", 7))
+            sys.sBSDFS = &argv[i][7];
         else if (!strncmp(argv[i], "-dvd=", 5))
             sys.sDVDMode = &argv[i][5];
         else if (!strncmp(argv[i], "-ata0=", 6))
@@ -987,9 +994,15 @@ int main(int argc, char *argv[])
      */
     if (!strcmp(sys.sBSD, "no")) {
         // Load nothing
-    } else if (load_driver("bsd", sys.sBSD) < 0) {
-        printf("ERROR: driver %s failed\n", sys.sBSD);
-        return -1;
+    } else {
+        if (load_driver("bsd", sys.sBSD) < 0) {
+            printf("ERROR: driver %s failed\n", sys.sBSD);
+            return -1;
+        }
+        if (load_driver("bsdfs", sys.sBSDFS) < 0) {
+            printf("ERROR: driver %s failed\n", sys.sBSDFS);
+            return -1;
+        }
     }
 
     /*

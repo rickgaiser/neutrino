@@ -121,7 +121,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0)
 #-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -mc0=mass:VMC/mymc.bin
 #-bsd=udpbd -dvd=mass:"DVD/Splinter Cell (E).iso" -elf="cdrom0:\\LOADER.PS2;1" --b 0_0_2 -wantload -ll -diskimage -restart -l=1 -v=13117
-#-bsd=ata-hdl -dvd=hdl:$(GAME)
+#-bsd=ata -bsdfs=hdl -dvd=hdl:$(GAME)
 
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
@@ -163,8 +163,7 @@ copy:
 	cp $(PS2SDK)/iop/irx/bdm.irx                   modules
 	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx           modules
 	cp $(PS2SDK)/iop/irx/ata_bd.irx                modules
-	cp $(PS2SDK)/iop/irx/ps2atad.irx               modules
-	cp $(PS2SDK)/iop/irx/ps2hdd-osd.irx            modules
+	cp $(PS2SDK)/iop/irx/ps2hdd-bdm.irx            modules
 	cp $(PS2SDK)/iop/irx/usbd_mini.irx             modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx       modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx        modules
