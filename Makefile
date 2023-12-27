@@ -7,6 +7,8 @@ all:
 	$(MAKE) -C iop/cdvdman_emu  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/cdvdman_esr1 all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/cdvdman_esr2 all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/dev9         all DEBUG=$(IOPCORE_DEBUG) DEV9_HIDDEN=1
+	$(MAKE) -C iop/dev9         all DEBUG=$(IOPCORE_DEBUG) DEV9_NO_SHUTDOWN=1
 	$(MAKE) -C iop/fakemod      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_bdm      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/hdlfs        all DEBUG=$(IOPCORE_DEBUG)
@@ -31,6 +33,8 @@ clean:
 	$(MAKE) -C iop/cdvdman_emu  clean
 	$(MAKE) -C iop/cdvdman_esr1 clean
 	$(MAKE) -C iop/cdvdman_esr2 clean
+	$(MAKE) -C iop/dev9         clean DEV9_HIDDEN=1
+	$(MAKE) -C iop/dev9         clean DEV9_NO_SHUTDOWN=1
 	$(MAKE) -C iop/fakemod      clean
 	$(MAKE) -C iop/fhi_bdm      clean
 	$(MAKE) -C iop/hdlfs        clean

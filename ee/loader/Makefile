@@ -112,6 +112,8 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = "DVD/007 - Nightfire (E).iso"
 #GAME = "DVD/Splinter Cell (E).iso" # Skips FMV (IOP memory overrun issue? fixed!)
 #GAME = "DVD/Splashdown (E).iso" # IOP memory allocation issue: allocates too little for the DVD reads that follow (fixed!)
+#GAME = 'DVD/God of War II (U).iso'
+#GAME = 'DVD/Gran Turismo 4 (U).iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
@@ -143,6 +145,8 @@ copy:
 	cp ../../iop/cdvdman_emu/irx/cdvdman_emu.irx   modules
 	cp ../../iop/cdvdman_esr1/irx/cdvdman_esr1.irx modules
 	cp ../../iop/cdvdman_esr2/irx/cdvdman_esr2.irx modules
+	cp ../../iop/dev9/irx/dev9_hidden.irx          modules
+	cp ../../iop/dev9/irx/dev9_ns.irx              modules
 	cp ../../iop/fakemod/irx/fakemod.irx           modules
 	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx           modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
@@ -164,7 +168,6 @@ copy:
 	cp $(PS2SDK)/iop/irx/usbd_mini.irx             modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx       modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx        modules
-	cp $(PS2SDK)/iop/irx/ps2dev9.irx               modules
 	cp $(PS2SDK)/iop/irx/iLinkman.irx              modules
 	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx      modules
 

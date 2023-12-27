@@ -6,7 +6,7 @@ depends = "bdm"
 
 # Modules to load
 [[module]]
-file = "ps2dev9.irx"
+file = "dev9_hidden.irx" # hidden version to hide from the game
 [[module]]
 file = "smap_udpbd.irx"
 args = ["ip=192.168.1.10"]
@@ -14,7 +14,7 @@ args = ["ip=192.168.1.10"]
 # Faking strategy
 # ---------------
 # To prevent games from trying to use networing:
-# - dev9 is not resident (startrvs 1) becouse it does not detect dev9 hardware
+# - dev9 is not resident (startrv 1) becouse it does not detect dev9 hardware
 # - all modules depending on dev9 fail to load becouse dev9 is not resident
 [[fake]]
 file = "DEV9.IRX"

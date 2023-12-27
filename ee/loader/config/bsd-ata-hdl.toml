@@ -9,7 +9,7 @@ file = "fileXio.irx"
 [[module-le]]
 file = "isofs.irx"
 [[module-le]]
-file = "ps2dev9.irx"
+file = "dev9_ns.irx"
 [[module-le]]
 file = "ps2atad.irx"
 [[module-le]]
@@ -23,7 +23,7 @@ file = "hdlfs.irx"
 file = "fhi_bdm.irx"
 ioprp = "FHI" # ID used by loader
 [[module-ee]]
-file = "ps2dev9.irx"
+file = "dev9_ns.irx" # no-shutdown version, to prevent games shutting down the dev9
 [[module-ee]]
 file = "ata_bd.irx"
 

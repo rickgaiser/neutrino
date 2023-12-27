@@ -6,7 +6,7 @@ depends = "bdm"
 
 # Modules to load
 [[module]]
-file = "ps2dev9.irx"
+file = "dev9_ns.irx" # no-shutdown version, to prevent games shutting down the dev9
 [[module]]
 file = "smap_udpbd.irx"
 args = ["ip=192.168.1.10"]
