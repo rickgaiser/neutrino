@@ -17,7 +17,7 @@ EE_SAMPLE_DIR ?= samples/
 EE_NEWLIB_NANO ?= 0
 EE_COMPACT_EXECUTABLE ?= 0
 
-EE_NANO_NEWLIB_LIBS ?= -lcdvd -lcglue -lpthreadglue -lkernel
+EE_NANO_NEWLIB_LIBS ?= -lcglue -lpthreadglue -lkernel
 
 ifneq (x$(EE_NEWLIB_NANO), x0)
 EE_ADDITIONAL_DEPS := $(EE_ADDITIONAL_DEPS)
