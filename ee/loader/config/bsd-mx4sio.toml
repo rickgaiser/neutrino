@@ -2,8 +2,9 @@
 name = "MX4SIO in MC2 BDM driver"
 
 # Drivers this driver depends on (config file must exist)
-depends = "bdm"
+depends = ["i_bdm"]
 
 # Modules to load
 [[module]]
 file = "mx4sio_bd_mini.irx"
+env = ["LE", "EE"]

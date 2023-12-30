@@ -1,6 +1,10 @@
 # Name of loaded config, to show to user
 name = "exFat filesystem driver"
 
+# Drivers this driver depends on (config file must exist)
+#depends = ["i_bdm"]
+
 # Modules to load in load environment
-[[module-le]]
+[[module]]
 file = "bdmfs_fatfs.irx"
+env = ["LE"]

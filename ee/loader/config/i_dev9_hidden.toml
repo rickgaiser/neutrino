@@ -1,0 +1,15 @@
+# Name of loaded config, to show to user
+name = "DEV9 hidden driver"
+
+# Modules to load
+[[module]]
+file = "dev9_hidden.irx" # hidden version to hide from the game
+env = ["LE", "EE"]
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "DEV9.IRX"
+name = "dev9"
+version = 0x0208
+loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
+startrv = 1 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

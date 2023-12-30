@@ -1,27 +1,20 @@
 # Name of loaded config, to show to user
-name = "UDPBD - UDP Block Device BDM driver with HDD support"
+name = "UDPBD BDM driver with HDD support"
 
 # Drivers this driver depends on (config file must exist)
-depends = "bdm"
+depends = ["i_bdm", "i_dev9_ns"]
 
 # Modules to load
 [[module]]
-file = "dev9_ns.irx" # no-shutdown version, to prevent games shutting down the dev9
-[[module]]
 file = "smap_udpbd.irx"
 args = ["ip=192.168.1.10"]
+env = ["LE", "EE"]
 
 # Faking strategy
 # ---------------
 # To allow games to use hdd:
-# - dev9 is resident (startrv 0), and can be used by hdd modules
+# - dev9 (no-shutdown) is resident, and can be used by hdd modules
 # - all networking modules are faked (we hope they are not used)
-[[fake]]
-file = "DEV9.IRX"
-name = "dev9"
-version = 0x0208
-loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
-startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
 [[fake]]
 file = "ENT_SMAP.IRX"
 name = "ent_smap"

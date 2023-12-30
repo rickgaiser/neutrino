@@ -2,13 +2,15 @@
 name = "iLink/FireWire/IEEE1394 BDM driver"
 
 # Drivers this driver depends on (config file must exist)
-depends = "bdm"
+depends = ["i_bdm"]
 
 # Modules to load
 [[module]]
 file = "iLinkman.irx"
+env = ["LE", "EE"]
 [[module]]
 file = "IEEE1394_bd_mini.irx"
+env = ["LE", "EE"]
 
 # Modules of the game that are faked/blocked
 [[fake]]

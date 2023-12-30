@@ -2,12 +2,14 @@
 name = "CD/DVD emulation using image file"
 
 # Modules to load
-[[module-ee]]
+[[module]]
 file = "cdvdman_emu.irx"
 ioprp = "CDVDMAN"
-[[module-ee]]
+env = ["EE"]
+[[module]]
 file = "cdvdfsv.irx"
 ioprp = "CDVDFSV"
+env = ["EE"]
 
 # Modules of the game that are faked/blocked
 [[fake]]

@@ -1,8 +1,8 @@
 # Name of loaded config, to show to user
-name = "USB Mass Storage BDM driver"
+name = "USB BDM driver"
 
 # Drivers this driver depends on (config file must exist)
-depends = "bdm"
+depends = ["i_bdm"]
 
 # Modules to load
 [[module]]
@@ -29,8 +29,10 @@ file = "usbd_mini.irx"
 args = ["dev=16", "ed=32", "gtd=64", "itd=64", "hub=4", "port=4", "thpri=7,8"]
 # Save 13KiB IOP RAM
 #args = ["dev=4", "ed=8", "gtd=16", "itd=16", "hub=2", "port=4", "thpri=7,8"]
+env = ["LE", "EE"]
 [[module]]
 file = "usbmass_bd_mini.irx"
+env = ["LE", "EE"]
 
 # Modules of the game that are faked/blocked
 [[fake]]

@@ -1,17 +1,14 @@
 # Name of loaded config, to show to user
-name = "ATA HDD BDM driver"
-
-# Drivers this driver depends on (config file must exist)
-depends = ["i_bdm", "i_dev9_ns"]
+name = "DEV9 no-shutdown driver"
 
 # Modules to load
 [[module]]
-file = "ata_bd.irx"
+file = "dev9_ns.irx" # no-shutdown version, to prevent games shutting down the dev9
 env = ["LE", "EE"]
 
 # Modules of the game that are faked/blocked
 [[fake]]
-file = "ATAD.IRX"
-name = "atad_driver"
-version = 0x0207
+file = "DEV9.IRX"
+name = "dev9"
+version = 0x0208
 startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

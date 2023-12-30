@@ -122,6 +122,8 @@ void print_usage()
     printf("  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso\n");
 }
 
+#define MOD_ENV_LE (1<<0)
+#define MOD_ENV_EE (1<<1)
 struct SModule
 {
     const char *sFileName;
@@ -132,17 +134,19 @@ struct SModule
 
     int arg_len;
     char *args;
+
+    unsigned int env;
 };
 
 #define DRV_MAX_MOD 20
 struct SModList {
     int count;
-    struct SModule *mod;
+    struct SModule mod[DRV_MAX_MOD];
 };
 
 struct SFakeList {
     int count;
-    struct FakeModule *fake;
+    struct FakeModule fake[MODULE_SETTINGS_MAX_FAKE_COUNT];
 };
 
 struct SSystemSettings {
@@ -175,13 +179,9 @@ struct SSystemSettings {
 } sys;
 
 struct SDriver {
-    // Drivers for load environment
-    struct SModList mod_l_env;
-    // Drivers for emulation environment
-    struct SModList mod_e_env;
-    // Drivers for all environments
-    struct SModList mod_all_env;
-    // Module faking for emulation environment
+    // All modules
+    struct SModList mod;
+    // List of fake modules for emulation environment
     struct SFakeList fake;
 } drv;
 
@@ -257,18 +257,6 @@ int module_start(struct SModule *mod)
     }
 
     printf("- %s started\n", mod->sFileName);
-
-    return 0;
-}
-
-int modlist_start(struct SModList *ml)
-{
-    int i;
-
-    for (i = 0; i < ml->count; i++) {
-        if (module_start(&ml->mod[i]) < 0)
-            return -1;
-    }
 
     return 0;
 }
@@ -367,7 +355,7 @@ static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const str
     uint8_t *ioprp_out = (uint8_t *)romdir_out;
 
     while (romdir_in->name[0] != '\0') {
-        struct SModule *mod = modlist_get_by_udnlname(&drv.mod_e_env, romdir_in->name);
+        struct SModule *mod = modlist_get_by_udnlname(&drv.mod, romdir_in->name);
         if (mod != NULL) {
             printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
             memcpy(ioprp_out, mod->pData, mod->iSize);
@@ -498,14 +486,27 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
     toml_array_t *arr;
     struct SModule *m;
 
-    if (ml->count >= DRV_MAX_MOD)
-        return -1;
-    m = &ml->mod[ml->count];
-    ml->count++;
-
     v = toml_string_in(t, "file");
-    if (v.ok)
-        m->sFileName = v.u.s; // NOTE: passing ownership of dynamic memory
+    if (v.ok == 0) {
+        printf("ERROR: module.file does not exist\n");
+        return -1;
+    }
+
+    m = modlist_get_by_name(ml, v.u.s);
+    if (m != NULL) {
+        printf("WARNING: module %s already loaded\n", m->sFileName);
+        memset(m, 0, sizeof(struct SModule));
+    } else {
+        if (ml->count >= DRV_MAX_MOD) {
+            printf("ERROR: too many modules\n");
+            return -1;
+        }
+        m = &ml->mod[ml->count];
+        ml->count++;
+    }
+
+    m->sFileName = v.u.s; // NOTE: passing ownership of dynamic memory
+
     v = toml_string_in(t, "ioprp");
     if (v.ok)
         m->sUDNL = v.u.s; // NOTE: passing ownership of dynamic memory
@@ -522,14 +523,29 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
             }
         }
     }
+    arr = toml_array_in(t, "env");
+    if (arr != NULL) {
+        int i;
+        for (i=0; i < toml_array_nelem(arr); i++) {
+            v = toml_string_at(arr, i);
+            if (v.ok) {
+                if (strncmp(v.u.s, "LE", 2) == 0)
+                    m->env |= MOD_ENV_LE;
+                else if (strncmp(v.u.s, "EE", 2) == 0)
+                    m->env |= MOD_ENV_EE;
+                else
+                    printf("ERROR: unknown module.env: %s\n", v.u.s);
+            }
+        }
+    }
 
     return 0;
 }
 
-int modlist_add_array(struct SModList *ml, toml_table_t *tbl_root, const char *arrname)
+int modlist_add_array(struct SModList *ml, toml_table_t *tbl_root)
 {
     int i;
-    toml_array_t *arr = toml_array_in(tbl_root, arrname);
+    toml_array_t *arr = toml_array_in(tbl_root, "module");
     if (arr == NULL)
         return 0;
 
@@ -608,23 +624,6 @@ int fakelist_add_array(struct SFakeList *fl, toml_table_t *tbl_root)
     return 0;
 }
 
-void driver_init()
-{
-    // Initialize system structure
-    memset(&sys, 0, sizeof(struct SSystemSettings));
-
-    // Initialize driver structure
-    memset(&drv, 0, sizeof(struct SDriver));
-    drv.mod_all_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
-    memset(drv.mod_all_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
-    drv.mod_e_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
-    memset(drv.mod_e_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
-    drv.mod_l_env.mod  = malloc(DRV_MAX_MOD * sizeof(struct SModule)); // NOTE: never freed, but we don't care
-    memset(drv.mod_l_env.mod,  0, DRV_MAX_MOD * sizeof(struct SModule));
-    drv.fake.fake = malloc(MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule)); // NOTE: never freed, but we don't care
-    memset(drv.fake.fake, 0, MODULE_SETTINGS_MAX_FAKE_COUNT * sizeof(struct FakeModule));
-}
-
 void toml_string_in_overwrite(toml_table_t *t, const char *name, char **dest)
 {
     toml_datum_t v = toml_string_in(t, name);
@@ -669,10 +668,16 @@ int load_driver(const char * type, const char * subtype)
     }
 
     // Recurse into dependencies
-    v = toml_string_in(tbl_root, "depends");
-    if (v.ok) {
-        load_driver(v.u.s, NULL);
-        free(v.u.s);
+    arr = toml_array_in(tbl_root, "depends");
+    if (arr != NULL) {
+        int i;
+        for (i=0; i < toml_array_nelem(arr); i++) {
+            v = toml_string_at(arr, i);
+            if (v.ok) {
+                load_driver(v.u.s, NULL);
+                free(v.u.s);
+            }
+        }
     }
 
     // Display driver set being loaded
@@ -683,7 +688,7 @@ int load_driver(const char * type, const char * subtype)
     }
 
     toml_string_in_overwrite(tbl_root, "default_bsd",    &sys.sBSD);
-    toml_string_in_overwrite(tbl_root, "default_bsdfs",    &sys.sBSDFS);
+    toml_string_in_overwrite(tbl_root, "default_bsdfs",  &sys.sBSDFS);
     toml_string_in_overwrite(tbl_root, "default_dvd",    &sys.sDVDMode);
     toml_string_in_overwrite(tbl_root, "default_ata0",   &sys.sATA0File);
     toml_string_in_overwrite(tbl_root, "default_ata0id", &sys.sATA0IDFile);
@@ -728,9 +733,7 @@ int load_driver(const char * type, const char * subtype)
         free(arr);
     }
 
-    modlist_add_array(&drv.mod_all_env, tbl_root, "module");
-    modlist_add_array(&drv.mod_e_env, tbl_root, "module-ee");
-    modlist_add_array(&drv.mod_l_env, tbl_root, "module-le");
+    modlist_add_array(&drv.mod, tbl_root);
     fakelist_add_array(&drv.fake, tbl_root);
     free(tbl_root);
 
@@ -849,9 +852,10 @@ int main(int argc, char *argv[])
     printf("--------------------------------\n");
 
     /*
-     * Initialiaze main driver structure before filling it from config files
+     * Initialiaze structures before filling them from config files
      */
-    driver_init();
+    memset(&sys, 0, sizeof(struct SSystemSettings));
+    memset(&drv, 0, sizeof(struct SDriver));
 
     /*
      * Load system settings
@@ -1038,11 +1042,7 @@ int main(int argc, char *argv[])
      */
     if (module_load(&mod_ee_core) < 0)
         return -1;
-    if (modlist_load(&drv.mod_e_env) < 0)
-        return -1;
-    if (modlist_load(&drv.mod_l_env) < 0)
-        return -1;
-    if (modlist_load(&drv.mod_all_env) < 0)
+    if (modlist_load(&drv.mod) < 0)
         return -1;
 
     /*
@@ -1066,34 +1066,36 @@ int main(int argc, char *argv[])
     /*
      * Start load environment modules
      */
-    if (modlist_start(&drv.mod_l_env) < 0)
-        return -1;
-    if (modlist_start(&drv.mod_all_env) < 0)
-        return -1;
-    if (modlist_get_by_name(&drv.mod_l_env, "fileXio.irx") != NULL)
+    for (i = 0; i < drv.mod.count; i++) {
+        struct SModule *pm = &drv.mod.mod[i];
+        if (pm->env & MOD_ENV_LE) {
+            if (module_start(pm) < 0)
+                return -1;
+        }
+    }
+    if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
         fileXioInit();
 
     // FAKEMOD optional module
     // Only loaded when modules need to be faked
-    struct SModule *mod_fakemod = modlist_get_by_udnlname(&drv.mod_e_env, "FAKEMOD");
+    struct SModule *mod_fakemod = modlist_get_by_name(&drv.mod, "fakemod.irx");
 
     // FHI optional module
     // Only loaded when file access is needed
-    // NOTE: FHI is an abstraction to FHI_BDM, FHI_FILE, etc...
-    struct SModule *mod_fhi = modlist_get_by_udnlname(&drv.mod_e_env, "FHI");
+    struct SModule *mod_fhi = modlist_get_by_name(&drv.mod, "fhi_bdm.irx");
 
     // Load module settings for fhi_bdm backing store
-    struct fhi_bdm *set_fhi_bdm = modlist_get_settings(&drv.mod_e_env, "fhi_bdm.irx");
+    struct fhi_bdm *set_fhi_bdm = modlist_get_settings(&drv.mod, "fhi_bdm.irx");
     if (set_fhi_bdm != NULL)
         memset((void *)set_fhi_bdm, 0, sizeof(struct fhi_bdm));
 
     // Load module settings for cdvd emulator
-    struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod_e_env, "cdvdman_emu.irx");
+    struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod, "cdvdman_emu.irx");
     if (set_cdvdman != NULL)
         memset((void *)set_cdvdman, 0, sizeof(struct cdvdman_settings_common));
 
     // Load module settings for module faker
-    struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod_e_env, "fakemod.irx");
+    struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod, "fakemod.irx");
     if (set_fakemod != NULL)
         memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
 
@@ -1112,8 +1114,6 @@ int main(int argc, char *argv[])
             printf("ERROR: DVD emulator not found!\n");
             return -1;
         }
-        // Make sure the FHI module gets loaded
-        mod_fhi->sUDNL = NULL;
 
         /*
          * Check if file exists
@@ -1301,8 +1301,6 @@ int main(int argc, char *argv[])
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        // Make sure the FHI module gets loaded
-        mod_fhi->sUDNL = NULL;
         // Load fragfile
         if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0, sys.sATA0File) < 0)
             return -1;
@@ -1322,8 +1320,6 @@ int main(int argc, char *argv[])
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        // Make sure the FHI module gets loaded
-        mod_fhi->sUDNL = NULL;
         // Load fragfile
         if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA1, sys.sATA1File) < 0)
             return -1;
@@ -1338,8 +1334,6 @@ int main(int argc, char *argv[])
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        // Make sure the FHI module gets loaded
-        mod_fhi->sUDNL = NULL;
         // Load fragfile
         if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC0, sys.sMC0File) < 0)
             return -1;
@@ -1354,8 +1348,6 @@ int main(int argc, char *argv[])
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        // Make sure the FHI module gets loaded
-        mod_fhi->sUDNL = NULL;
         // Load fragfile
         if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC1, sys.sMC1File) < 0)
             return -1;
@@ -1417,13 +1409,11 @@ int main(int argc, char *argv[])
 
     // Count the number of modules to pass to the ee_core
     int modcount = 1; // IOPRP
-    modcount += drv.mod_all_env.count;
-    for (i = 0; i < drv.mod_e_env.count; i++) {
-        if (drv.mod_e_env.mod[i].sUDNL == NULL)
+    for (i = 0; i < drv.mod.count; i++) {
+        struct SModule *pm = &drv.mod.mod[i];
+        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL))
             modcount++;
     }
-    if (drv.fake.count > 0)
-        modcount++;
 
     irxtable = (irxtab_t *)get_modstorage(sGameID);
     if (irxtable == NULL)
@@ -1455,16 +1445,13 @@ int main(int argc, char *argv[])
     //
     // Load modules into place
     //
-    for (i = 0; i < drv.mod_e_env.count; i++) {
+    for (i = 0; i < drv.mod.count; i++) {
+        struct SModule *pm = &drv.mod.mod[i];
         // Load only the modules that are not part of IOPRP / UDNL
-        if (drv.mod_e_env.mod[i].sUDNL == NULL) {
-            irxptr = module_install(&drv.mod_e_env.mod[i], irxptr, irxptr_tab++);
+        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm != mod_fakemod)) {
+            irxptr = module_install(pm, irxptr, irxptr_tab++);
             irxtable->count++;
         }
-    }
-    for (i = 0; i < drv.mod_all_env.count; i++) {
-        irxptr = module_install(&drv.mod_all_env.mod[i], irxptr, irxptr_tab++);
-        irxtable->count++;
     }
     // Load FAKEMOD last, to prevent it from faking our own modules
     if (drv.fake.count > 0) {

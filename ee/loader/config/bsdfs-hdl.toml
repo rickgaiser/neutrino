@@ -1,9 +1,14 @@
 # Name of loaded config, to show to user
 name = "HDLoader filesystem driver"
 
+# Drivers this driver depends on (config file must exist)
+#depends = ["i_bdm"]
+
 # Modules to load in load environment
-[[module-le]]
+[[module]]
 file = "ps2hdd-bdm.irx"
 args = ["-o", "4", "-n", "20"]
-[[module-le]]
+env = ["LE"]
+[[module]]
 file = "hdlfs.irx"
+env = ["LE"]

@@ -39,11 +39,13 @@ cdvdman_fs_sectors = 8
 #disk_id = [0x00, 0x00, 0x00, 0x00, 0x00]
 
 # Modules to load in emulation environment
-[[module-ee]]
+[[module]]
 file = "eesync.irx"
 ioprp = "EESYNC"
-[[module-ee]]
+env = ["EE"]
+[[module]]
 file = "imgdrv.irx"
-[[module-ee]]
+env = ["EE"]
+[[module]]
 file = "fakemod.irx"
-ioprp = "FAKEMOD" # ID used by loader
+env = ["EE"]

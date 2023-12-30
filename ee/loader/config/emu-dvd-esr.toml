@@ -4,5 +4,7 @@ name = "Builtin DVD drive with ESR patched disk"
 # Modules to load
 [[module]]
 file = "cdvdman_esr1.irx"
+env = ["LE", "EE"]
 [[module]]
 file = "cdvdman_esr2.irx"
+env = ["LE", "EE"]
