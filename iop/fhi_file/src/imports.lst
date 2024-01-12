@@ -1,0 +1,32 @@
+ioman_IMPORTS_start
+I_open
+I_lseek
+I_read
+I_close
+ioman_IMPORTS_end
+
+loadcore_IMPORTS_start
+I_RegisterLibraryEntries
+loadcore_IMPORTS_end
+
+stdio_IMPORTS_start
+I_printf // used by libbdm!
+stdio_IMPORTS_end
+
+sysclib_IMPORTS_start
+I_strncmp
+sysclib_IMPORTS_end
+
+#ifdef DEBUG
+thbase_IMPORTS_start
+I_CreateThread
+I_StartThread
+I_DelayThread
+thbase_IMPORTS_end
+#endif
+
+thsemap_IMPORTS_start
+I_CreateSema
+I_SignalSema
+I_WaitSema
+thsemap_IMPORTS_end

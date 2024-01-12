@@ -1,0 +1,19 @@
+void _retonly(void) {}
+
+int _ret0(void) {
+    return 0;
+}
+
+int _dummy(void) {
+    return 1;
+}
+
+DECLARE_EXPORT_TABLE(fhi, 1, 1)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_ret0)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(fhi_size)
+    DECLARE_EXPORT(fhi_read)
+    DECLARE_EXPORT(fhi_write)
+END_EXPORT_TABLE

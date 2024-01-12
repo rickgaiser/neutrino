@@ -4,6 +4,9 @@
 #ifndef FHI_H
 #define FHI_H
 
+#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
+#define FHI_MAX_FILES 6
+
 #define FHI_FID_CDVD    0
 #define FHI_FID_ATA0    1
 #define FHI_FID_ATA0ID  2
