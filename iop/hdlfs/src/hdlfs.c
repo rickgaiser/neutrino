@@ -44,8 +44,9 @@ int hdl_init(iomanX_iop_device_t *d)
 
     int fd = iomanX_dopen("hdd0:");
     if (fd < 0) {
-        M_DEBUG("ERROR: unable to open hdd0:\n");
-        return -ENODEV;
+        M_DEBUG("WARNING: unable to open hdd0 at this time:\n");
+        // Return succes so we can try to open hdd0 later
+        return 0;//-ENODEV;
     }
 
 #ifdef DEBUG
@@ -87,6 +88,11 @@ int hdl_open(iomanX_iop_file_t *f, const char *name, int mode, int unk)
         *iso_ext = '\0'; // Terminate the string
     }
 
+    while (name[0] == '/' || name[0] == '\\') {
+        M_DEBUG("ignoring leading '/'\n");
+        name++;
+    }
+
     while (iomanX_dread(fd, &dirent) > 0) {
         M_DEBUG("  %s, mode=0x%x, attr=0x%x, size=%d\n", dirent.name, dirent.stat.mode, dirent.stat.attr, dirent.stat.size);
         if (dirent.stat.mode == HDL_FS_MAGIC && (dirent.stat.attr & APA_FLAG_SUB) == 0) {
@@ -102,6 +108,11 @@ int hdl_open(iomanX_iop_file_t *f, const char *name, int mode, int unk)
             args->size = nsectors;
             if (iomanX_devctl("hdd0:", HDIOC_READSECTOR, args, sizeof(hddAtaTransfer_t), &file_hdl, nsectors * 512) != 0)
                 return -EIO;
+
+            if (file_hdl.checksum != 0xdeadfeed) {
+                M_DEBUG("- HDL checksum invalid (0x%X, p5=0x%X)\n", file_hdl.checksum, dirent.stat.private_5);
+                continue;
+            }
 
             M_DEBUG("- name = %s\n", file_hdl.gamename);
             M_DEBUG("- partitions:\n");
@@ -154,45 +165,41 @@ int hdl_read(iomanX_iop_file_t *f, void *buffer, int size)
 {
     M_DEBUG("%s(0x%x, %d)\n", __FUNCTION__, buffer, size);
 
-    if ((file_offset + size) <= file_hdl.part_specs[0].part_size) { // only read in first partition (for now)
-        hddAtaTransfer_t *args = (hddAtaTransfer_t *)&sector_buffer;
-        int size_left = size;
+    hddAtaTransfer_t *args = (hddAtaTransfer_t *)&sector_buffer;
+    int size_left = size;
 
-        while (size_left > 0) {
-            unsigned int file_sector = file_offset / 512;
-            unsigned int file_sector_offset = file_offset & 511;
-            unsigned int part = get_part(file_sector);
-            unsigned int part_sector = file_sector - (file_hdl.part_specs[part].part_offset * 4);
-            unsigned int hdd_sector = file_hdl.part_specs[part].data_start + part_sector;
-            int size_read = size_left;
+    while (size_left > 0) {
+        unsigned int file_sector = file_offset / 512;
+        unsigned int file_sector_offset = file_offset & 511;
+        unsigned int part = get_part(file_sector);
+        unsigned int part_sector = file_sector - (file_hdl.part_specs[part].part_offset * 4);
+        unsigned int hdd_sector = file_hdl.part_specs[part].data_start + part_sector;
+        int size_read = size_left;
 
-            if (size_read > (512 - file_sector_offset))
-                size_read = 512 - file_sector_offset;
+        if (size_read > (512 - file_sector_offset))
+            size_read = 512 - file_sector_offset;
 
-            M_DEBUG("reading %d bytes from lba %d, offset %d\n", size_read, hdd_sector, file_sector_offset);
+        M_DEBUG("reading %d bytes from lba %d, offset %d\n", size_read, hdd_sector, file_sector_offset);
 
-            args->lba = hdd_sector;
-            args->size = 1;
-            if (size_read == 512) {
-                // Read whole sector
-                if (iomanX_devctl("hdd0:", HDIOC_READSECTOR, args, sizeof(hddAtaTransfer_t), buffer, 512) != 0)
-                    return -EIO;
-            }
-            else {
-                // Read part of sector via bounce buffer
-                if (iomanX_devctl("hdd0:", HDIOC_READSECTOR, args, sizeof(hddAtaTransfer_t), &sector_buffer, 512) != 0)
-                    return -EIO;
-                memcpy(buffer, sector_buffer + file_sector_offset, size_read);
-            }
-
-            buffer += size_read;
-            size_left -= size_read;
-            file_offset += size_read;
+        args->lba = hdd_sector;
+        args->size = 1;
+        if (size_read == 512) {
+            // Read whole sector
+            if (iomanX_devctl("hdd0:", HDIOC_READSECTOR, args, sizeof(hddAtaTransfer_t), buffer, 512) != 0)
+                return -EIO;
         }
-        return size;
-    }
+        else {
+            // Read part of sector via bounce buffer
+            if (iomanX_devctl("hdd0:", HDIOC_READSECTOR, args, sizeof(hddAtaTransfer_t), &sector_buffer, 512) != 0)
+                return -EIO;
+            memcpy(buffer, sector_buffer + file_sector_offset, size_read);
+        }
 
-    return -EIO;
+        buffer += size_read;
+        size_left -= size_read;
+        file_offset += size_read;
+    }
+    return size;
 }
 int hdl_write(iomanX_iop_file_t *f, void *buffer, int size)
 {
