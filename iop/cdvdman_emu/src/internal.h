@@ -56,6 +56,13 @@ enum ECallSource {
     ECS_EE_RPC
 };
 
+enum ESpinCtrl {
+    ESPIN_DVD_CLV_2X = 0,
+    ESPIN_DVD_CAV_4X,
+    ESPIN_CD_CLV_12X,
+    ESPIN_CD_CAV_24X,
+};
+
 typedef struct
 {
     u32 lba;
@@ -63,6 +70,7 @@ typedef struct
     u16 sector_size;
     void *buf;
     enum ECallSource source;
+    enum ESpinCtrl spin;
 } cdvdman_read_t;
 
 typedef struct
