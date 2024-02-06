@@ -33,13 +33,20 @@ static const gamecompat_t default_game_compat[] = {
 
 uint32_t get_compat(const char *id)
 {
+    // Default compatibility mode
+    uint32_t compat = COMPAT_MODE_1;
+
+    // Game specific compatibility mode
     const gamecompat_t *p = &default_game_compat[0];
     while (p->game != NULL) {
-        if (strcmp(id, p->game) == 0)
-            return p->flags;
+        if (strcmp(id, p->game) == 0) {
+            compat |= p->flags;
+            break;
+        }
         p++;
     }
-    return 0;
+
+    return compat;
 }
 
 
