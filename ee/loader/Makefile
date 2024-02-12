@@ -114,6 +114,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = "DVD/Splashdown (E).iso" # IOP memory allocation issue: allocates too little for the DVD reads that follow (fixed!)
 #GAME = 'DVD/God of War II (U).iso'
 #GAME = 'DVD/Gran Turismo 4 (U).iso'
+#GAME = 'CD/OPL_Accurate_Read_v1.0.iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)

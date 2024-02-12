@@ -21,7 +21,7 @@ static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16
 static unsigned int event_alarm_cb(void *args);
 static void cdvdman_startThreads(void);
 static void cdvdman_create_semaphores(void);
-static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf, cdvdman_read_t *req);
+static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf);
 
 struct cdvdman_cb_data
 {
@@ -78,14 +78,14 @@ static unsigned int cdvdemu_read_end_cb(void *arg)
     return 0;
 }
 
-static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf, cdvdman_read_t *req)
+static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 {
     unsigned int remaining;
     void *ptr;
     int endOfMedia = 0;
     u32 usec_per_sector = 0;
 
-    //M_DEBUG("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p, spin=%d\n", lsn, sectors, buf, req->spin);
+    //M_DEBUG("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
     if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) {
         /*
@@ -95,57 +95,71 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf, cdvdma
          * -  1x =  150KiB/s =   75 sectors/s for CD
          * -  1x = 1350KiB/s =  675 sectors/s for DVD
          *
-         * CAV read speed is 40% at the inner track, and 100% at the outer track
+         * Maximum read speeds:
          * - 24x = 3600KiB/s = 1900 sectors/s for CD
          * -  4x = 5400KiB/s = 2700 sectors/s for DVD
          *
-         * CLV read speed is constant:
-         * - 10.3x = 1545KiB/s for CD  - check this value!
-         * -  1.6x = 2160KiB/s for DVD - check this value!
+         * CLV read speed is constant (Maximum / 2.4):
+         * - 10.00x = 1500KiB/s for CD
+         * -  1.67x = 2250KiB/s for DVD
+         *
+         * CAV read speed is:
+         * - Same as CLV at the inner sectors
+         * - Same as max at the outer sectors
+         *
+         * Sony documentation states only CAV is used.
+         * But there is some discussion about if this is true 100% of the time.
          */
 
-        // Assume the compiler optimizes this into constants
-        // DO NOT use this in non-constant calculations
-        const double cd_x1 = 150.0; // KiB/s
-        const double dvd_x1 = 1350.0; // KiB/s
-        const double us_per_s = 1000000.0;
-        const double kb_per_sector = 2.0;
+        if (cdvdman_settings.media == 0x12) {
+            // CD constant values
+            // ------------------
+            // 2 KiB
+            // 1000000 us / s
+            // 333000 sectors per CD
+            // 1500 KiB/s inner speed (10X)
+            // 3600 KiB/s outer speed (24X)
+            const u32 cd_const_1 = (1000000 * 2 * 333000ll) / (3600 - 1500);
+            const u32 cd_const_2 = (       1500 * 333000ll) / (3600 - 1500);
+            usec_per_sector = cd_const_1 / (cd_const_2 + lsn);
+            // CD is limited to 3000KiB/s = 667ms
+            // Compensation: our code seems 23ms / sector slower than sony CDVD
+            if (usec_per_sector < (667-23))
+                usec_per_sector = (667-23);
+        } else if (cdvdman_settings.layer1_start != 0) {
+            // DVD dual layer constant values
+            // ------------------------------
+            // 2 KiB
+            // 1000000 us / s
+            // 2084960 sectors per DVD (8.5GB/2)
+            // 2250 KiB/s inner speed (1.67X)
+            // 5400 KiB/s outer speed (4X)
+            const u32 dvd_dl_const_1 = (1000000 * 2 * 2084960ll) / (5400 - 2250);
+            const u32 dvd_dl_const_2 = (       2250 * 2084960ll) / (5400 - 2250);
+            // For dual layer DVD, the second layer starts at 0
+            // PS2 uses PTP = Parallel Track Path
+            u32 effective_lsn = lsn;
+            if (lsn >= cdvdman_settings.layer1_start)
+                lsn -= cdvdman_settings.layer1_start;
 
-        // CD timings at 24x
-        const u32 cd_usec_per_sector_inner = 1389; // 556us at the outer track
-        const u32 cd_sectors_per_usec_decrease = 432;
-        // DVD timings at 4x
-        const u32 dvd_usec_per_sector_inner = 926; // 370us at the outer track
-        const u32 dvd_sectors_per_usec_decrease = 4138;
-
-        switch (req->spin) {
-            case ESPIN_CD_CAV_24X:
-                {
-                    usec_per_sector = cd_usec_per_sector_inner - (lsn / cd_sectors_per_usec_decrease);
-                    M_DEBUG("Sector %lu (%u Sectors) Speed=24x(CAV) usec = %d\n", lsn, sectors, usec_per_sector);
-                }
-                break;
-            case ESPIN_CD_CLV_12X:
-                {
-                    const double speed = 10.3; // 12x is limited to 10.3x
-                    usec_per_sector = (u32)((kb_per_sector * us_per_s) / (cd_x1 * speed));
-                    M_DEBUG("Sector %lu (%u Sectors) Speed=12x(CLV) usec = %d\n", lsn, sectors, usec_per_sector);
-                }
-                break;
-            case ESPIN_DVD_CAV_4X:
-                {
-                    usec_per_sector = dvd_usec_per_sector_inner - (lsn / dvd_sectors_per_usec_decrease);
-                    M_DEBUG("Sector %lu (%u Sectors) Speed=4x(CAV) usec = %d\n", lsn, sectors, usec_per_sector);
-                }
-                break;
-            case ESPIN_DVD_CLV_2X:
-            default:
-                {
-                    const double speed = 1.6;     // 2x is limited to 1.6x
-                    usec_per_sector = (u32)((kb_per_sector * us_per_s) / (dvd_x1 * speed));
-                    M_DEBUG("Sector %lu (%u Sectors) Speed=2x(CLV) usec = %d\n", lsn, sectors, usec_per_sector);
-                }
+            usec_per_sector = dvd_dl_const_1 / (dvd_dl_const_2 + effective_lsn);
         }
+        else {
+            // DVD single layer constant values
+            // --------------------------------
+            // 2 KiB
+            // 1000000 us / s
+            // 2298496 sectors per DVD (4.7GB)
+            // 2250 KiB/s inner speed (1.67X)
+            // 5400 KiB/s outer speed (4X)
+            const u32 dvd_sl_const_1 = (1000000 * 2 * 2298496ll) / (5400 - 2250);
+            const u32 dvd_sl_const_2 = (       2250 * 2298496ll) / (5400 - 2250);
+            usec_per_sector = dvd_sl_const_1 / (dvd_sl_const_2 + lsn);
+        }
+        // Compensation: our code seems 55ms / sector slower than sony CDVD
+        usec_per_sector -= 30;
+
+        M_DEBUG("Sector %lu (%u sectors) CAV usec_per_sector = %d\n", lsn, sectors, usec_per_sector);
     }
 
     if (mediaLsnCount) {
@@ -227,7 +241,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf, cdvdma
     return (cdvdman_stat.err == SCECdErNO ? 0 : 1);
 }
 
-static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf, cdvdman_read_t *req)
+static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf)
 {
     cdvdman_stat.status = SCECdStatRead;
 
@@ -255,7 +269,7 @@ static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf, cdvdma
             if (sector_size != 2048)
                 nsectors = 1;
 
-            cdvdman_read_sectors(rpos, nsectors, cdvdman_buf, req);
+            cdvdman_read_sectors(rpos, nsectors, cdvdman_buf);
 
             rpos += nsectors;
             sectors -= nsectors;
@@ -290,7 +304,7 @@ static int cdvdman_read(u32 lsn, u32 sectors, u16 sector_size, void *buf, cdvdma
 
         SignalSema(cdvdman_searchfilesema);
     } else {
-        cdvdman_read_sectors(lsn, sectors, buf, req);
+        cdvdman_read_sectors(lsn, sectors, buf);
     }
 
     ReadPos = 0; /* Reset the buffer offset indicator. */
@@ -358,20 +372,6 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     cdvdman_stat.req.sector_size = sector_size;
     cdvdman_stat.req.buf = buf;
     cdvdman_stat.req.source = source;
-    if (mode == NULL) {
-        int iscd = cdvdman_settings.media == 0x12;
-        switch (source) {
-            case ECS_EXTERNAL:  cdvdman_stat.req.spin = iscd ? ESPIN_CD_CAV_24X : ESPIN_DVD_CAV_4X; break; // CD not checked             , DVD with DBZBT3
-            case ECS_SEARCHFILE:cdvdman_stat.req.spin = iscd ? ESPIN_CD_CAV_24X : ESPIN_DVD_CAV_4X; break; // CD checked with "Downforce", DVD with DBZBT3
-            case ECS_STREAMING: cdvdman_stat.req.spin = iscd ? ESPIN_CD_CLV_12X : ESPIN_DVD_CLV_2X; break; // CD checked with "Downforce"
-            case ECS_EE_RPC:    cdvdman_stat.req.spin = iscd ? ESPIN_CD_CAV_24X : ESPIN_DVD_CAV_4X; break; // CD checked with "Downforce", DVD with DBZBT3
-            default:            cdvdman_stat.req.spin = iscd ? ESPIN_CD_CAV_24X : ESPIN_DVD_CAV_4X;
-        }
-    } else {
-        int iscd = cdvdman_settings.media == 0x12;
-        // TODO!
-        cdvdman_stat.req.spin = iscd ? ESPIN_CD_CLV_12X : ESPIN_DVD_CLV_2X;
-    }
 
     CpuResumeIntr(OldState);
 
@@ -597,7 +597,7 @@ static void cdvdman_cdread_Thread(void *args)
 
         M_DEBUG("%s() [%d, %d, %d, %08x, %d]\n", __FUNCTION__, (int)req.lba, (int)req.sectors, (int)req.sector_size, (int)req.buf, (int)req.source);
 
-        cdvdman_read(req.lba, req.sectors, req.sector_size, req.buf, &req);
+        cdvdman_read(req.lba, req.sectors, req.sector_size, req.buf);
 
         sync_flag_locked = 0;
         SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED);
