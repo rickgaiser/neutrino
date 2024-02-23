@@ -6,13 +6,13 @@
 #include <bdm.h>
 #include <bd_defrag.h>
 
-#include "fhi_bdm.h"
+#include "fhi_bd_defrag.h"
 #include "mprintf.h"
 
 #define MODNAME "fhi" // give all fhi modules the same name
 IRX_ID(MODNAME, 1, 1);
 
-struct fhi_bdm fhi = {MODULE_SETTINGS_MAGIC};
+struct fhi_bd_defrag fhi = {MODULE_SETTINGS_MAGIC};
 static struct block_device *g_bd = NULL;
 static int bdm_io_sema;
 
@@ -74,7 +74,7 @@ u32 fhi_size(int file_handle)
 int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count)
 {
     int rv;
-    struct fhi_bdm_info *ff;
+    struct fhi_bd_defrag_info *ff;
 
     if (file_handle)
         M_DEBUG("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
@@ -95,7 +95,7 @@ int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned 
 int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, unsigned int sector_count)
 {
     int rv;
-    struct fhi_bdm_info *ff;
+    struct fhi_bd_defrag_info *ff;
 
     if (file_handle)
         M_DEBUG("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);

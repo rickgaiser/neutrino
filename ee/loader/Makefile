@@ -149,7 +149,8 @@ copy:
 	cp ../../iop/dev9/irx/dev9_hidden.irx          modules
 	cp ../../iop/dev9/irx/dev9_ns.irx              modules
 	cp ../../iop/fakemod/irx/fakemod.irx           modules
-	cp ../../iop/fhi_bdm/irx/fhi_bdm.irx           modules
+	cp ../../iop/fhi_bd/irx/fhi_bd.irx             modules
+	cp ../../iop/fhi_bd_defrag/irx/fhi_bd_defrag.irx modules
 	cp ../../iop/fhi_file/irx/fhi_file.irx         modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules

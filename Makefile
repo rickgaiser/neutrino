@@ -10,7 +10,8 @@ all:
 	$(MAKE) -C iop/dev9         all DEBUG=$(IOPCORE_DEBUG) DEV9_HIDDEN=1
 	$(MAKE) -C iop/dev9         all DEBUG=$(IOPCORE_DEBUG) DEV9_NO_SHUTDOWN=1
 	$(MAKE) -C iop/fakemod      all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/fhi_bdm      all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/fhi_bd       all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/fhi_bd_defrag all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_file     all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/hdlfs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
@@ -37,7 +38,8 @@ clean:
 	$(MAKE) -C iop/dev9         clean DEV9_HIDDEN=1
 	$(MAKE) -C iop/dev9         clean DEV9_NO_SHUTDOWN=1
 	$(MAKE) -C iop/fakemod      clean
-	$(MAKE) -C iop/fhi_bdm      clean
+	$(MAKE) -C iop/fhi_bd       clean
+	$(MAKE) -C iop/fhi_bd_defrag clean
 	$(MAKE) -C iop/fhi_file     clean
 	$(MAKE) -C iop/hdlfs        clean
 	$(MAKE) -C iop/imgdrv       clean

@@ -1,0 +1,32 @@
+void _retonly(void) {}
+
+int _ret0(void) {
+    return 0;
+}
+
+int _dummy(void) {
+    return 1;
+}
+
+DECLARE_EXPORT_TABLE(bdm, 1, 1)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_ret0)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(bdm_connect_bd)
+    DECLARE_EXPORT(bdm_disconnect_bd)
+    // DECLARE_EXPORT(bdm_connect_fs)
+    // DECLARE_EXPORT(bdm_disconnect_fs)
+    // DECLARE_EXPORT(bdm_get_bd)
+    // DECLARE_EXPORT(bdm_RegisterCallback)
+END_EXPORT_TABLE
+
+DECLARE_EXPORT_TABLE(fhi, 1, 1)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_ret0)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(fhi_size)
+    DECLARE_EXPORT(fhi_read)
+    DECLARE_EXPORT(fhi_write)
+END_EXPORT_TABLE

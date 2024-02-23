@@ -25,7 +25,8 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "xparam.h"
 #include "../../../iop/common/cdvd_config.h"
 #include "../../../iop/common/fakemod.h"
-#include "../../../iop/common/fhi_bdm.h"
+#include "../../../iop/common/fhi_bd.h"
+#include "../../../iop/common/fhi_bd_defrag.h"
 #include "../../../iop/common/fhi_file.h"
 #include "../../../iop/common/fhi.h"
 #include "toml.h"
@@ -768,12 +769,12 @@ void *modlist_get_settings(struct SModList *ml, const char *name)
     return settings;
 }
 
-int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
+int fhi_bd_defrag_add_file_by_fd(struct fhi_bd_defrag *bdm, int fhi_fid, int fd)
 {
     int i, iop_fd;
     off_t size;
     unsigned int frag_start = 0;
-    struct fhi_bdm_info *frag = &bdm->file[fhi_fid];
+    struct fhi_bd_defrag_info *frag = &bdm->file[fhi_fid];
 
     // Get actual IOP fd
     iop_fd = ps2sdk_get_iop_fd(fd);
@@ -811,7 +812,7 @@ int fhi_bdm_add_file_by_fd(struct fhi_bdm *bdm, int fhi_fid, int fd)
     return 0;
 }
 
-int fhi_bdm_add_file(struct fhi_bdm *bdm, int fhi_fid, const char *name)
+int fhi_bd_defrag_add_file(struct fhi_bd_defrag *bdm, int fhi_fid, const char *name)
 {
     int i, fd, rv;
 
@@ -830,7 +831,7 @@ int fhi_bdm_add_file(struct fhi_bdm *bdm, int fhi_fid, const char *name)
         return -1;
     }
 
-    rv = fhi_bdm_add_file_by_fd(bdm, fhi_fid, fd);
+    rv = fhi_bd_defrag_add_file_by_fd(bdm, fhi_fid, fd);
     close(fd);
     return rv;
 }
@@ -1083,10 +1084,10 @@ int main(int argc, char *argv[])
     // Only loaded when modules need to be faked
     struct SModule *mod_fakemod = modlist_get_by_name(&drv.mod, "fakemod.irx");
 
-    // Load module settings for fhi_bdm backing store
-    struct fhi_bdm *set_fhi_bdm = modlist_get_settings(&drv.mod, "fhi_bdm.irx");
-    if (set_fhi_bdm != NULL)
-        memset((void *)set_fhi_bdm, 0, sizeof(struct fhi_bdm));
+    // Load module settings for fhi_bd_defrag backing store
+    struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings(&drv.mod, "fhi_bd_defrag.irx");
+    if (set_fhi_bd_defrag != NULL)
+        memset((void *)set_fhi_bd_defrag, 0, sizeof(struct fhi_bd_defrag));
 
     // Load module settings for fhi_file backing store
     struct fhi_file *set_fhi_file = modlist_get_settings(&drv.mod, "fhi_file.irx");
@@ -1110,7 +1111,7 @@ int main(int argc, char *argv[])
         uint32_t layer1_lba_start = 0;
         int fd_iso = 0;
 
-        if (set_fhi_bdm == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
             printf("ERROR: DVD emulator needs FHI backing store!\n");
             return -1;
         }
@@ -1181,8 +1182,8 @@ int main(int argc, char *argv[])
         }
         printf("- media = %s\n", sMT);
 
-        if (set_fhi_bdm != NULL) {
-            if (fhi_bdm_add_file_by_fd(set_fhi_bdm, FHI_FID_CDVD, fd_iso) < 0)
+        if (set_fhi_bd_defrag != NULL) {
+            if (fhi_bd_defrag_add_file_by_fd(set_fhi_bd_defrag, FHI_FID_CDVD, fd_iso) < 0)
                 return -1;
         }
         if (set_fhi_file != NULL) {
@@ -1307,16 +1308,16 @@ int main(int argc, char *argv[])
      */
     if (sys.sATA0File != NULL) {
         // Check for FHI backing store
-        if (set_fhi_bdm == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
         // Load file
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0, sys.sATA0File) < 0)
+        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0, sys.sATA0File) < 0)
             return -1;
         // if ata 0 is ok, load HDD ID file
         if (sys.sATA0IDFile != NULL) {
-            if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
+            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
                 return -1;
         }
     }
@@ -1326,12 +1327,12 @@ int main(int argc, char *argv[])
      */
     if (sys.sATA1File != NULL) {
         // Check for FHI backing store
-        if (set_fhi_bdm == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
         // Load file
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_ATA1, sys.sATA1File) < 0)
+        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA1, sys.sATA1File) < 0)
             return -1;
     }
 
@@ -1340,12 +1341,12 @@ int main(int argc, char *argv[])
      */
     if (sys.sMC0File != NULL) {
         // Check for FHI backing store
-        if (set_fhi_bdm == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
         // Load file
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC0, sys.sMC0File) < 0)
+        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC0, sys.sMC0File) < 0)
             return -1;
     }
 
@@ -1354,12 +1355,12 @@ int main(int argc, char *argv[])
      */
     if (sys.sMC1File != NULL) {
         // Check for FHI backing store
-        if (set_fhi_bdm == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
         // Load file
-        if (fhi_bdm_add_file(set_fhi_bdm, FHI_FID_MC1, sys.sMC1File) < 0)
+        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC1, sys.sMC1File) < 0)
             return -1;
     }
 

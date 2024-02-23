@@ -1,0 +1,27 @@
+loadcore_IMPORTS_start
+I_RegisterLibraryEntries
+loadcore_IMPORTS_end
+
+#ifdef DEBUG
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+#endif
+
+sysclib_IMPORTS_start
+I_strncmp
+sysclib_IMPORTS_end
+
+#ifdef DEBUG
+thbase_IMPORTS_start
+I_CreateThread
+I_StartThread
+I_DelayThread
+thbase_IMPORTS_end
+#endif
+
+thsemap_IMPORTS_start
+I_CreateSema
+I_SignalSema
+I_WaitSema
+thsemap_IMPORTS_end

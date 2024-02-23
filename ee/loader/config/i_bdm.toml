@@ -19,5 +19,5 @@ env = ["LE"]
 
 # Modules to load in emulation environment
 [[module]]
-file = "fhi_bdm.irx"
+file = "fhi_bd_defrag.irx"
 env = ["EE"]
