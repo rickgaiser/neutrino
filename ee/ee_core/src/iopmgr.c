@@ -177,8 +177,10 @@ int New_Reset_Iop(const char *arg, int arglen)
 
     DPRINTF("New_Reset_Iop complete!\n");
     // we have 4 SifSetReg calls to skip in ELF's SifResetIop, not when we use it ourselves
-    if (set_reg_disabled)
+    if (set_reg_disabled) {
         set_reg_hook = 4;
+        get_reg_hook = 1;
+    }
 
     if (EnableDebug)
         GS_BGCOLOUR = 0x000000; // Black

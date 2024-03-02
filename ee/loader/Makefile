@@ -115,6 +115,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/God of War II (U).iso'
 #GAME = 'DVD/Gran Turismo 4 (U).iso'
 #GAME = 'CD/OPL_Accurate_Read_v1.0.iso'
+#GAME = 'DVD/Kidou Senshi Gundam - Ichinen Sensou (J).iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)

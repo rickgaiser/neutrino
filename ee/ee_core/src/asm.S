@@ -44,6 +44,7 @@
 .extern New_SifSetDma
 .extern Old_SifSetDma
 .extern Old_SifSetReg
+.extern Old_SifGetReg
 .extern Old_ExecPS2
 .extern Old_CreateThread
 .extern sysExit
@@ -155,6 +156,12 @@ _Apply_Mode3:
     /* unhook SifSetReg */
     addiu   $a0, $zero, __NR_SifSetReg
     lw      $a1, Old_SifSetReg
+    addiu   $v1, $zero, __NR_SetSyscall
+    syscall
+
+    /* unhook SifGetReg */
+    addiu   $a0, $zero, __NR_SifGetReg
+    lw      $a1, Old_SifGetReg
     addiu   $v1, $zero, __NR_SetSyscall
     syscall
 

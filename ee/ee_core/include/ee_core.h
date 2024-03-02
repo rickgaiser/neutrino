@@ -34,6 +34,7 @@
 #endif
 
 extern int set_reg_hook;
+extern int get_reg_hook;
 extern int set_reg_disabled;
 extern int iop_reboot_count;
 

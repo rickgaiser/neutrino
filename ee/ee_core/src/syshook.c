@@ -20,6 +20,7 @@
 #include <loadfile.h>
 
 int set_reg_hook;
+int get_reg_hook;
 int set_reg_disabled;
 int iop_reboot_count = 0;
 
@@ -30,6 +31,7 @@ extern void *_end;
 // Global data
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
 int (*Old_SifSetReg)(u32 register_num, int register_value);
+int (*Old_SifGetReg)(u32 register_num);
 int (*Old_ExecPS2)(void *entry, void *gp, int num_args, char *args[]);
 int (*Old_CreateThread)(ee_thread_t *thread_param);
 void (*Old_Exit)(s32 exit_code);
@@ -144,6 +146,16 @@ void sysExit(s32 exit_code)
     Remove_Kernel_Hooks();
 }
 
+static int Hook_SifGetReg(u32 register_num)
+{
+    if (register_num == SIF_REG_SMFLAG && get_reg_hook > 0) {
+        get_reg_hook--;
+        return 0;
+    }
+
+    return Old_SifGetReg(register_num);
+}
+
 /*----------------------------------------------------------------------------------------*/
 /* Replace SifSetDma, SifSetReg, Exit syscalls in kernel. (Game Loader)                   */
 /*----------------------------------------------------------------------------------------*/
@@ -154,6 +166,9 @@ void Install_Kernel_Hooks(void)
 
     Old_SifSetReg = GetSyscallHandler(__NR_SifSetReg);
     SetSyscall(__NR_SifSetReg, &Hook_SifSetReg);
+
+    Old_SifGetReg = GetSyscallHandler(__NR_SifGetReg);
+    SetSyscall(__NR_SifGetReg, &Hook_SifGetReg);
 
     Old_Exit = GetSyscallHandler(__NR_KExit);
     SetSyscall(__NR_KExit, &Hook_Exit);
@@ -166,6 +181,7 @@ void Remove_Kernel_Hooks(void)
 {
     SetSyscall(__NR_SifSetDma, Old_SifSetDma);
     SetSyscall(__NR_SifSetReg, Old_SifSetReg);
+    SetSyscall(__NR_SifGetReg, Old_SifGetReg);
     SetSyscall(__NR_KExit, Old_Exit);
 
     DI();
