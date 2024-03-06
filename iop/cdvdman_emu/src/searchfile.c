@@ -55,7 +55,7 @@ static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLen
     struct dirTocEntry *tocEntryPointer;
 
 lbl_startlocate:
-    //M_DEBUG("cdvdman_locatefile start locating %s, layer=%d\n", name, layer);
+    //M_DEBUG("%s start locating %s, layer=%d\n", __FUNCTION__, name, layer);
 
     while (*p == '/')
         p++;
@@ -75,7 +75,7 @@ lbl_startlocate:
     if (slash != NULL) {
 #ifdef DEBUG
         if (len >= sizeof(cdvdman_dirname)) {
-            M_DEBUG("cdvdman_locatefile: segment too long: (%d chars) \"%s\"\n", len, p);
+            M_DEBUG("%s: segment too long: (%d chars) \"%s\"\n", __FUNCTION__, len, p);
             asm volatile("break\n");
         }
 #endif
@@ -88,7 +88,7 @@ lbl_startlocate:
         len = strlen(p);
 
         if (len >= sizeof(cdvdman_dirname)) {
-            M_DEBUG("cdvdman_locatefile: filename too long: (%d chars) \"%s\"\n", len, p);
+            M_DEBUG("%s: filename too long: (%d chars) \"%s\"\n", __FUNCTION__, len, p);
             asm volatile("break\n");
         }
 #endif
@@ -100,7 +100,7 @@ lbl_startlocate:
         if (sceCdRead_internal(tocLBA, 1, cdvdman_buf, NULL, ECS_SEARCHFILE) == 0)
             return NULL;
         sceCdSync(0);
-        //M_DEBUG("cdvdman_locatefile tocLBA read done\n");
+        //M_DEBUG("%s tocLBA read done\n", __FUNCTION__);
 
         tocLength -= 2048;
         tocLBA++;
@@ -117,11 +117,11 @@ lbl_startlocate:
                 strncpy(cdvdman_curdir, tocEntryPointer->filename, filename_len); // copy filename
                 cdvdman_curdir[filename_len] = 0;
 
-                //M_DEBUG("cdvdman_locatefile strcmp %s %s\n", cdvdman_dirname, cdvdman_curdir);
+                //M_DEBUG("%s strcmp %s %s\n", __FUNCTION__, cdvdman_dirname, cdvdman_curdir);
 
                 r = strncmp(cdvdman_dirname, cdvdman_curdir, 12);
                 if ((!r) && (!slash)) { // we searched a file so it's found
-                    //M_DEBUG("cdvdman_locatefile found file! LBA=%d size=%d\n", (int)tocEntryPointer->fileLBA, (int)tocEntryPointer->fileSize);
+                    //M_DEBUG("%s found file! LBA=%d size=%d\n", __FUNCTION__, (int)tocEntryPointer->fileLBA, (int)tocEntryPointer->fileSize);
                     return tocEntryPointer;
                 } else if ((!r) && (tocEntryPointer->fileProperties & 2)) { // we found it but it's a directory
                     tocLBA = tocEntryPointer->fileLBA;
@@ -145,7 +145,7 @@ lbl_startlocate:
         } while (tocPos < 2016);
     }
 
-    //M_DEBUG("cdvdman_locatefile file not found!!!\n");
+    //M_DEBUG("%s file not found!!!\n", __FUNCTION__);
 
     return NULL;
 }
@@ -166,13 +166,13 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
 
     WaitSema(cdvdman_searchfilesema);
 
-    M_DEBUG("cdvdman_findfile %s layer%d\n", name, layer);
+    M_DEBUG("%s %s layer%d\n", __FUNCTION__, name, layer);
 
     strncpy(cdvdman_filepath, name, sizeof(cdvdman_filepath));
     cdvdman_filepath[sizeof(cdvdman_filepath) - 1] = '\0';
     cdvdman_trimspaces(cdvdman_filepath);
 
-    M_DEBUG("cdvdman_findfile cdvdman_filepath=%s\n", cdvdman_filepath);
+    M_DEBUG("%s cdvdman_filepath=%s\n", __FUNCTION__, cdvdman_filepath);
 
     if (pLayerInfo->rootDirtocLBA == 0) {
         SignalSema(cdvdman_searchfilesema);
@@ -196,7 +196,7 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
 
     strcpy(pcdfile->name, strrchr(name, '\\') + 1);
 
-    M_DEBUG("cdvdman_findfile found %s\n", name);
+    M_DEBUG("%s found %s\n", __FUNCTION__, name);
 
     SignalSema(cdvdman_searchfilesema);
 
@@ -206,7 +206,7 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
 //-------------------------------------------------------------------------
 int sceCdSearchFile(sceCdlFILE *pcd_file, const char *name)
 {
-    M_DEBUG("sceCdSearchFile %s\n", name);
+    M_DEBUG("%s %s\n", __FUNCTION__, name);
 
     return cdvdman_findfile(pcd_file, name, 0);
 }
@@ -214,7 +214,7 @@ int sceCdSearchFile(sceCdlFILE *pcd_file, const char *name)
 //-------------------------------------------------------------------------
 int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
 {
-    M_DEBUG("sceCdLayerSearchFile %s\n", name);
+    M_DEBUG("%s %s\n", __FUNCTION__, name);
 
     return cdvdman_findfile(fp, name, layer);
 }
@@ -222,7 +222,7 @@ int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
 //-------------------------------------------------------------------------
 void cdvdman_searchfile_init(void)
 {
-    // Read the volume descriptor
+    // Read the volume descriptor of first layer
     sceCdRead_internal(16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
     sceCdSync(0);
 
@@ -230,30 +230,23 @@ void cdvdman_searchfile_init(void)
     layer_info[0].rootDirtocLBA = tocEntryPointer->fileLBA;
     layer_info[0].rootDirtocLength = tocEntryPointer->fileSize;
 
-    // PVD Volume Space Size field
-    //mediaLsnCount = *(u32 *)&cdvdman_buf[0x50];
-    //M_DEBUG("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
+    // Number of sectors on first layer
+    u32 lsn0 = *(u32 *)&cdvdman_buf[0x50];
 
-    // DVD DL support
-    if (!(cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
-        int on_dual;
-        u32 layer1_start;
-        sceCdReadDvdDualInfo(&on_dual, &layer1_start);
-        if (on_dual) {
-            //u32 lsn0 = mediaLsnCount;
-            // So that CdRead below can read more than first layer.
-            //mediaLsnCount = 0;
-            sceCdRead_internal(layer1_start + 16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
-            sceCdSync(0);
-            tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
-            layer_info[1].rootDirtocLBA = layer1_start + tocEntryPointer->fileLBA;
-            layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
+    // Read the volume descriptor of second layer
+    sceCdRead_internal(lsn0, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
+    sceCdSync(0);
 
-            //u32 lsn1 = *(u32 *)&cdvdman_buf[0x50];
-            //M_DEBUG("cdvdman_searchfile_init DVD9 L0 mediaLsnCount=%d \n", lsn0);
-            //M_DEBUG("cdvdman_searchfile_init DVD9 L1 mediaLsnCount=%d \n", lsn1);
-            //mediaLsnCount = lsn0 + lsn1 - 16;
-            //M_DEBUG("cdvdman_searchfile_init DVD9 mediaLsnCount=%d\n", mediaLsnCount);
-        }
+    if ((sceCdGetError() == SCECdErNO) && (cdvdman_buf[0x00] == 1) && (!strncmp(&((char*)cdvdman_buf)[0x01], "CD001", 5))) {
+        printf("%s Dual Layer DVD detected @ lsn = %d\n", __FUNCTION__, lsn0 - 16);
+
+        cdvdman_settings.layer1_start = lsn0 - 16;
+
+        tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
+        layer_info[1].rootDirtocLBA = cdvdman_settings.layer1_start + tocEntryPointer->fileLBA;
+        layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
+    }
+    else {
+        printf("%s Single Layer CD/DVD detected\n", __FUNCTION__);
     }
 }

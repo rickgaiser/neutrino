@@ -1108,7 +1108,6 @@ int main(int argc, char *argv[])
      * Enable DVD emulation
      */
     if (sDVDFile != NULL) {
-        uint32_t layer1_lba_start = 0;
         int fd_iso = 0;
 
         if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
@@ -1152,22 +1151,6 @@ int main(int argc, char *argv[])
             printf("File is not a valid ISO\n");
             return -1;
         }
-        // Get ISO layer0 size
-        uint32_t layer0_lba_size;
-        lseek64(fd_iso, 16 * 2048 + 80, SEEK_SET);
-        if (read(fd_iso, &layer0_lba_size, sizeof(layer0_lba_size)) != sizeof(layer0_lba_size)) {
-            printf("ISO invalid\n");
-            return -1;
-        }
-        // Try to get ISO layer1 size
-        layer1_lba_start = 0;
-        lseek64(fd_iso, (uint64_t)layer0_lba_size * 2048, SEEK_SET);
-        if (read(fd_iso, buffer, sizeof(buffer)) == sizeof(buffer)) {
-            if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
-                layer1_lba_start = layer0_lba_size - 16;
-                printf("- DVD-DL detected\n");
-            }
-        }
 
         if (eMediaType == SCECdNODISC)
             eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
@@ -1193,7 +1176,6 @@ int main(int argc, char *argv[])
         close(fd_iso);
 
         set_cdvdman->media = eMediaType;
-        set_cdvdman->layer1_start = layer1_lba_start;
         set_cdvdman->fs_sectors = sys.fs_sectors;
         if (sys.ilink_id_int != 0) {
             printf("Overriding i.Link ID: %2x %2x %2x %2x %2x %2x %2x %2x\n"
