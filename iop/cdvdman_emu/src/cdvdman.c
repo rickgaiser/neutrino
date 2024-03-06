@@ -139,8 +139,8 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
             // For dual layer DVD, the second layer starts at 0
             // PS2 uses PTP = Parallel Track Path
             u32 effective_lsn = lsn;
-            if (lsn >= cdvdman_settings.layer1_start)
-                lsn -= cdvdman_settings.layer1_start;
+            if (effective_lsn >= cdvdman_settings.layer1_start)
+                effective_lsn -= cdvdman_settings.layer1_start;
 
             usec_per_sector = dvd_dl_const_1 / (dvd_dl_const_2 + effective_lsn);
         }
