@@ -60,12 +60,12 @@ void bdm_disconnect_bd(struct block_device *bd)
 // FHI export #4
 u32 fhi_size(int file_handle)
 {
-    if (file_handle < 0 || file_handle >= FHI_MAX_FILES)
-        return 0;
-
     M_DEBUG("%s(%d)\n", __func__, file_handle);
 
-    return fhi.file[file_handle].size / 512;
+    if (file_handle < 0 || file_handle >= FHI_MAX_FILES || g_bd == NULL)
+        return 0;
+
+    return g_bd->sectorCount;
 }
 
 //---------------------------------------------------------------------------
