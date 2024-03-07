@@ -1152,11 +1152,9 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        if (eMediaType == SCECdNODISC)
-            eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
-
         const char *sMT;
         switch (eMediaType) {
+            case SCECdNODISC:  sMT = "ps2 cd/dvd auto detect"; break;
             case SCECdPS2CDDA: sMT = "ps2 cdda";  break;
             case SCECdPS2CD:   sMT = "ps2 cd";    break;
             case SCECdDVDV:    sMT = "dvd video"; break;

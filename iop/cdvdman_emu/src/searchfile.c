@@ -233,12 +233,16 @@ void cdvdman_searchfile_init(void)
     // Number of sectors on first layer
     u32 lsn0 = *(u32 *)&cdvdman_buf[0x50];
 
+    // Auto detect CD/DVD based on number of sectors
+    if (cdvdman_settings.media == SCECdNODISC)
+        cdvdman_settings.media = lsn0 <= 333000 ? SCECdPS2CD : SCECdPS2DVD;
+
     // Read the volume descriptor of second layer
     sceCdRead_internal(lsn0, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
     sceCdSync(0);
 
     if ((sceCdGetError() == SCECdErNO) && (cdvdman_buf[0x00] == 1) && (!strncmp(&((char*)cdvdman_buf)[0x01], "CD001", 5))) {
-        printf("%s Dual Layer DVD detected @ lsn = %d\n", __FUNCTION__, lsn0 - 16);
+        M_DEBUG("%s: Dual Layer DVD detected @ lsn = %d\n", __FUNCTION__, lsn0 - 16);
 
         cdvdman_settings.layer1_start = lsn0 - 16;
 
@@ -247,6 +251,6 @@ void cdvdman_searchfile_init(void)
         layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
     }
     else {
-        printf("%s Single Layer CD/DVD detected\n", __FUNCTION__);
+        M_DEBUG("%s: Single Layer %s detected\n", __FUNCTION__, cdvdman_settings.media == SCECdPS2CD ? "CD" : "DVD");
     }
 }
