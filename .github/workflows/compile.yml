@@ -29,6 +29,7 @@ jobs:
           cp *.elf $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
+          cp ../../README.md $TARGET/
           7z a -t7z $TARGET.7z $TARGET/*
 
       - name: Upload release as artifact
@@ -73,6 +74,7 @@ jobs:
           cp *.elf $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
+          cp ../../README.md $TARGET/
           7z a -t7z $TARGET.7z $TARGET/*
 
       - name: Upload release as artifact
@@ -107,6 +109,7 @@ jobs:
           cp *.elf $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
+          cp ../../README.md $TARGET/
           7z a -t7z $TARGET.7z $TARGET/*
 
       - name: Upload release as artifact
@@ -141,6 +144,7 @@ jobs:
           cp *.elf $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
+          cp ../../README.md $TARGET/
           7z a -t7z $TARGET.7z $TARGET/*
 
       - name: Upload release as artifact
@@ -150,5 +154,3 @@ jobs:
           name: ${{ env.TARGET }}
           path: |
             ee/loader/*.7z
-
-
