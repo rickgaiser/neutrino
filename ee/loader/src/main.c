@@ -71,7 +71,8 @@ void print_usage()
     printf("\n");
     printf("  -bsdfs=<driver>   Backing store fileystem drivers, supported are:\n");
     printf("                    - exfat (default)\n");
-    printf("                    - hdl\n");
+    printf("                    - hdl   (HD Loader)\n");
+    printf("                    - bd    (Block Device)\n");
     printf("\n");
     printf("  -dvd=<mode>       DVD emulation mode, supported are:\n");
     printf("                    - no (default)\n");
@@ -122,6 +123,7 @@ void print_usage()
     printf("  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso\n");
+    printf("  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0\n");
 }
 
 #define MOD_ENV_LE (1<<0)

@@ -143,6 +143,7 @@ copy:
 	rm -rf modules
 	mkdir -p modules
 	cp ../../iop/atad_emu/irx/atad_emu.irx         modules
+	cp ../../iop/bdfs/irx/bdfs.irx                 modules
 	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx           modules
 	cp ../../iop/cdvdman_emu/irx/cdvdman_emu.irx   modules
 	cp ../../iop/cdvdman_esr1/irx/cdvdman_esr1.irx modules

@@ -3,6 +3,7 @@ IOPCORE_DEBUG?=0
 
 all:
 	$(MAKE) -C iop/atad_emu     all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/bdfs         all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/cdvdfsv      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/cdvdman_emu  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/cdvdman_esr1 all DEBUG=$(IOPCORE_DEBUG)
@@ -31,6 +32,7 @@ format:
 
 clean:
 	$(MAKE) -C iop/atad_emu     clean
+	$(MAKE) -C iop/bdfs         clean
 	$(MAKE) -C iop/cdvdfsv      clean
 	$(MAKE) -C iop/cdvdman_emu  clean
 	$(MAKE) -C iop/cdvdman_esr1 clean

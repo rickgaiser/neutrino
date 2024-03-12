@@ -59,7 +59,8 @@ Options:
 
   -bsdfs=<driver>   Backing store fileystem drivers, supported are:
                     - exfat (default)
-                    - hdl
+                    - hdl   (HD Loader)
+                    - bd    (Block Device)
 
   -dvd=<mode>       DVD emulation mode, supported are:
                     - no (default)
@@ -110,4 +111,5 @@ Usage examples:
   neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso
   neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso
   neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso
+  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 ```

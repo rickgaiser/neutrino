@@ -1,0 +1,10 @@
+# Name of loaded config, to show to user
+name = "Block Device filesystem driver"
+
+# Drivers this driver depends on (config file must exist)
+#depends = ["i_bdm"]
+
+# Modules to load in load environment
+[[module]]
+file = "bdfs.irx"
+env = ["LE"]

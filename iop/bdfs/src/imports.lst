@@ -1,0 +1,19 @@
+bdm_IMPORTS_start
+I_bdm_get_bd
+bdm_IMPORTS_end
+
+iomanX_IMPORTS_start
+I_AddDrv
+iomanX_IMPORTS_end
+
+#ifdef DEBUG
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+#endif
+
+sysclib_IMPORTS_start
+I_sprintf
+I_memcpy
+I_strcmp
+sysclib_IMPORTS_end
