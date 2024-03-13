@@ -222,7 +222,7 @@ int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
 //-------------------------------------------------------------------------
 void cdvdman_searchfile_init(void)
 {
-    // Read the volume descriptor of first layer
+    // Read the volume descriptor
     sceCdRead_internal(16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
     sceCdSync(0);
 
@@ -230,27 +230,30 @@ void cdvdman_searchfile_init(void)
     layer_info[0].rootDirtocLBA = tocEntryPointer->fileLBA;
     layer_info[0].rootDirtocLength = tocEntryPointer->fileSize;
 
-    // Number of sectors on first layer
-    u32 lsn0 = *(u32 *)&cdvdman_buf[0x50];
+    // PVD Volume Space Size field
+    //mediaLsnCount = *(u32 *)&cdvdman_buf[0x50];
+    //M_DEBUG("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
 
-    // Auto detect CD/DVD based on number of sectors
-    if (cdvdman_settings.media == SCECdNODISC)
-        cdvdman_settings.media = lsn0 <= 333000 ? SCECdPS2CD : SCECdPS2DVD;
+    // DVD DL support
+    if (!(cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)) {
+        int on_dual;
+        u32 layer1_start;
+        sceCdReadDvdDualInfo(&on_dual, &layer1_start);
+        if (on_dual) {
+            //u32 lsn0 = mediaLsnCount;
+            // So that CdRead below can read more than first layer.
+            //mediaLsnCount = 0;
+            sceCdRead_internal(layer1_start + 16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
+            sceCdSync(0);
+            tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
+            layer_info[1].rootDirtocLBA = layer1_start + tocEntryPointer->fileLBA;
+            layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
 
-    // Read the volume descriptor of second layer
-    sceCdRead_internal(lsn0, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
-    sceCdSync(0);
-
-    if ((sceCdGetError() == SCECdErNO) && (cdvdman_buf[0x00] == 1) && (!strncmp(&((char*)cdvdman_buf)[0x01], "CD001", 5))) {
-        M_DEBUG("%s: Dual Layer DVD detected @ lsn = %d\n", __FUNCTION__, lsn0 - 16);
-
-        cdvdman_settings.layer1_start = lsn0 - 16;
-
-        tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
-        layer_info[1].rootDirtocLBA = cdvdman_settings.layer1_start + tocEntryPointer->fileLBA;
-        layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
-    }
-    else {
-        M_DEBUG("%s: Single Layer %s detected\n", __FUNCTION__, cdvdman_settings.media == SCECdPS2CD ? "CD" : "DVD");
+            //u32 lsn1 = *(u32 *)&cdvdman_buf[0x50];
+            //M_DEBUG("cdvdman_searchfile_init DVD9 L0 mediaLsnCount=%d \n", lsn0);
+            //M_DEBUG("cdvdman_searchfile_init DVD9 L1 mediaLsnCount=%d \n", lsn1);
+            //mediaLsnCount = lsn0 + lsn1 - 16;
+            //M_DEBUG("cdvdman_searchfile_init DVD9 mediaLsnCount=%d\n", mediaLsnCount);
+        }
     }
 }
