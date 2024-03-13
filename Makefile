@@ -63,11 +63,11 @@ sim:
 
 # Mount first partition of block device used in PCSX2 testing (ATA or USB)
 sim_mount:
-	sudo mount -o loop,offset=1048576 ee/loader/blockdev.raw mount
+	losetup /dev/loop1 ee/loader/blockdev.raw
 
 # Unmount block device used in PCSX2 testing
 sim_unmount:
-	sudo umount mount
+	losetup -d /dev/loop1
 
 opl:
 	ps2client -h 192.168.1.10 execee host:OPNPS2LD.ELF
