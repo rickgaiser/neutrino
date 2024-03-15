@@ -158,6 +158,7 @@ copy:
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
 	cp ../../iop/isofs/irx/isofs.irx               modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
+	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules
 	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
 	cp ../../iop/usbd_null/irx/usbd_null.irx       modules

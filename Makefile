@@ -18,6 +18,7 @@ all:
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/mc_emu       all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/patch_freemem all DEBUG=1
 	$(MAKE) -C iop/patch_rc_uya all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/smap_udpbd   all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/usbd_null    all DEBUG=$(IOPCORE_DEBUG)
@@ -47,6 +48,7 @@ clean:
 	$(MAKE) -C iop/imgdrv       clean
 	$(MAKE) -C iop/isofs        clean
 	$(MAKE) -C iop/mc_emu       clean
+	$(MAKE) -C iop/patch_freemem clean
 	$(MAKE) -C iop/patch_rc_uya clean
 	$(MAKE) -C iop/smap_udpbd   clean
 	$(MAKE) -C iop/usbd_null    clean
