@@ -401,7 +401,6 @@ int _start(int argc, char *argv[])
 {
     M_DEBUG("HDLoader read-only filesystem driver\n");
 
-    AddDrv(&hdl_device);
-
+    if(AddDrv(&hdl_device) != 0) { return MODULE_NO_RESIDENT_END; }
     return MODULE_RESIDENT_END;
 }
