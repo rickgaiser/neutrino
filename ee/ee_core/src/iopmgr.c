@@ -68,7 +68,7 @@ int New_Reset_Iop(const char *arg, int arglen)
 #endif
 
     if (EnableDebug)
-        GS_BGCOLOUR = 0xFF00FF; // Purple
+        GS_BGCOLOUR = BGR_PURPLE;
 
     iop_reboot_count++;
 
@@ -168,7 +168,7 @@ int New_Reset_Iop(const char *arg, int arglen)
     }
 
     if (EnableDebug)
-        GS_BGCOLOUR = 0x00FFFF; // Yellow
+        GS_BGCOLOUR = BGR_YELLOW;
 
     DPRINTF("Exiting services...\n");
     SifExitIopHeap();
@@ -183,7 +183,7 @@ int New_Reset_Iop(const char *arg, int arglen)
     }
 
     if (EnableDebug)
-        GS_BGCOLOUR = 0x000000; // Black
+        GS_BGCOLOUR = BGR_BLACK;
 
     return 1;
 }
