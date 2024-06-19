@@ -59,6 +59,8 @@ extern int GameMode;
 extern int EnableDebug;
 #define GS_BGCOLOUR *((volatile unsigned long int *)0x120000E0)
 
+#ifdef CHEAT_ENGINE
 extern int *gCheatList; // Store hooks/codes addr+val pairs
+#endif
 
 #endif
