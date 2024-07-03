@@ -136,7 +136,7 @@ static void longLseek(int fd, unsigned int lba)
 }
 
 //-------------------------------------------------------------------------
-static int sceCdReadDvdDualInfo(int *on_dual, u32 *layer1_start)
+static int sceCdReadDvdDualInfo(int *on_dual, unsigned int *layer1_start)
 {
     if (MountPoint.layer_info[1].maxLBA > 0) {
         *layer1_start = MountPoint.layer_info[0].maxLBA;
@@ -258,7 +258,7 @@ lbl_startlocate:
 
                     int on_dual;
                     u32 layer1_start;
-                    sceCdReadDvdDualInfo(&on_dual, &layer1_start);
+                    sceCdReadDvdDualInfo(&on_dual, (unsigned int *)&layer1_start);
 
                     if (layer)
                         tocLBA += layer1_start;
@@ -305,7 +305,7 @@ static int cdvdman_findfile(cd_file_t *pcdfile, const char *name, int layer)
 
         lsn = tocEntryPointer->fileLBA;
         if (layer) {
-            sceCdReadDvdDualInfo((int *)&pcdfile->lsn, &pcdfile->size);
+            sceCdReadDvdDualInfo((int *)&pcdfile->lsn, (unsigned int *)&pcdfile->size);
             lsn += pcdfile->size;
         }
 
