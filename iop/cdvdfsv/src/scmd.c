@@ -121,7 +121,7 @@ static inline void rpcSCmd_cdreadModelID(void *buf)
 
     M_DEBUG("%s\n", __FUNCTION__);
 
-    r->result = sceCdReadModelID(&r->param1);
+    r->result = sceCdReadModelID((unsigned int *)&r->param1);
 }
 
 //-------------------------------------------------------------------------
@@ -132,7 +132,7 @@ static inline void rpcSCmd_cdreaddvddualinfo(void *buf)
 
     M_DEBUG("%s\n", __FUNCTION__);
 
-    r->result = sceCdReadDvdDualInfo((int *)&r->param1, &r->param2);
+    r->result = sceCdReadDvdDualInfo((int *)&r->param1, (unsigned int *)&r->param2);
 }
 
 //-------------------------------------------------------------------------

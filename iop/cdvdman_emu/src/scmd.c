@@ -188,7 +188,7 @@ int sceCdReadGUID(u64 *GUID)
 }
 
 //--------------------------------------------------------------
-int sceCdReadModelID(unsigned long int *ModelID)
+int sceCdReadModelID(unsigned int *ModelID)
 {
     M_DEBUG("%s(-)\n", __FUNCTION__);
 
@@ -196,7 +196,7 @@ int sceCdReadModelID(unsigned long int *ModelID)
 }
 
 //-------------------------------------------------------------------------
-int sceCdReadDvdDualInfo(int *on_dual, u32 *layer1_start)
+int sceCdReadDvdDualInfo(int *on_dual, unsigned int *layer1_start)
 {
     M_DEBUG("%s(-, -)\n", __FUNCTION__);
 
