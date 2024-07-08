@@ -119,7 +119,7 @@ static int eecoreInit(int argc, char **argv)
     Install_Kernel_Hooks();
 
     if (EnableDebug)
-        GS_BGCOLOUR = 0xff0000; // Blue
+        GS_BGCOLOUR = BGR_BLUE;
 
     SifExitRpc();
 

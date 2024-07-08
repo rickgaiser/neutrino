@@ -75,7 +75,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
     DPRINTF("t_loadElf: elf path = '%s'\n", filename);
 
     if (EnableDebug)
-        GS_BGCOLOUR = 0x00ff00; // Green
+        GS_BGCOLOUR = BGR_GREEN;
 
     DPRINTF("t_loadElf: cleaning user memory...");
 
@@ -114,7 +114,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
     DPRINTF(" failed, error code = -%x\n", -r);
 
     // Error
-    GS_BGCOLOUR = 0xffffff; // White    - shouldn't happen.
+    GS_BGCOLOUR = BGR_WHITE;
     SleepThread();
 }
 
