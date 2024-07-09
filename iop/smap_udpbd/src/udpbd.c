@@ -332,7 +332,7 @@ static inline void _cmd_read_rdma(struct SUDPBDv2_Header *hdr)
     }
 
     // Directly DMA the packet data into the user buffer
-    dev9DmaTransfer(1, g_buffer_act, bt.block_count << 16 | (1U << bt.block_shift), DMAC_TO_MEM);
+    SpdDmaTransfer(1, g_buffer_act, bt.block_count << 16 | (1U << bt.block_shift), DMAC_TO_MEM);
 
     g_buffer_act += size;
     g_read_size -= size;

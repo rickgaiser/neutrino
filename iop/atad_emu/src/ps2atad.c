@@ -28,11 +28,11 @@ int _exit(void) { return MODULE_RESIDENT_END; }
 
 ata_devinfo_t dev[2] = {
     {0, 0, 0, 0},
-    {0, 0, 0, 0}
+    {0, 0, 0, 0},
 };
 
 /* Export 4 */
-ata_devinfo_t *ata_get_devinfo(int device)
+ata_devinfo_t *sceAtaInit(int device)
 {
     M_DEBUG("(%d)\n", device);
 
@@ -66,21 +66,21 @@ int ata_io_start(void *buf, u32 blkcount, u16 feature, u16 nsector, u16 sector, 
 }
 
 /* Export 7 */
-int ata_io_finish(void)
+int sceAtaWaitResult(void)
 {
     M_DEBUG("\n");
     return 0;
 }
 
 /* Export 8 */
-int ata_get_error(void)
+int sceAtaGetError(void)
 {
     M_DEBUG("\n");
     return 0;
 }
 
 /* Export 9 */
-int ata_device_sector_io(int device, void *buf, u32 lba, u32 nsectors, int dir)
+int sceAtaExecCmd(int device, void *buf, u32 lba, u32 nsectors, int dir)
 {
     M_DEBUG("(%d, 0x%x, %d, %d, %d)\n", device, buf, lba, nsectors, dir);
 
@@ -101,8 +101,8 @@ int ata_device_sce_sec_set_password(int device, void *password)
     int i;
 
     M_DEBUG("(%d, password)\n", device);
-    for (i=0; i<8; i++) {
-        M_DEBUG("- 0x%08x\n", ((u32*)password)[i]);
+    for (i = 0; i < 8; i++) {
+        M_DEBUG("- 0x%08x\n", ((u32 *)password)[i]);
     }
 
     return 0;
@@ -114,8 +114,8 @@ int ata_device_sce_sec_unlock(int device, void *password)
     int i;
 
     M_DEBUG("(%d, password)\n", device);
-    for (i=0; i<8; i++) {
-        M_DEBUG("- 0x%08x\n", ((u32*)password)[i]);
+    for (i = 0; i < 8; i++) {
+        M_DEBUG("- 0x%08x\n", ((u32 *)password)[i]);
     }
 
     dev[device].security_status &= ~ATA_F_SEC_LOCKED;
@@ -164,7 +164,7 @@ int ata_device_smart_save_attr(int device)
 }
 
 /* Export 17 */
-int ata_device_flush_cache(int device)
+int sceAtaFlushCache(int device)
 {
     M_DEBUG("(%d)\n", device);
     return 0;

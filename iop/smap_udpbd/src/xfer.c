@@ -67,7 +67,7 @@ static int SmapDmaTransfer(volatile u8 *smap_regbase, void *buffer, unsigned int
     /*  Non-Sony: the original block size was (32*4 = 128) bytes.
         However, that resulted in slightly lower performance due to the IOP needing to copy more data.    */
     if ((NumBlocks = size >> 6) > 0) {
-        if (dev9DmaTransfer(1, buffer, NumBlocks << 16 | 0x10, direction) >= 0) {
+        if (SpdDmaTransfer(1, buffer, NumBlocks << 16 | 0x10, direction) >= 0) {
             result = NumBlocks << 6;
         } else
             result = 0;
@@ -111,7 +111,7 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
     int NumPacketsReceived;
     volatile smap_bd_t *PktBdPtr;
     volatile u8 *smap_regbase;
-    //void *pbuf, *payload;
+    // void *pbuf, *payload;
     u16 ctrl_stat, length, pointer, LengthRounded;
 
     smap_regbase = SmapDrivPrivData->smap_regbase;
@@ -171,7 +171,7 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, u
 
     if (SmapDrivPrivData->NumPacketsInTx >= SMAP_BD_MAX_ENTRY)
         return -1;
-    
+
     if (SmapDrivPrivData->TxBufferSpaceAvailable < SizeRounded)
         return -2;
 

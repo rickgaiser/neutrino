@@ -395,7 +395,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
         if (EFBits & SMAP_EVENT_START) {
             if (!SmapDrivPrivData->SmapIsInitialized) {
                 SmapDrivPrivData->SmapDriverStarted = 1;
-                dev9IntrEnable(DEV9_SMAP_INTR_MASK2);
+                SpdIntrEnable(DEV9_SMAP_INTR_MASK2);
                 if ((result = InitPHY(SmapDrivPrivData)) != 0)
                     break;
                 if (SmapDrivPrivData->NetDevStopFlag) {
@@ -442,7 +442,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
             }
 
             // TXDNV is not enabled here, but only when frames are transmitted.
-            dev9IntrEnable(DEV9_SMAP_INTR_MASK2);
+            SpdIntrEnable(DEV9_SMAP_INTR_MASK2);
 
             // Do the link check, only if there has not been any incoming traffic in a while.
             if (ResetCounterFlag) {
@@ -460,7 +460,7 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
 
 static int Dev9IntrCb(int flag)
 {
-    dev9IntrDisable(DEV9_SMAP_ALL_INTR_MASK);
+    SpdIntrDisable(DEV9_SMAP_ALL_INTR_MASK);
     iSetEventFlag(SmapDriverData.Dev9IntrEventFlag, SMAP_EVENT_INTR);
     return 0;
 }
@@ -523,7 +523,7 @@ int smap_init(int argc, char *argv[])
     if (SPD_REG16(SPD_R_REV_1) < 0x11)
         return -6; // Minimum: revision 17, ES2.
 
-    dev9IntrDisable(DEV9_SMAP_ALL_INTR_MASK);
+    SpdIntrDisable(DEV9_SMAP_ALL_INTR_MASK);
 
     /* Reset FIFOs. */
     SMAP_REG8(SMAP_R_TXFIFO_CTRL) = SMAP_TXFIFO_RESET;
@@ -568,7 +568,7 @@ int smap_init(int argc, char *argv[])
 
     /* Retrieve the MAC address and verify it's integrity. */
     bzero(eeprom_data, 8);
-    if ((result = dev9GetEEPROM(eeprom_data)) < 0) {
+    if ((result = SpdGetEthernetID(eeprom_data)) < 0) {
         return (result == -1 ? -7 : -4);
     }
 
@@ -607,7 +607,7 @@ int smap_init(int argc, char *argv[])
 
     // Register the interrupt handlers for all SMAP events.
     for (i = 2; i < 7; i++)
-        dev9RegisterIntrCb(i, &Dev9IntrCb);
+        SpdRegisterIntrHandler(i, &Dev9IntrCb);
 
     xfer_init();
 
