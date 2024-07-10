@@ -9,11 +9,14 @@ EE_BIN_NAME = neutrino
 EE_BIN = $(EE_BIN_NAME)_unpacked.elf
 EE_BIN_PACKED = $(EE_BIN_NAME).elf
 
+MODULE_DIR = modules/
+
 $(EE_BIN_PACKED): $(EE_BIN)
 	ps2-packer $< $@ > /dev/null
 
 all: $(EE_BIN_PACKED)
 
+.PHONY: run sim clean copy clean_moddir
 # TODO:
 # SCUS_971.01 Twisted Metal Black (same as opl, when quit to menu the games crash with black screen)
 # Max Payne 2 freezes when loading Part 1, Chapter 3 on neutrino USB - same on OPL ?
@@ -137,43 +140,33 @@ sim: all copy
 clean:
 	rm -rf $(EE_OBJS) *_irx.o *_elf.o
 	rm -rf $(EE_BIN) $(EE_BIN_PACKED)
-	rm -rf modules
+	rm -rf $(MODULE_DIR)
 
-copy:
-	rm -rf modules
-	mkdir -p modules
-	cp ../../iop/atad_emu/irx/atad_emu.irx         modules
-	cp ../../iop/bdfs/irx/bdfs.irx                 modules
-	cp ../../iop/cdvdfsv/irx/cdvdfsv.irx           modules
-	cp ../../iop/cdvdman_emu/irx/cdvdman_emu.irx   modules
-	cp ../../iop/cdvdman_esr1/irx/cdvdman_esr1.irx modules
-	cp ../../iop/cdvdman_esr2/irx/cdvdman_esr2.irx modules
-	cp ../../iop/dev9/irx/dev9_hidden.irx          modules
-	cp ../../iop/dev9/irx/dev9_ns.irx              modules
-	cp ../../iop/fakemod/irx/fakemod.irx           modules
-	cp ../../iop/fhi_bd/irx/fhi_bd.irx             modules
-	cp ../../iop/fhi_bd_defrag/irx/fhi_bd_defrag.irx modules
-	cp ../../iop/fhi_file/irx/fhi_file.irx         modules
-	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
-	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
-	cp ../../iop/isofs/irx/isofs.irx               modules
-	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
-	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules
-	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
-	cp ../../iop/usbd_null/irx/usbd_null.irx       modules
-	cp ../ee_core/ee_core.elf                      modules
-	cp $(PS2SDK)/iop/irx/eesync.irx                modules
-	cp $(PS2SDK)/iop/irx/iomanX.irx                modules
-	cp $(PS2SDK)/iop/irx/fileXio.irx               modules
-	cp $(PS2SDK)/iop/irx/bdm.irx                   modules
-	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx           modules
-	cp $(PS2SDK)/iop/irx/ata_bd.irx                modules
-	cp $(PS2SDK)/iop/irx/ps2hdd-bdm.irx            modules
-	cp $(PS2SDK)/iop/irx/usbd_mini.irx             modules
-	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx       modules
-	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx        modules
-	cp $(PS2SDK)/iop/irx/iLinkman.irx              modules
-	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx      modules
+vpath %.irx ../../iop/irx/
+vpath %.irx $(PS2SDK)/iop/irx/
+IOP_BINARY_DISTRIB = atad_emu.irx bdfs.irx \
+	fhi_bd.irx fhi_bd_defrag.irx fhi_file.irx \
+	bdm.irx bdmfs_fatfs.irx ata_bd.irx ps2hdd-bdm.irx usbmass_bd_mini.irx mx4sio_bd_mini.irx IEEE1394_bd_mini.irx \
+	hdlfs.irx isofs.irx \
+	cdvdfsv.irx cdvdman_emu.irx cdvdman_esr1.irx cdvdman_esr2.irx \
+	mc_emu.irx \
+	dev9_hidden.irx dev9_ns.irx \
+	fakemod.irx imgdrv.irx eesync.irx \
+	patch_rc_uya.irx \
+	smap_udpbd.irx usbd_null.irx usbd_mini.irx iLinkman.irx \
+	iomanX.irx fileXio.irx
+IOP_BINARY_DISTRIB := $(IOP_BINARY_DISTRIB:%=$(MODULE_DIR)%)
+
+$(MODULE_DIR)%.irx: %.irx
+	$(DIR_GUARD)
+	@cp $< $@
+
+copy: clean_moddir $(IOP_BINARY_DISTRIB)
+	cp ../ee_core/ee_core.elf $(MODULE_DIR)
+
+clean_moddir:
+	rm -rf $(MODULE_DIR)
+	mkdir -p $(MODULE_DIR)
 
 include ../../Defs.make
 include ../Rules.make
