@@ -1,0 +1,7 @@
+name = "TTY over PowerPC UART"
+
+#Prints all the printf from both IOP and EE over the UART of the PowerPC CPU. this module aborts it's startup if console is not DECKARD to avoid undesired side-effects
+
+[[module]]
+file = "ppctty.irx"
+env = ["LE", "EE"]
