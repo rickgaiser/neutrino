@@ -18,6 +18,7 @@ all:
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/mc_emu       all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/patch_freemem all DEBUG=1
 	$(MAKE) -C iop/patch_rc_uya all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/smap_udpbd   all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/usbd_null    all DEBUG=$(IOPCORE_DEBUG)
@@ -47,6 +48,7 @@ clean:
 	$(MAKE) -C iop/imgdrv       clean
 	$(MAKE) -C iop/isofs        clean
 	$(MAKE) -C iop/mc_emu       clean
+	$(MAKE) -C iop/patch_freemem clean
 	$(MAKE) -C iop/patch_rc_uya clean
 	$(MAKE) -C iop/smap_udpbd   clean
 	$(MAKE) -C iop/usbd_null    clean
@@ -63,11 +65,11 @@ sim:
 
 # Mount first partition of block device used in PCSX2 testing (ATA or USB)
 sim_mount:
-	sudo mount -o loop,offset=1048576 ee/loader/blockdev.raw mount
+	losetup /dev/loop1 ee/loader/blockdev.raw
 
 # Unmount block device used in PCSX2 testing
 sim_unmount:
-	sudo umount mount
+	losetup -d /dev/loop1
 
 opl:
 	ps2client -h 192.168.1.10 execee host:OPNPS2LD.ELF

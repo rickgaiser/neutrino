@@ -17,11 +17,12 @@ An environment in neutrino describes what IOP modules are loaded and defines wha
 ## Backing Store Driver
 A backing store driver provides a storage location for storing virtual disk images. For instance of DVD's, HDD's or MC's.
 The following backing storage devices are supported:
-- USB
-- MX4SIO
-- ATA (internal HDD)
-- UDPBD
-- iLink / IEEE1394
+- USB (`usb`)
+- MX4SIO (`sdc`)
+- ATA (internal HDD) (`ata`)
+- UDPBD (`udp`)
+- iLink / IEEE1394 (`sd`)
+NOTE: Internal block device names between (parenthesis), these must be used for `bdfs:`
 
 These are all BDM drivers, or "Block Devices". On all devices the following partitioning schemes are supported:
 - MBR (Master Boot Record)
@@ -30,6 +31,7 @@ These are all BDM drivers, or "Block Devices". On all devices the following part
 And the following file systems:
 - exFat/FAT32, accessable as `mass:<file>.iso`
 - HDLoader, accessable as `hdl:<file>`, `hdl:<file>.iso`, `hdl:<part>` or `hdl:<part>.iso`
+- Block Devices, accessable as `bdfs:<blockdevice>`. Like `bdfs:udp0p0`
 
 Note that the HDLoader backing store is currently read-ony, and limited to only emulating the DVD.
 
