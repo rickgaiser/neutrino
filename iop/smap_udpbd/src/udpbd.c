@@ -89,7 +89,7 @@ static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, u
     g_read_size     = count * g_udpbd.sectorSize;
     g_read_cmdpkt   = 1; // First reply packet should be cmdpkt==1
 
-    udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
+    udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_SERVER_PORT);
     pkt.rw.hdr.cmd    = UDPBD_CMD_READ;
     pkt.rw.hdr.cmdid  = g_cmdid;
     pkt.rw.hdr.cmdpkt = 0;
@@ -191,7 +191,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
     // Send write command
     {
         udpbd_pkt_rw_t pkt;
-        udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
+        udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_SERVER_PORT);
         pkt.rw.hdr.cmd    = UDPBD_CMD_WRITE;
         pkt.rw.hdr.cmdid  = g_cmdid;
         pkt.rw.hdr.cmdpkt = 0;
@@ -208,7 +208,7 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
     {
         uint16_t count_left = count;
         udpbd_pkt_rdma_t pkt;
-        udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
+        udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_SERVER_PORT);
         pkt.hdr.cmd    = UDPBD_CMD_WRITE_RDMA;
         pkt.hdr.cmdid  = g_cmdid;
         pkt.hdr.cmdpkt = 0;
@@ -412,10 +412,10 @@ int udpbd_init(void)
     g_udpbd.stop         = udpbd_stop;
 
     // Bind to UDP socket
-    udpbd_socket = udp_bind(UDPBD_PORT, udpbd_isr, NULL);
+    udpbd_socket = udp_bind(UDPBD_CLIENT_PORT, udpbd_isr, NULL);
 
     // Broadcast request for block device information
-    udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_PORT);
+    udp_packet_init((udp_packet_t *)&pkt, IP_ADDR(255,255,255,255), UDPBD_SERVER_PORT);
     pkt.bd.cmd    = UDPBD_CMD_INFO;
     pkt.bd.cmdid  = g_cmdid;
     pkt.bd.cmdpkt = 0;

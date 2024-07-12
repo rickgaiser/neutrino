@@ -5,7 +5,8 @@
 #include <stdint.h>
 
 
-#define UDPBD_PORT            0xBDBD //The port on which to listen for incoming data
+#define UDPBD_SERVER_PORT     0xBDBD
+#define UDPBD_CLIENT_PORT     0xBDBE
 
 #define UDPBD_CMD_INFO        0x00 // client -> server
 #define UDPBD_CMD_INFO_REPLY  0x01 // server -> client
