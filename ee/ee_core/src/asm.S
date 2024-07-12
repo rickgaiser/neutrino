@@ -27,7 +27,7 @@
 
 .text
 
-.extern _end
+.extern _stack_end
 
 /* libkernel */
 .extern memset
@@ -69,7 +69,7 @@ _SifSetDma:
     daddu   $a2, $sp, $zero
 
     /* change the stack pointer */
-    la      $sp, _end
+    la      $sp, _stack_end
 
     /* call New_SifSetDma, preserving ra and a2 registers values */
     addiu   $sp, $sp, -0x10
@@ -140,7 +140,7 @@ _Apply_Mode3:
     daddu   $a0, $sp, $zero
 
     /* change the stack pointer */
-    la      $sp, _end
+    la      $sp, _stack_end
 
     /* preserving ra and a0 registers values */
     addiu   $sp, $sp, -0x10
@@ -282,7 +282,7 @@ InitRegsExecPS2:
     por     $t8, $zero, $zero
     por     $t9, $zero, $zero
     por     $gp, $zero, $zero
-    la      $sp, _end               # Reset SP to top of stack
+    la      $sp, _stack_end         # Reset SP to top of stack
     por     $fp, $zero, $zero
     # por     $ra, $zero, $zero       # Required for returning
     mthi    $zero

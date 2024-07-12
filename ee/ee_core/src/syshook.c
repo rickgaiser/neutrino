@@ -26,7 +26,7 @@ int iop_reboot_count = 0;
 
 extern void *ModStorageStart, *ModStorageEnd;
 extern void *eeloadCopy, *initUserMemory;
-extern void *_end;
+extern void *_stack_end;
 
 // Global data
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
@@ -80,7 +80,7 @@ void sysLoadElf(char *filename, int argc, char **argv)
     DPRINTF("t_loadElf: cleaning user memory...");
 
     // wipe user memory
-    WipeUserMemory((void *)&_end, (void *)ModStorageStart);
+    WipeUserMemory((void *)&_stack_end, (void *)ModStorageStart);
     // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
     // WipeUserMemory((void *)ModStorageEnd, (void *)GetMemorySize());
 
