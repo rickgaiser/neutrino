@@ -41,7 +41,6 @@ PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
 void _libcglue_timezone_update() {}; // Disable timezone update
 void _libcglue_rtc_update() {}; // Disable rtc update
 
-#define OPL_MOD_STORAGE 0x00097000 //(default) Address of the module storage region
 /*
 OPL Module Storage Memory Map:
     struct irxtab_t;
@@ -169,7 +168,10 @@ struct SSystemSettings {
     int bDebugColors;
     int bLogo;
 
-    uint8_t fs_sectors;
+    char *eecore_elf;
+    int eecore_mod_base;
+
+    int fs_sectors;
 
     union {
         uint8_t ilink_id[8];
@@ -189,7 +191,7 @@ struct SDriver {
     struct SFakeList fake;
 } drv;
 
-struct SModule mod_ee_core = {"ee_core.elf"};
+struct SModule mod_ee_core;
 
 #define MAX_FILENAME 128
 int module_load(struct SModule *mod)
@@ -645,6 +647,13 @@ void toml_bool_in_overwrite(toml_table_t *t, const char *name, int *dest)
         *dest = v.u.b;
 }
 
+void toml_int_in_overwrite(toml_table_t *t, const char *name, int *dest)
+{
+    toml_datum_t v = toml_int_in(t, name);
+    if (v.ok)
+        *dest = v.u.i;
+}
+
 int load_driver(const char * type, const char * subtype)
 {
     FILE* fp;
@@ -706,10 +715,10 @@ int load_driver(const char * type, const char * subtype)
     toml_bool_in_overwrite  (tbl_root, "default_dbc",    &sys.bDebugColors);
     toml_bool_in_overwrite  (tbl_root, "default_logo",   &sys.bLogo);
 
-    // Number of sectors for fs buffer in cdvdman_emu
-    v = toml_int_in(tbl_root, "cdvdman_fs_sectors");
-    if (v.ok)
-        sys.fs_sectors = v.u.i;
+    toml_string_in_overwrite(tbl_root, "eecore_elf",      &sys.eecore_elf);
+    toml_int_in_overwrite   (tbl_root, "eecore_mod_base", &sys.eecore_mod_base);
+
+    toml_int_in_overwrite   (tbl_root, "cdvdman_fs_sectors", &sys.fs_sectors);
 
     arr = toml_array_in(tbl_root, "ilink_id");
     if (arr != NULL) {
@@ -1046,6 +1055,7 @@ int main(int argc, char *argv[])
     /*
      * Load all needed files before rebooting the IOP
      */
+    mod_ee_core.sFileName = sys.eecore_elf;
     if (module_load(&mod_ee_core) < 0)
         return -1;
     if (modlist_load(&drv.mod) < 0)
@@ -1417,7 +1427,8 @@ int main(int argc, char *argv[])
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
-    memset((void *)0x00084000, 0, 0x00100000 - 0x00084000);
+    // Clear the entire "free" memory range
+    memset((void *)0x00082000, 0, 0x00100000 - 0x00082000);
 #pragma GCC diagnostic pop
 
     // Count the number of modules to pass to the ee_core
@@ -1430,7 +1441,7 @@ int main(int argc, char *argv[])
 
     irxtable = (irxtab_t *)get_modstorage(sGameID);
     if (irxtable == NULL)
-        irxtable = (irxtab_t *)OPL_MOD_STORAGE;
+        irxtable = (irxtab_t *)sys.eecore_mod_base;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
     irxptr = (uint8_t *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
 

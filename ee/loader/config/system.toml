@@ -18,6 +18,11 @@ default_elf = "auto"
 default_dbc = false
 default_logo = false
 
+# EE_CORE configuration
+eecore_elf = "ee_core.elf"
+eecore_mod_base = 0x95000
+#eecore_mod_base = 0xA7000
+
 # Select the number of sectors for the FS buffer
 # A small value can increase game compatibility
 # A large value can increase performce

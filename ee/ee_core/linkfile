@@ -7,19 +7,41 @@ MEMORY {
 	game_ram   : ORIGIN = 0x00100000, LENGTH =  31M
 	scratchpad : ORIGIN = 0x70000000, LENGTH =  16K
 
-	/* BIOS RAM memory layout */
-	bios_ram80 : ORIGIN = 0x00080000, LENGTH =   8K  /* Used: old idle thread and alarm dispatcher */
-	bios_ram82 : ORIGIN = 0x00082000, LENGTH =   8K  /* Used: new idle thread and alarm dispatcher or EELOAD */
-	bios_ram84 : ORIGIN = 0x00084000, LENGTH = 304K  /* Free - is this always true? */
-	bios_ramD0 : ORIGIN = 0x000D0000, LENGTH = 192K  /* Free for most games - what games? */
+	/*
+	 * BIOS RAM memory layout
+	 * ----------------------
+	 * This huge memory region of 512K is mostly not used. Known exceptions listed here:
+	 * - 0x80000 - 0x82000   8K: idle thread and alarm dispatcher, always used
+	 * - 0x82000 - 0x84000   8K: idle thread and alarm dispatcher, updated version, often used
+	 * -   start - 0x96000  88K: many games use this area, for example:
+	 *                           [SLUS_211.39] GUN
+	 *                           [SCES_511.76] Disneys Treasure Planet
+	 *                           Note that its possible only EELOAD uses this range temporarily
+	 *                           Perhaps with a replaced EELOAD (which we have) its safe to use?
+	 * -   start - end     512K: some games use the entire area and need mode 3 to work, for example:
+	 *                           [SCUS_971.24] Jak and Daxter - The Precursor Legacy
+	 *                           [SCUS_973.30] Jak 3
+	 *                           [SCES_524.60] Jak 3
+	 * - 0xD0000 - end     192K: some games use this area, what games???
+	 */
+	bios_ram80 : ORIGIN = 0x00080000, LENGTH =   8K
+	bios_ram82 : ORIGIN = 0x00082000, LENGTH =   8K
+	bios_ram84 : ORIGIN = 0x00084000, LENGTH = 304K
+	bios_ramD0 : ORIGIN = 0x000D0000, LENGTH = 192K
 
-	/* EE_CORE memory layout, currently only using bios_ram84 area */
-	ee_core    : ORIGIN = 0x00084000, LENGTH =  72K
-	stack      : ORIGIN = 0x00096000, LENGTH =   4K
-	modules    : ORIGIN = 0x00097000, LENGTH = 228K
+	/* EE_CORE "84" memory layout */
+	ee_core84  : ORIGIN = 0x00084000, LENGTH =  64K
+	stack84    : ORIGIN = 0x00094000, LENGTH =   4K
+	modules84  : ORIGIN = 0x00095000, LENGTH = 428K
+
+	/* EE_CORE "96" memory layout */
+	ee_core96  : ORIGIN = 0x00096000, LENGTH =  64K
+	stack96    : ORIGIN = 0x000A6000, LENGTH =   4K
+	modules96  : ORIGIN = 0x000A7000, LENGTH = 356K
 }
 
-REGION_ALIAS("MAIN_REGION", ee_core);
+REGION_ALIAS("MAIN_REGION", ee_core84);
+REGION_ALIAS("STACK_REGION", stack84);
 
 PHDRS {
   text PT_LOAD;
@@ -108,7 +130,7 @@ SECTIONS {
 
 	_heap_size = -1; /* automatically from _end to _stack */
 
-	_stack = ORIGIN(stack);
-	_stack_size = LENGTH(stack);
+	_stack = ORIGIN(STACK_REGION);
+	_stack_size = LENGTH(STACK_REGION);
 	_stack_end = _stack + _stack_size;
 }
