@@ -1268,11 +1268,12 @@ int main(int argc, char *argv[])
 
         // Locate and set ELF file name
         sys.sELFFile = strstr(system_cnf_data, "cdrom0:");
-        char *fname_end = strstr(system_cnf_data, ";1");
+        char *fname_end = strstr(system_cnf_data, ";");
         if (sys.sELFFile == NULL || fname_end == NULL) {
             printf("ERROR: file name not found in SYSTEM.CNF\n");
             return -1;
         }
+        fname_end[1] = '1';
         fname_end[2] = '\0';
 
         // Locate and set GameID
