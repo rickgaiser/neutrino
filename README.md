@@ -22,6 +22,7 @@ The following backing storage devices are supported:
 - ATA (internal HDD) (`ata`)
 - UDPBD (`udp`)
 - iLink / IEEE1394 (`sd`)
+
 NOTE: Internal block device names between (parenthesis), these must be used for `bdfs:`
 
 These are all BDM drivers, or "Block Devices". On all devices the following partitioning schemes are supported:
