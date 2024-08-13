@@ -29,6 +29,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "../../../iop/common/fhi_bd.h"
 #include "../../../iop/common/fhi_bd_defrag.h"
 #include "../../../iop/common/fhi_file.h"
+#include "../../../iop/common/fhi_fileid.h"
 #include "../../../iop/common/fhi.h"
 #include "toml.h"
 
@@ -68,17 +69,19 @@ void print_usage()
     printf("\n");
     printf("Options:\n");
     printf("  -bsd=<driver>     Backing store drivers, supported are:\n");
-    printf("                    - no (default)\n");
-    printf("                    - ata\n");
-    printf("                    - usb\n");
-    printf("                    - mx4sio\n");
-    printf("                    - udpbd\n");
-    printf("                    - ilink\n");
+    printf("                    - no     (uses cdvd, default)\n");
+    printf("                    - ata    (block device)\n");
+    printf("                    - usb    (block device)\n");
+    printf("                    - mx4sio (block device)\n");
+    printf("                    - udpbd  (block device)\n");
+    printf("                    - ilink  (block device)\n");
+    printf("                    - mmce   (file system)\n");
     printf("\n");
-    printf("  -bsdfs=<driver>   Backing store fileystem drivers, supported are:\n");
+    printf("  -bsdfs=<driver>   Backing store fileystem drivers used for block device, supported are:\n");
     printf("                    - exfat (default)\n");
     printf("                    - hdl   (HD Loader)\n");
     printf("                    - bd    (Block Device)\n");
+    printf("                    NOTE: Used only for block devices (see -bsd)\n");
     printf("\n");
     printf("  -dvd=<mode>       DVD emulation mode, supported are:\n");
     printf("                    - no (default)\n");
@@ -837,6 +840,27 @@ void *modlist_get_settings(struct SModList *ml, const char *name)
     return settings;
 }
 
+/*
+ * Get a pointer to the settings data structure of a module
+ */
+void *modlist_get_settings_by_func(struct SModList *ml, const char *func)
+{
+    struct SModule *mod = modlist_get_by_func(ml, func);
+    void *settings = NULL;
+
+    if (mod != NULL) {
+        int i;
+        for (i = 0; i < mod->iSize; i += 4) {
+            if (*(uint32_t *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
+                settings = (void *)(mod->pData + i);
+                break;
+            }
+        }
+    }
+
+    return settings;
+}
+
 int fhi_bd_defrag_add_file_by_fd(struct fhi_bd_defrag *bdm, int fhi_fid, int fd)
 {
     int i, iop_fd;
@@ -902,6 +926,35 @@ int fhi_bd_defrag_add_file(struct fhi_bd_defrag *bdm, int fhi_fid, const char *n
     rv = fhi_bd_defrag_add_file_by_fd(bdm, fhi_fid, fd);
     close(fd);
     return rv;
+}
+
+int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *name)
+{
+    int i, fd;
+
+    // Open file
+    printf("Loading %s...\n", name);
+    for (i = 0; i < 1000; i++) {
+        fd = open(name, O_RDONLY);
+        if (fd >= 0)
+            break;
+
+        // Give low level drivers some time to init
+        nopdelay();
+    }
+    if (fd < 0) {
+        printf("Unable to open %s\n", name);
+        return -1;
+    }
+
+    // FIXME! remove need for ioctl
+    ffid->file[FHI_FID_CDVD].id = fileXioIoctl2(ps2sdk_get_iop_fd(fd), 0x80, NULL, 0, NULL, 0);
+    ffid->file[FHI_FID_CDVD].size = lseek64(fd, 0, SEEK_END);
+
+    // Leave file open!
+    //close(fd);
+
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -1133,6 +1186,9 @@ int main(int argc, char *argv[])
             printf("ERROR: driver %s failed\n", sys.sBSD);
             return -1;
         }
+        // mmce devices don't have a filesystem
+        if (!strcmp(sys.sBSD, "mmce"))
+            sys.sBSDFS = "no";
         if (!strcmp(sys.sBSDFS, "no")) {
             // Load nothing
         } else if (load_driver("bsdfs", sys.sBSDFS) < 0) {
@@ -1227,14 +1283,14 @@ int main(int argc, char *argv[])
     struct SModule *mod_fakemod = modlist_get_by_func(&drv.mod, "FAKEMOD");
 
     // Load module settings for fhi_bd_defrag backing store
-    struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings(&drv.mod, "fhi_bd_defrag.irx");
+    struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings_by_func(&drv.mod, "FHI_BD");
     if (set_fhi_bd_defrag != NULL)
         memset((void *)set_fhi_bd_defrag, 0, sizeof(struct fhi_bd_defrag));
 
-    // Load module settings for fhi_file backing store
-    struct fhi_file *set_fhi_file = modlist_get_settings(&drv.mod, "fhi_file.irx");
-    if (set_fhi_file != NULL)
-        memset((void *)set_fhi_file, 0, sizeof(struct fhi_file));
+    // Load module settings for fhi_fileid backing store
+    struct fhi_fileid *set_fhi_fileid = modlist_get_settings_by_func(&drv.mod, "FHI_FILEID");
+    if (set_fhi_fileid != NULL)
+        memset((void *)set_fhi_fileid, 0, sizeof(struct fhi_fileid));
 
     // Load module settings for cdvd emulator
     struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod, "cdvdman_emu.irx");
@@ -1253,7 +1309,7 @@ int main(int argc, char *argv[])
         uint32_t layer1_lba_start = 0;
         int fd_iso = 0;
 
-        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_fileid == NULL) {
             printf("ERROR: DVD emulator needs FHI backing store!\n");
             return -1;
         }
@@ -1323,20 +1379,24 @@ int main(int argc, char *argv[])
             default:           sMT = "unknown";
         }
         printf("- media = %s\n", sMT);
+        close(fd_iso);
 
         if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file_by_fd(set_fhi_bd_defrag, FHI_FID_CDVD, fd_iso) < 0)
+            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_CDVD, sDVDFile) < 0)
                 return -1;
-        }
-        if (set_fhi_file != NULL) {
-            if (strlen(sDVDFile) > FHI_FILE_MAX_LEN) {
-                printf("ERROR: File name too long: %s\n", sDVDFile);
-                return -1;
+        } else if (set_fhi_fileid != NULL) {
+            const char *s = strchr(sDVDFile, ':');
+
+            set_fhi_fileid->devNr = 0;
+            if (s != NULL) {
+                s--;
+                if (*s >= '0' && *s <= '9')
+                    set_fhi_fileid->devNr = *s - '0';
             }
-            strncpy(set_fhi_file->file[FHI_FID_CDVD].name, sDVDFile, FHI_FILE_MAX_LEN);
-            set_fhi_file->file[FHI_FID_CDVD].size = iso_size;
+
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_CDVD, sDVDFile) < 0)
+                return -1;
         }
-        close(fd_iso);
 
         set_cdvdman->media = eMediaType;
         set_cdvdman->layer1_start = layer1_lba_start;
@@ -1446,18 +1506,23 @@ int main(int argc, char *argv[])
      * Enable ATA0 emulation
      */
     if (sys.sATA0File != NULL) {
-        // Check for FHI backing store
-        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag != NULL) {
+            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0, sys.sATA0File) < 0)
+                return -1;
+            if (sys.sATA0IDFile != NULL) {
+                if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
+                    return -1;
+            }
+        } else if (set_fhi_fileid != NULL) {
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0, sys.sATA0File) < 0)
+                return -1;
+            if (sys.sATA0IDFile != NULL) {
+                if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
+                    return -1;
+            }
+        } else {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
-        }
-        // Load file
-        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0, sys.sATA0File) < 0)
-            return -1;
-        // if ata 0 is ok, load HDD ID file
-        if (sys.sATA0IDFile != NULL) {
-            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
-                return -1;
         }
     }
 
@@ -1465,42 +1530,48 @@ int main(int argc, char *argv[])
      * Enable ATA1 emulation
      */
     if (sys.sATA1File != NULL) {
-        // Check for FHI backing store
-        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
+        if (set_fhi_bd_defrag != NULL) {
+            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA1, sys.sATA1File) < 0)
+                return -1;
+        } else if (set_fhi_fileid != NULL) {
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA1, sys.sATA1File) < 0)
+                return -1;
+        } else {
             printf("ERROR: ATA emulator needs FHI backing store!\n");
             return -1;
         }
-        // Load file
-        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA1, sys.sATA1File) < 0)
-            return -1;
     }
 
     /*
      * Enable MC0 emulation
      */
     if (sys.sMC0File != NULL) {
-        // Check for FHI backing store
-        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
-            printf("ERROR: ATA emulator needs FHI backing store!\n");
+        if (set_fhi_bd_defrag != NULL) {
+            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC0, sys.sMC0File) < 0)
+                return -1;
+        } else if (set_fhi_fileid != NULL) {
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC0, sys.sMC0File) < 0)
+                return -1;
+        } else {
+            printf("ERROR: MC0 emulator needs FHI backing store!\n");
             return -1;
         }
-        // Load file
-        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC0, sys.sMC0File) < 0)
-            return -1;
     }
 
     /*
      * Enable MC1 emulation
      */
     if (sys.sMC1File != NULL) {
-        // Check for FHI backing store
-        if (set_fhi_bd_defrag == NULL && set_fhi_file == NULL) {
-            printf("ERROR: ATA emulator needs FHI backing store!\n");
+        if (set_fhi_bd_defrag != NULL) {
+            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC1, sys.sMC1File) < 0)
+                return -1;
+        } else if (set_fhi_fileid != NULL) {
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC1, sys.sMC1File) < 0)
+                return -1;
+        } else {
+            printf("ERROR: MC1 emulator needs FHI backing store!\n");
             return -1;
         }
-        // Load file
-        if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC1, sys.sMC1File) < 0)
-            return -1;
     }
 
     printf("ELF file: %s\n", sys.sELFFile);
@@ -1559,7 +1630,7 @@ int main(int argc, char *argv[])
 #pragma GCC diagnostic pop
 
     // Count the number of modules to pass to the ee_core
-    int modcount = 3; // IOPRP, IMGDRV and UDNL
+    int modcount = 4; // IOPRP, IMGDRV, UDNL and FHI
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];
         if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm->sFunc == NULL))
@@ -1608,6 +1679,16 @@ int main(int argc, char *argv[])
         irxptr = module_install(modlist_get_by_func(&drv.mod, "UDNL"), irxptr, irxptr_tab);
     irxptr_tab++;
     irxtable->count++;
+    // FHI BD
+    if (modlist_get_by_func(&drv.mod, "FHI_BD") != NULL) {
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD"), irxptr, irxptr_tab++);
+        irxtable->count++;
+    }
+    // FHI FILEID
+    if (modlist_get_by_func(&drv.mod, "FHI_FILEID") != NULL) {
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_FILEID"), irxptr, irxptr_tab++);
+        irxtable->count++;
+    }
     // All other modules
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];

@@ -59,17 +59,19 @@ Usage: neutrino.elf options
 
 Options:
   -bsd=<driver>     Backing store drivers, supported are:
-                    - no (default)
-                    - ata
-                    - usb
-                    - mx4sio
-                    - udpbd
-                    - ilink
+                    - no     (uses cdvd, default)
+                    - ata    (block device)
+                    - usb    (block device)
+                    - mx4sio (block device)
+                    - udpbd  (block device)
+                    - ilink  (block device)
+                    - mmce   (file system)
 
-  -bsdfs=<driver>   Backing store fileystem drivers, supported are:
+  -bsdfs=<driver>   Backing store fileystem drivers used for block device, supported are:
                     - exfat (default)
                     - hdl   (HD Loader)
                     - bd    (Block Device)
+                    NOTE: Used only for block devices (see -bsd)
 
   -dvd=<mode>       DVD emulation mode, supported are:
                     - no (default)

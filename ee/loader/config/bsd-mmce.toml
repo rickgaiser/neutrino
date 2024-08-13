@@ -1,0 +1,20 @@
+# Name of loaded config, to show to user
+name = "MMCEDRV"
+
+[[module]]
+file = "iomanX.irx"
+env = ["LE"]
+[[module]]
+file = "fileXio.irx"
+env = ["LE"]
+[[module]]
+file = "isofs.irx"
+env = ["LE"]
+[[module]]
+file = "mmceman.irx"
+env = ["LE"]
+
+[[module]]
+file = "mmcefhi.irx"
+func = "FHI_FILEID"
+env = ["EE"]

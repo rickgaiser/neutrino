@@ -172,7 +172,6 @@ copy:
 	cp ../../iop/fakemod/irx/fakemod.irx           modules
 	cp ../../iop/fhi_bd/irx/fhi_bd.irx             modules
 	cp ../../iop/fhi_bd_defrag/irx/fhi_bd_defrag.irx modules
-	cp ../../iop/fhi_file/irx/fhi_file.irx         modules
 	cp ../../iop/gapfill/irx/gapfill.irx           modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
@@ -200,6 +199,10 @@ copy:
 	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx        modules
 	cp $(PS2SDK)/iop/irx/iLinkman.irx              modules
 	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx      modules
+
+# Add later when modules are part of ps2sdk
+#	cp $(PS2SDK)/iop/irx/mmceman.irx               modules
+#	cp $(PS2SDK)/iop/irx/mmcefhi.irx               modules
 
 include ../../Defs.make
 include ../Rules.make
