@@ -10,7 +10,7 @@ extern struct irx_export_table _exp_usbd;
 #ifdef DEBUG
 int sceUsbdRegisterLdd(sceUsbdLddOps *driver)
 {
-    M_DEBUG("%s\n", __FUNCTION__);
+    M_DEBUG("%s(%s)\n", __FUNCTION__, driver->name);
     return 0;
 }
 
