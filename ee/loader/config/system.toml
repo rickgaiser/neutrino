@@ -51,7 +51,16 @@ ioprp = "EESYNC"
 env = ["EE"]
 [[module]]
 file = "imgdrv.irx"
+func = "IMGDRV" # used by EECORE durion IOP reboot
+env = ["EE"]
+# By default the system rom0:UDNL will be used, but this can be overruled here
+# Some games (like Auto Modellista) don't work over USB with the default UDNL.
+[[module]]
+file = "udnl.irx"
+#file = "udnl-t300.irx"
+func = "UDNL" # used by EECORE durion IOP reboot
 env = ["EE"]
 [[module]]
 file = "fakemod.irx"
+func = "FAKEMOD" # loaded last, so we don't fake our own modules
 env = ["EE"]

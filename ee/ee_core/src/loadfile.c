@@ -31,7 +31,7 @@ extern SifRpcClientData_t _lf_cd;
 extern int _lf_init;
 
 int _SifLoadElfPart(const char *path, const char *secname, t_ExecData *data, int fno);
-int _SifLoadModuleBuffer(void *ptr, int arg_len, const char *args, int *modres);
+int _SifLoadModuleBuffer(void *ptr, int arg_len, const char *args, int *modres, int dontwait);
 
 //#if defined(F_SifLoadFileInit)
 SifRpcClientData_t _lf_cd;
@@ -317,7 +317,7 @@ int SifIopGetVal(u32 iop_addr, void *val, int type)
 #endif
 
 //#ifdef F__SifLoadModuleBuffer
-int _SifLoadModuleBuffer(void *ptr, int arg_len, const char *args, int *modres)
+int _SifLoadModuleBuffer(void *ptr, int arg_len, const char *args, int *modres, int dontwait)
 {
     struct _lf_module_buffer_load_arg arg;
 
@@ -334,7 +334,7 @@ int _SifLoadModuleBuffer(void *ptr, int arg_len, const char *args, int *modres)
         arg.q.arg_len = 0;
     }
 
-    if (SifCallRpc(&_lf_cd, LF_F_MOD_BUF_LOAD, 0, &arg, sizeof arg, &arg, 8,
+    if (SifCallRpc(&_lf_cd, LF_F_MOD_BUF_LOAD, dontwait, &arg, sizeof arg, &arg, 8,
                    NULL, NULL) < 0)
         return -SCE_ECALLMISS;
 
@@ -348,19 +348,19 @@ int _SifLoadModuleBuffer(void *ptr, int arg_len, const char *args, int *modres)
 #if defined(F_SifLoadModuleBuffer)
 int SifLoadModuleBuffer(void *ptr, int arg_len, const char *args)
 {
-    return _SifLoadModuleBuffer(ptr, arg_len, args, NULL);
+    return _SifLoadModuleBuffer(ptr, arg_len, args, NULL, 0);
 }
 #endif
 
 #if defined(F_SifLoadStartModuleBuffer)
 int SifLoadStartModuleBuffer(void *ptr, int arg_len, const char *args, int *mod_res)
 {
-    return _SifLoadModuleBuffer(ptr, arg_len, args, mod_res);
+    return _SifLoadModuleBuffer(ptr, arg_len, args, mod_res, 0);
 }
 #endif
 
 //#if defined(F_SifExecModuleBuffer)
-int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res)
+int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait)
 {
     SifDmaTransfer_t dmat;
     void *iop_addr;
@@ -394,11 +394,11 @@ int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int 
     // Free temp buffer
     SifFreeIopHeap(ptemp);
 
-    dmat.src  = ptr;
+    dmat.src  = (void *)ptr;
     dmat.dest = iop_addr;
     dmat.size = size;
     dmat.attr = 0;
-    SifWriteBackDCache(ptr, size);
+    SifWriteBackDCache((void *)ptr, size);
     qid = SifSetDma(&dmat, 1);
 
     if (!qid)
@@ -407,12 +407,22 @@ int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int 
     while (SifDmaStat(qid) >= 0)
         ;
 
-    res = _SifLoadModuleBuffer(iop_addr, arg_len, args, mod_res);
-    SifFreeIopHeap(iop_addr);
+    res = _SifLoadModuleBuffer(iop_addr, arg_len, args, mod_res, dontwait);
+
+    if (dontwait == 0) {
+        // This should only happen when loading UDNL during IOP reboot
+        // Check if this does not cause a memory leak
+        SifFreeIopHeap(iop_addr);
+    }
 
     return res;
 }
 //#endif
+
+int SifExecModuleBuffer(void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res)
+{
+    return _SifExecModuleBuffer(ptr, size, arg_len, args, mod_res, 0);
+}
 
 #if defined(F_SifExecModuleFile)
 int SifExecModuleFile(const char *path, u32 arg_len, const char *args, int *mod_res)
@@ -436,7 +446,7 @@ int SifExecModuleFile(const char *path, u32 arg_len, const char *args, int *mod_
         return res;
     }
 
-    res = _SifLoadModuleBuffer(iop_addr, arg_len, args, mod_res);
+    res = _SifLoadModuleBuffer(iop_addr, arg_len, args, mod_res, 0);
     SifFreeIopHeap(iop_addr);
 
     return res;

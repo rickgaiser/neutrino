@@ -116,6 +116,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/Gran Turismo 4 (U).iso'
 #GAME = 'CD/OPL_Accurate_Read_v1.0.iso'
 #GAME = 'DVD/Kidou Senshi Gundam - Ichinen Sensou (J).iso'
+#GAME = 'DVD/Auto Modellista (E).iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
@@ -163,6 +164,8 @@ copy:
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
 	cp ../../iop/usbd_null/irx/usbd_null.irx       modules
 	cp ../ee_core/ee_core.elf                      modules
+	cp $(PS2SDK)/iop/irx/udnl.irx                  modules
+	cp $(PS2SDK)/iop/irx/udnl-t300.irx             modules
 	cp $(PS2SDK)/iop/irx/eesync.irx                modules
 	cp $(PS2SDK)/iop/irx/iomanX.irx                modules
 	cp $(PS2SDK)/iop/irx/fileXio.irx               modules

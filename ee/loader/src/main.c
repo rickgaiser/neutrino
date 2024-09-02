@@ -131,6 +131,7 @@ struct SModule
 {
     const char *sFileName;
     const char *sUDNL;
+    const char *sFunc;
 
     off_t iSize;
     void *pData;
@@ -295,6 +296,21 @@ struct SModule *modlist_get_by_udnlname(struct SModList *ml, const char *name)
     return NULL;
 }
 
+struct SModule *modlist_get_by_func(struct SModList *ml, const char *func)
+{
+    int i;
+
+    for (i = 0; i < ml->count; i++) {
+        struct SModule *m = &ml->mod[i];
+        if (m->sFunc != NULL) {
+            if (strcmp(m->sFunc, func) == 0)
+                return m;
+        }
+    }
+
+    return NULL;
+}
+
 static void print_iop_args(int arg_len, const char *args)
 {
     // Multiple null terminated strings together
@@ -326,7 +342,7 @@ static uint8_t * module_install(struct SModule *mod, uint8_t *addr, irxptr_t *ir
 {
     if (mod == NULL) {
         printf("ERROR: mod == NULL\n");
-        return 0;
+        return addr;
     }
 
     // Install module
@@ -516,6 +532,9 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
     v = toml_string_in(t, "ioprp");
     if (v.ok)
         m->sUDNL = v.u.s; // NOTE: passing ownership of dynamic memory
+    v = toml_string_in(t, "func");
+    if (v.ok)
+        m->sFunc = v.u.s; // NOTE: passing ownership of dynamic memory
     arr = toml_array_in(t, "args");
     if (arr != NULL) {
         int i;
@@ -1094,7 +1113,7 @@ int main(int argc, char *argv[])
 
     // FAKEMOD optional module
     // Only loaded when modules need to be faked
-    struct SModule *mod_fakemod = modlist_get_by_name(&drv.mod, "fakemod.irx");
+    struct SModule *mod_fakemod = modlist_get_by_func(&drv.mod, "FAKEMOD");
 
     // Load module settings for fhi_bd_defrag backing store
     struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings(&drv.mod, "fhi_bd_defrag.irx");
@@ -1433,11 +1452,15 @@ int main(int argc, char *argv[])
 #pragma GCC diagnostic pop
 
     // Count the number of modules to pass to the ee_core
-    int modcount = 1; // IOPRP
+    int modcount = 3; // IOPRP, IMGDRV and UDNL
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];
-        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL))
+        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm->sFunc == NULL))
             modcount++;
+    }
+    if (drv.fake.count > 0) {
+        // FAKEMOD
+        modcount++;
     }
 
     irxtable = (irxtab_t *)get_modstorage(sGameID);
@@ -1470,15 +1493,24 @@ int main(int argc, char *argv[])
     //
     // Load modules into place
     //
+    // IMGDRV
+    irxptr = module_install(modlist_get_by_func(&drv.mod, "IMGDRV"), irxptr, irxptr_tab++);
+    irxtable->count++;
+    // UDNL, entry is always present, even if there is no custom UDNL module
+    if (modlist_get_by_func(&drv.mod, "UDNL") != NULL)
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "UDNL"), irxptr, irxptr_tab);
+    irxptr_tab++;
+    irxtable->count++;
+    // All other modules
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];
-        // Load only the modules that are not part of IOPRP / UDNL
-        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm != mod_fakemod)) {
+        // Load only the modules that are not part of IOPRP and don't have a special function
+        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm->sFunc == NULL)) {
             irxptr = module_install(pm, irxptr, irxptr_tab++);
             irxtable->count++;
         }
     }
-    // Load FAKEMOD last, to prevent it from faking our own modules
+    // FAKEMOD last, to prevent it from faking our own modules
     if (drv.fake.count > 0) {
         irxptr = module_install(mod_fakemod, irxptr, irxptr_tab++);
         irxtable->count++;

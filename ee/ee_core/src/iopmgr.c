@@ -19,6 +19,8 @@
 extern int _iop_reboot_count;
 extern void *ModStorageStart;
 
+int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
+
 #ifdef __EESIO_DEBUG
 static void print_iop_args(int arg_len, const char *args)
 {
@@ -55,8 +57,8 @@ int New_Reset_Iop(const char *arg, int arglen)
 {
     int i;
     void *pIOP_buffer;
-    const void *IOPRP_img, *imgdrv_irx;
-    unsigned int length_rounded, udnl_cmdlen, size_IOPRP_img, size_imgdrv_irx;
+    const void *IOPRP_img, *imgdrv_irx, *udnl_irx;
+    unsigned int length_rounded, udnl_cmdlen, size_IOPRP_img, size_imgdrv_irx, size_udnl_irx;
     char udnl_mod[10];
     char udnl_cmd[RESET_ARG_MAX + 1];
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
@@ -105,12 +107,15 @@ int New_Reset_Iop(const char *arg, int arglen)
     udnl_cmdlen += 6;
 
     // FIXED modules:
-    // 0 = IOPRP image
-    // 1 = imgdrv
+    // 0 = IOPRP.img
+    // 1 = imgdrv.irx
+    // 2 = udnl.irx
     IOPRP_img       = irxtable->modules[0].ptr;
     size_IOPRP_img  = irxtable->modules[0].size;
     imgdrv_irx      = irxtable->modules[1].ptr;
     size_imgdrv_irx = irxtable->modules[1].size;
+    udnl_irx        = irxtable->modules[2].ptr;
+    size_udnl_irx   = irxtable->modules[2].size;
 
     // Manually copy IOPRP to IOP
     length_rounded = (size_IOPRP_img + 0xF) & ~0xF;
@@ -136,7 +141,14 @@ int New_Reset_Iop(const char *arg, int arglen)
     ee_kmode_exit();
     EIntr();
 
-    _SifLoadModule(udnl_mod, udnl_cmdlen, udnl_cmd, NULL, LF_F_MOD_LOAD, 1);
+    if (udnl_irx != NULL) {
+        // Load custom UDNL
+        _SifExecModuleBuffer(udnl_irx, size_udnl_irx, udnl_cmdlen, udnl_cmd, NULL, 1);
+    }
+    else {
+        // Load system UDNL
+        _SifLoadModule(udnl_mod, udnl_cmdlen, udnl_cmd, NULL, LF_F_MOD_LOAD, 1);
+    }
 
     DIntr();
     ee_kmode_enter();
@@ -161,8 +173,11 @@ int New_Reset_Iop(const char *arg, int arglen)
     sbv_patch_enable_lmb();
 
     DPRINTF("Loading extra IOP modules...\n");
-    // Skip the first 2 modules (IOPRP.IMG and imgdrv.irx)
-    for (i = 2; i < irxtable->count; i++) {
+    // Skip the first modules:
+    // 0 = IOPRP.IMG
+    // 1 = imgdrv.irx
+    // 2 = udnl.irx
+    for (i = 3; i < irxtable->count; i++) {
         irxptr_t p = irxtable->modules[i];
         SifExecModuleBuffer((void *)p.ptr, p.size, p.arg_len, p.args, NULL);
     }
