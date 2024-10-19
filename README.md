@@ -103,6 +103,8 @@ Options:
                     - 5: IOP: Emulate DVD-DL
                     Multiple options possible, for example -gc=23
 
+  -cwd=<path>       Change working directory
+
   -cfg=<file>       Load extra user/game specific config file (without .toml extension)
 
   -dbc              Enable debug colors
