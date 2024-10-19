@@ -111,6 +111,8 @@ void print_usage()
     printf("                    - 5: IOP: Emulate DVD-DL\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
+    printf("  -cwd=<path>       Change working directory\n");
+    printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
     printf("\n");
     printf("  -dbc              Enable debug colors\n");
@@ -890,6 +892,18 @@ int main(int argc, char *argv[])
     memset(&drv, 0, sizeof(struct SDriver));
 
     /*
+     * Change working directory
+     */
+    for (i = 1; i < argc; i++) {
+        if (!strncmp(argv[i], "-cwd=", 5)) {
+            if (chdir(&argv[i][5]) != 0) {
+                printf("ERROR: failed to change working directory to %s\n", &argv[i][5]);
+                return -1;
+            }
+        }
+    }
+
+    /*
      * Load system settings
      */
     if (load_driver("system", NULL) < 0) {
@@ -940,6 +954,8 @@ int main(int argc, char *argv[])
             sys.sGC = &argv[i][4];
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
+        else if (!strncmp(argv[i], "-cwd=", 5))
+            continue;
         else if (!strncmp(argv[i], "-dbc", 4))
             sys.bDebugColors = true;
         else if (!strncmp(argv[i], "-logo", 5))
