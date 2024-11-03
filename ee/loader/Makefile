@@ -20,14 +20,18 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Twisted Metal - Black (E).iso' # psxUNK -> IOP crash (executing data?)
 #GAME = 'DVD/Cy Girls (U) (Disc 1) (Ice).iso'
 #GAME = 'DVD/Cy Girls (U) (Disc 2) (Aska).iso'
-#GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso'
-#GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'
-#GAME = "DVD/Disney's Treasure Planet (E).iso"
 #GAME = "CD/Pink Pong (E).iso" # BSOD on USB only. In PCSX2 with USB it works?
 #[SLUS_208.51] Ace Combat 5 - The Unsung War: If you try to load this save there will be no music in the Briefing and if you skip the cutscene you will get a black screen, the last working OPL was r726
 #[SLPM_659.98] Vampire - Darkstalkers Collection: If you try to select a game you will get black screen
 #[SLUS_202.13] Test Drive: Start any race and then restart, the graphics will glitch and also the game will freeze at some point (the last OPL that worked well with this game is r790)
 #[SLUS_202.33] Mobile Suit Gundam Zeonic Front: I believe the last working OPL is r726 (only for USB, it won't render the graphics on SMB), you will get black screen if you select the mission and if you're not pressing X constantly and even then the game will not render the graphics
+#
+#GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso' # opl github issue 1073: gfx missing, only on real ps2, works in pcsx2
+#GAME = 'DVD/Giants - Citizen Kabuto (E).iso'           # opl github issue 1260: sfx issues + gfx text issues
+#GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'          # neutrino github issue  8: UDPBD: sfx missing or random freezes when starting match
+#GAME = "DVD/Disney's Treasure Planet (E).iso"          # neutrino github issue 14: UDPBD: freezes when starting a game
+#GAME = 'DVD/Scooby-Doo! Mystery Mayhem (U).iso'        # neutrino github issue 19: When starting a new game, the cutscene freezes
+#GAME = 'DVD/Silent Hill 3 (U).iso'                     # neutrino github issue 30: USB:   freezes on startup logo, only on real ps2, works in pcsx2
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
