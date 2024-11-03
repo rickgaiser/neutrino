@@ -300,13 +300,13 @@ int _start(int argc, char **argv)
         // Transform file name index to pointer
         if ((unsigned int)fm->fname >= 0x80000000) {
             unsigned int idx = (unsigned int)fm->fname - 0x80000000;
-            fm->fname = (const char *)&fmd.data[idx];
+            fm->fname = (char *)&fmd.data[idx];
         }
 
         // Transform module name index to pointer
         if ((unsigned int)fm->name >= 0x80000000) {
             unsigned int idx = (unsigned int)fm->name - 0x80000000;
-            fm->name = (const char *)&fmd.data[idx];
+            fm->name = (char *)&fmd.data[idx];
         }
 
         if (fm->fname != NULL) {

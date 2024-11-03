@@ -41,6 +41,12 @@ PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
 void _libcglue_timezone_update() {}; // Disable timezone update
 void _libcglue_rtc_update() {}; // Disable rtc update
 
+// TOML helper functions
+void toml_string_move(toml_datum_t *v, char **dest);
+void toml_string_in_overwrite(toml_table_t *t, const char *name, char **dest);
+void toml_bool_in_overwrite(toml_table_t *t, const char *name, int *dest);
+void toml_int_in_overwrite(toml_table_t *t, const char *name, int *dest);
+
 /*
 OPL Module Storage Memory Map:
     struct irxtab_t;
@@ -131,9 +137,9 @@ void print_usage()
 #define MOD_ENV_EE (1<<1)
 struct SModule
 {
-    const char *sFileName;
-    const char *sUDNL;
-    const char *sFunc;
+    char *sFileName;
+    char *sUDNL;
+    char *sFunc;
 
     off_t iSize;
     void *pData;
@@ -519,24 +525,33 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
     m = modlist_get_by_name(ml, v.u.s);
     if (m != NULL) {
         printf("WARNING: module %s already loaded\n", m->sFileName);
+        // Free dynamic memory
+        if (m->sFileName)
+            free(m->sFileName);
+        if (m->sUDNL)
+            free(m->sUDNL);
+        if (m->sFunc)
+            free(m->sFunc);
+        if (m->args)
+            free(m->args);
+        if (m->pData)
+            free(m->pData);
+        // Clear entry
         memset(m, 0, sizeof(struct SModule));
     } else {
         if (ml->count >= DRV_MAX_MOD) {
             printf("ERROR: too many modules\n");
+            free(v.u.s);
             return -1;
         }
         m = &ml->mod[ml->count];
         ml->count++;
     }
 
-    m->sFileName = v.u.s; // NOTE: passing ownership of dynamic memory
+    toml_string_move(&v, &m->sFileName);
 
-    v = toml_string_in(t, "ioprp");
-    if (v.ok)
-        m->sUDNL = v.u.s; // NOTE: passing ownership of dynamic memory
-    v = toml_string_in(t, "func");
-    if (v.ok)
-        m->sFunc = v.u.s; // NOTE: passing ownership of dynamic memory
+    toml_string_in_overwrite(t, "ioprp", &m->sUDNL);
+    toml_string_in_overwrite(t, "func",  &m->sFunc);
     arr = toml_array_in(t, "args");
     if (arr != NULL) {
         int i;
@@ -548,6 +563,7 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
                 strcpy(&m->args[m->arg_len], v.u.s);
                 m->arg_len += strlen(v.u.s) + 1; // +1 for 0 termination
             }
+            free(v.u.s);
         }
     }
     arr = toml_array_in(t, "env");
@@ -563,6 +579,7 @@ int modlist_add(struct SModList *ml, toml_table_t *t)
                 else
                     printf("ERROR: unknown module.env: %s\n", v.u.s);
             }
+            free(v.u.s);
         }
     }
 
@@ -604,12 +621,8 @@ int fakelist_add(struct SFakeList *fl, toml_table_t *t)
     f = &fl->fake[fl->count];
     fl->count++;
 
-    v = toml_string_in(t, "file");
-    if (v.ok)
-        f->fname = v.u.s; // NOTE: passing ownership of dynamic memory
-    v = toml_string_in(t, "name");
-    if (v.ok)
-        f->name = v.u.s; // NOTE: passing ownership of dynamic memory
+    toml_string_in_overwrite(t, "file", &f->fname);
+    toml_string_in_overwrite(t, "name", &f->name);
     v = toml_bool_in(t, "unload");
     if (v.ok)
         f->prop |= (v.u.b != 0) ? FAKE_PROP_UNLOAD : 0;
@@ -651,13 +664,26 @@ int fakelist_add_array(struct SFakeList *fl, toml_table_t *tbl_root)
     return 0;
 }
 
+void toml_string_move(toml_datum_t *v, char **dest)
+{
+    // Free old string if previously set
+    if (*dest != NULL) {
+        free(*dest);
+        *dest = NULL;
+    }
+    // Allocate data for new string
+    *dest = malloc(strlen(v->u.s) + 1);
+    // Copy string
+    strcpy(*dest, v->u.s);
+    // Free toml string
+    free(v->u.s);
+}
+
 void toml_string_in_overwrite(toml_table_t *t, const char *name, char **dest)
 {
     toml_datum_t v = toml_string_in(t, name);
     if (v.ok) {
-        if (*dest != NULL)
-            free (*dest);
-        *dest = v.u.s;
+        toml_string_move(&v, dest);
     }
 }
 

@@ -7,8 +7,8 @@
 
 struct FakeModule
 {
-    const char *fname;
-    const char *name;
+    char *fname;
+    char *name;
     int id;
 
     uint16_t prop;
@@ -17,7 +17,7 @@ struct FakeModule
     int16_t returnLoad;  // Return value when loading the module
     int16_t returnStart; // Return value of module start function: RESIDENT END (0), NO RESIDENT END (1) or REMOVABLE END (2)
     uint16_t fill;
-} __attribute__((packed));
+} __attribute__((packed, aligned(4)));
 // Fake module properties
 #define FAKE_PROP_UNLOAD  (1<<1) /// 'fake' module can be unloaded (note that re-loading is not possible!)
 
@@ -34,7 +34,7 @@ struct fakemod_data
 
     // Strings used for fake module names
     const uint8_t data[MODULE_SETTINGS_MAX_DATA_SIZE];
-} __attribute__((packed));
+} __attribute__((packed, aligned(4)));
 
 
 #endif
