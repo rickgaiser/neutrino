@@ -48,6 +48,12 @@ The following HDD emulation drivers are supported:
 - File: using a virtual HDD image file from the backing store
 
 ## Usage instructions
+Neutrino is a command line application. To get the most out of neutrino you will need to run it from the command line, for instance using [ps2link](https://github.com/ps2dev/ps2link) and [ps2client](https://github.com/ps2dev/ps2client).
+
+Alternatively you can use a more user friendly GUI from one of the third-party projects (see below), but with a limited feature set.
+
+Command line usage instructions:
+
 ```
 Usage: neutrino.elf options
 
@@ -118,3 +124,15 @@ Usage examples:
   neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso
   neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 ```
+
+## Third-Party Loaders
+The following third-party projects use neutrino:
+
+Loader | Author
+-|-
+[XEB+ neutrino Launcher Plugin](https://github.com/sync-on-luma/xebplus-neutrino-loader-plugin) | sync-on-luma
+[OPLNEUTRINO](https://www.psx-place.com/threads/opl-based-gui-frontend-for-neutrino.42166/) | crt0
+[NHDDL](https://github.com/pcm720/nhddl) | pcm720
+[RETROLauncher](https://github.com/Spaghetticode-Boon-Tobias/RETROLauncher) | Boon Tobias
+
+Add your project here? Send me a PR.
