@@ -622,6 +622,10 @@ static void cdvdman_cdread_Thread(void *args)
                 // The callback will trigger a new read (if needed)
                 if (Stm0Callback != NULL)
                     Stm0Callback();
+
+                // Notify external irx that sceCdRead has finished
+                // 'Formula One 2001' seems to need this for background music
+                cdvdman_cb_event(SCECdFuncRead);
                 break;
         }
 
