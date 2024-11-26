@@ -107,6 +107,7 @@ Options:
                     - 2: IOP: Sync reads (sceCdRead)
                     - 3: EE : Unhook syscalls
                     - 5: IOP: Emulate DVD-DL
+                    - 7: IOP: Fix game buffer overrun
                     Multiple options possible, for example -gc=23
 
   -cwd=<path>       Change working directory

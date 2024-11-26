@@ -29,9 +29,9 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso' # opl github issue 1073: gfx missing, only on real ps2, works in pcsx2
 #GAME = 'DVD/Giants - Citizen Kabuto (E).iso'           # opl github issue 1260: sfx issues + gfx text issues
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'          # neutrino github issue  8: UDPBD: sfx missing or random freezes when starting match
-#GAME = "DVD/Disney's Treasure Planet (E).iso"          # neutrino github issue 14: UDPBD: freezes when starting a game
 #GAME = 'DVD/Scooby-Doo! Mystery Mayhem (U).iso'        # neutrino github issue 19: When starting a new game, the cutscene freezes
 #GAME = 'DVD/Silent Hill 3 (U).iso'                     # neutrino github issue 30: USB:   freezes on startup logo, only on real ps2, works in pcsx2
+#GAME = 'DVD/Formula One 2001 (E).iso'
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
@@ -121,6 +121,8 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'CD/OPL_Accurate_Read_v1.0.iso'
 #GAME = 'DVD/Kidou Senshi Gundam - Ichinen Sensou (J).iso'
 #GAME = 'DVD/Auto Modellista (E).iso'
+#GAME = 'DVD/Disney's Treasure Planet (E).iso' # buffer overrun issue
+#GAME = 'DVD/Donkey Xote (E).iso' # buffer overrun issue
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
@@ -133,11 +135,16 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
+ARGS = -bsd=udpbd -dvd=mass:$(GAME)
+
 run: all copy
-	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) -bsd=udpbd -dvd=mass:$(GAME)
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS)
 
 sim: all copy
 	flatpak --filesystem=host run net.pcsx2.PCSX2 $(PWD)/ee/loader/$(EE_BIN_PACKED)
+
+# PCSX should be able to start with these, but the filename cannot contain spaces :(
+# -gameargs "host:neutrino.elf $(ARGS)"
 
 clean:
 	rm -rf $(EE_OBJS) *_irx.o *_elf.o
@@ -164,6 +171,7 @@ copy:
 	cp ../../iop/isofs/irx/isofs.irx               modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
 	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules
+	cp ../../iop/patch_membo/irx/patch_membo.irx   modules
 	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
 	cp ../../iop/usbd_null/irx/usbd_null.irx       modules

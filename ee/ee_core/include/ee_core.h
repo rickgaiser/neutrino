@@ -46,6 +46,7 @@ extern u32 g_compat_mask;
 //#define COMPAT_MODE_4 0x08 // Skip videos - not supported!
 #define COMPAT_MODE_5 0x10 // Emulate DVD-DL
 //#define COMPAT_MODE_6 0x20 // Disable IGR - not supported!
+#define COMPAT_MODE_7 0x40 // Patch IOP buffer overrun (game bug)
 
 extern char GameID[16];
 extern int GameMode;

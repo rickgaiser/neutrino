@@ -115,6 +115,7 @@ void print_usage()
     printf("                    - 2: IOP: Sync reads (sceCdRead)\n");
     printf("                    - 3: EE : Unhook syscalls\n");
     printf("                    - 5: IOP: Emulate DVD-DL\n");
+    printf("                    - 7: IOP: Fix game buffer overrun\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
     printf("  -cwd=<path>       Change working directory\n");
@@ -1054,6 +1055,7 @@ int main(int argc, char *argv[])
                 case '2':
                 case '3':
                 case '5':
+                case '7':
                     iCompat |= 1U << (c - '1');
                     break;
                 default:
@@ -1111,6 +1113,17 @@ int main(int argc, char *argv[])
     } else if (load_driver("emu-mc", sMCMode) < 0) {
         printf("ERROR: mc driver %s failed\n", sMCMode);
         return -1;
+    }
+
+    /*
+     * Load IOP game compatibility modules
+     */
+    if (iCompat & COMPAT_MODE_7) {
+        struct SModule * m = &drv.mod.mod[drv.mod.count];
+        drv.mod.count++;
+
+        m->sFileName = "patch_membo.irx";
+        m->env = MOD_ENV_EE;
     }
 
     /*

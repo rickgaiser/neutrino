@@ -14,6 +14,7 @@
  * #define COMPAT_MODE_4 0x08 // Skip videos - not supported!
  * #define COMPAT_MODE_5 0x10 // Emulate DVD-DL
  * #define COMPAT_MODE_6 0x20 // Disable IGR - not supported!
+ * #define COMPAT_MODE_7 0x40 // Patch IOP buffer overrun (bug in the game)
  */
 
 
@@ -28,6 +29,8 @@ static const gamecompat_t default_game_compat[] = {
     {"SCUS_971.24", COMPAT_MODE_3              }, // Jak and Daxter - The Precursor Legacy # game writes to 0x84000 region !
     {"SCUS_973.30", COMPAT_MODE_3              }, // Jak 3                                 # game writes to 0x84000 region !
     {"SCES_524.60", COMPAT_MODE_3              }, // Jak 3                                 # game writes to 0x84000 region !
+    {"SLES_548.38", COMPAT_MODE_7              }, // Donkey Xote                           # game has IOP buffer overrun issues
+    {"SCES_511.76", COMPAT_MODE_7              }, // Disney's Treasure Planet              # game has IOP buffer overrun issues
     {NULL, 0},
 };
 
