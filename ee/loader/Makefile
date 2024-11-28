@@ -31,7 +31,6 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'          # neutrino github issue  8: UDPBD: sfx missing or random freezes when starting match
 #GAME = 'DVD/Scooby-Doo! Mystery Mayhem (U).iso'        # neutrino github issue 19: When starting a new game, the cutscene freezes
 #GAME = 'DVD/Silent Hill 3 (U).iso'                     # neutrino github issue 30: USB:   freezes on startup logo, only on real ps2, works in pcsx2
-#GAME = 'DVD/Formula One 2001 (E).iso'
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
@@ -123,6 +122,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/Auto Modellista (E).iso'
 #GAME = 'DVD/Disney's Treasure Planet (E).iso' # buffer overrun issue
 #GAME = 'DVD/Donkey Xote (E).iso' # buffer overrun issue
+#GAME = 'DVD/Formula One 2001 (E).iso' # cdvdman break command
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)

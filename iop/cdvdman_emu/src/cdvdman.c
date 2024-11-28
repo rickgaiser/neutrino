@@ -87,7 +87,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 
     //M_DEBUG("cdvdman_read_sectors lsn=%lu sectors=%u buf=%p\n", lsn, sectors, buf);
 
-    if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) {
+    if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
         /*
          * Limit transfer speed to match the physical drive in the ps2
          *
@@ -184,7 +184,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     for (ptr = buf, remaining = sectors; remaining > 0;) {
         unsigned int SectorsToRead = remaining;
 
-        if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) {
+        if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
             // Limit transfers to a maximum length of 8, with a restricted transfer rate.
             iop_sys_clock_t TargetTime;
 
@@ -198,7 +198,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 
         cdvdman_stat.err = DeviceReadSectors(lsn, ptr, SectorsToRead);
         if (cdvdman_stat.err != SCECdErNO) {
-            if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS)
+            if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0)
                 CancelAlarm(&cdvdemu_read_end_cb, NULL);
             break;
         }
@@ -227,7 +227,7 @@ static int cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
         lsn += SectorsToRead;
         ReadPos += SectorsToRead * 2048;
 
-        if (cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) {
+        if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
             // Sleep until the required amount of time has been spent.
             WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_END, WEF_AND, NULL);
         }
@@ -623,9 +623,9 @@ static void cdvdman_cdread_Thread(void *args)
                 if (Stm0Callback != NULL)
                     Stm0Callback();
 
-                // Notify external irx that sceCdRead has finished
-                // 'Formula One 2001' seems to need this for background music
-                cdvdman_cb_event(SCECdFuncRead);
+                if (cdvdman_settings.flags & CDVDMAN_COMPAT_F1_2001)
+                    cdvdman_cb_event(SCECdFuncRead);
+
                 break;
         }
 
@@ -699,7 +699,7 @@ int _start(int argc, char **argv)
     RegisterLibraryEntries(&_exp_cdvdstm);
 
     // Setup the callback timer.
-    USec2SysClock((cdvdman_settings.flags & IOPCORE_COMPAT_ACCU_READS) ? 5000 : 0, &gCallbackSysClock);
+    USec2SysClock((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) ? 0 : 5000, &gCallbackSysClock);
 
     // Limit min/max sectors
     if (cdvdman_settings.fs_sectors < 2)

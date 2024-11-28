@@ -30,7 +30,7 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 
     result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
 
-    if ((result == 1) && (cdvdman_settings.flags & IOPCORE_COMPAT_ALT_READ) && !QueryIntrContext())
+    if ((result == 1) && (cdvdman_settings.flags & CDVDMAN_COMPAT_ALT_READ) && !QueryIntrContext())
         WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
 
     return result;
@@ -140,7 +140,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
             memset(tocBuff, 0, 2048);
 
             u8 dual = 0;
-            if ((!(cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL)) || (cdvdman_settings.layer1_start > 0))
+            if ((!(cdvdman_settings.flags & CDVDMAN_COMPAT_EMU_DVDDL)) || (cdvdman_settings.layer1_start > 0))
                 dual = 1;
 
             // Write only what we need, memset has cleared the above buffers.

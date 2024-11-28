@@ -20,17 +20,14 @@ static void StmCallback(void)
 {
     int OldState;
 
-    // Only update parameters if the streaming system was reading. Otherwise, this callback might have been triggered by the game reading data (BUG!)
-    if (cdvdman_stat.StreamingData.StIsReading) {
-        CpuSuspendIntr(&OldState);
-        cdvdman_stat.StreamingData.Stlsn += cdvdman_stat.StreamingData.StBanksize;
-        cdvdman_stat.StreamingData.StStreamed += cdvdman_stat.StreamingData.StBanksize;
-        cdvdman_stat.StreamingData.StWritePtr += cdvdman_stat.StreamingData.StBanksize;
-        if (cdvdman_stat.StreamingData.StWritePtr >= cdvdman_stat.StreamingData.StBufmax)
-            cdvdman_stat.StreamingData.StWritePtr = 0;
-        cdvdman_stat.StreamingData.StIsReading = 0;
-        CpuResumeIntr(OldState);
-    }
+    CpuSuspendIntr(&OldState);
+    cdvdman_stat.StreamingData.Stlsn += cdvdman_stat.StreamingData.StBanksize;
+    cdvdman_stat.StreamingData.StStreamed += cdvdman_stat.StreamingData.StBanksize;
+    cdvdman_stat.StreamingData.StWritePtr += cdvdman_stat.StreamingData.StBanksize;
+    if (cdvdman_stat.StreamingData.StWritePtr >= cdvdman_stat.StreamingData.StBufmax)
+        cdvdman_stat.StreamingData.StWritePtr = 0;
+    cdvdman_stat.StreamingData.StIsReading = 0;
+    CpuResumeIntr(OldState);
 
     //M_DEBUG("StmCallback: %08lx, wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
@@ -420,6 +417,9 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
     } else {
         result = 0;
     }
+
+    if (cdvdman_settings.flags & CDVDMAN_COMPAT_F1_2001)
+        cdvdman_cb_event(SCECdFuncRead);
 
     return result;
 }

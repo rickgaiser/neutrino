@@ -200,7 +200,7 @@ int sceCdReadDvdDualInfo(int *on_dual, unsigned int *layer1_start)
 {
     M_DEBUG("%s(-, -)\n", __FUNCTION__);
 
-    if (cdvdman_settings.flags & IOPCORE_COMPAT_EMU_DVDDL) {
+    if (cdvdman_settings.flags & CDVDMAN_COMPAT_EMU_DVDDL) {
         // Make layer 1 point to layer 0.
         *layer1_start = 0;
         *on_dual = 1;

@@ -102,8 +102,8 @@ Options:
                     Defaults to cd for size<=650MiB, and dvd for size>650MiB
 
   -gc=<compat>      Game compatibility modes, supported are:
-                    - 0: Disable builtin compat flags
-                    - 1: IOP: Accurate reads (sceCdRead)
+                    - 0: IOP: Fast reads (sceCdRead)
+                    - 1: dummy
                     - 2: IOP: Sync reads (sceCdRead)
                     - 3: EE : Unhook syscalls
                     - 5: IOP: Emulate DVD-DL

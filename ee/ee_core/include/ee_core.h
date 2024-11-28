@@ -40,13 +40,7 @@ extern int iop_reboot_count;
 
 extern u32 g_compat_mask;
 
-#define COMPAT_MODE_1 0x01 // Accurate reads (sceCdRead)
-#define COMPAT_MODE_2 0x02 // Sync reads (sceCdRead)
-#define COMPAT_MODE_3 0x04 // Unhook syscalls
-//#define COMPAT_MODE_4 0x08 // Skip videos - not supported!
-#define COMPAT_MODE_5 0x10 // Emulate DVD-DL
-//#define COMPAT_MODE_6 0x20 // Disable IGR - not supported!
-#define COMPAT_MODE_7 0x40 // Patch IOP buffer overrun (game bug)
+#define EECORE_COMPAT_UNHOOK (1<<0) // Unhook syscalls
 
 extern char GameID[16];
 extern int GameMode;

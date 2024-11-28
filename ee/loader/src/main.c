@@ -110,8 +110,8 @@ void print_usage()
     printf("                    Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
     printf("\n");
     printf("  -gc=<compat>      Game compatibility modes, supported are:\n");
-    printf("                    - 0: Disable builtin compat flags\n");
-    printf("                    - 1: IOP: Accurate reads (sceCdRead)\n");
+    printf("                    - 0: IOP: Fast reads (sceCdRead)\n");
+    printf("                    - 1: dummy\n");
     printf("                    - 2: IOP: Sync reads (sceCdRead)\n");
     printf("                    - 3: EE : Unhook syscalls\n");
     printf("                    - 5: IOP: Emulate DVD-DL\n");
@@ -1049,14 +1049,12 @@ int main(int argc, char *argv[])
             char c = *sys.sGC;
             switch (c) {
                 case '0':
-                    iCompat |= 1U << 31; // Set dummy flag
-                    break;
-                case '1':
+                case '1': // dummy
                 case '2':
                 case '3':
                 case '5':
                 case '7':
-                    iCompat |= 1U << (c - '1');
+                    iCompat |= 1U << (c - '0');
                     break;
                 default:
                     printf("ERROR: compat flag %c not supported\n", c);
@@ -1066,6 +1064,14 @@ int main(int argc, char *argv[])
             sys.sGC++;
         }
     }
+
+    /*
+     * Process user requested compatibility flags
+     */
+    uint32_t eecore_compat = 0;
+    uint32_t cdvdman_compat = 0;
+    const char * patch_compat = NULL;
+    get_compat_flag(iCompat, &eecore_compat, &cdvdman_compat, &patch_compat);
 
     /*
      * Load backing store driver settings
@@ -1118,11 +1124,11 @@ int main(int argc, char *argv[])
     /*
      * Load IOP game compatibility modules
      */
-    if (iCompat & COMPAT_MODE_7) {
+    if (patch_compat != NULL) {
         struct SModule * m = &drv.mod.mod[drv.mod.count];
         drv.mod.count++;
 
-        m->sFileName = "patch_membo.irx";
+        m->sFileName = (char *)patch_compat;
         m->env = MOD_ENV_EE;
     }
 
@@ -1304,7 +1310,7 @@ int main(int argc, char *argv[])
         }
     }
     else {
-        if (iCompat != 0)
+        if (cdvdman_compat != 0)
             printf("WARNING: compatibility cannot be changed without emulating the DVD\n");
         if (eMediaType != SCECdNODISC)
             printf("WARNING: media type cannot be changed without emulating the DVD\n");
@@ -1366,23 +1372,15 @@ int main(int argc, char *argv[])
     /*
      * Get ELF/game compatibility flags
      */
-    if (iCompat == 0)
-        iCompat = get_compat(sGameID);
-    iCompat &= ~(1U << 31); // Clear dummy flag
+    get_compat_game(sGameID, &eecore_compat, &cdvdman_compat, &patch_compat);
+    printf("EECORE  compat flags: 0x%lX\n", eecore_compat);
+    printf("CDVDMAN compat flags: 0x%lX\n", cdvdman_compat);
 
     /*
      * Set CDVDMAN compatibility
      */
-    if (sDVDFile != NULL) {
-        if (iCompat & COMPAT_MODE_1)
-            set_cdvdman->flags |= IOPCORE_COMPAT_ACCU_READS;
-        if (iCompat & COMPAT_MODE_2)
-            set_cdvdman->flags |= IOPCORE_COMPAT_ALT_READ;
-        if (iCompat & COMPAT_MODE_5)
-            set_cdvdman->flags |= IOPCORE_COMPAT_EMU_DVDDL;
-
-        printf("Compat flags: 0x%X, IOP=0x%X\n", (unsigned int)iCompat, set_cdvdman->flags);
-    }
+    if (sDVDFile != NULL)
+        set_cdvdman->flags = cdvdman_compat;
 
     /*
      * Set deckard compatibility
@@ -1607,7 +1605,7 @@ int main(int argc, char *argv[])
     eecc_setELFArgs(&eeconf, argc-iELFArgcStart, (const char **)&argv[iELFArgcStart]);
     eecc_setKernelConfig(&eeconf, eeloadCopy, initUserMemory);
     eecc_setModStorageConfig(&eeconf, irxtable, irxptr);
-    eecc_setCompatFlags(&eeconf, iCompat);
+    eecc_setCompatFlags(&eeconf, eecore_compat);
     eecc_setDebugColors(&eeconf, sys.bDebugColors);
     eecc_setPS2Logo(&eeconf, sys.bLogo);
     printf("Starting ee_core with following arguments:\n");

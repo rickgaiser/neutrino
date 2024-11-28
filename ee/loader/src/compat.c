@@ -3,53 +3,88 @@
 
 // Other
 #include "compat.h"
-#include "ee_core.h"
-
-
-/****************************************************************************
- * Compatibility options:
- * #define COMPAT_MODE_1 0x01 // Accurate reads (sceCdRead)
- * #define COMPAT_MODE_2 0x02 // Sync reads (sceCdRead)
- * #define COMPAT_MODE_3 0x04 // Unhook syscalls
- * #define COMPAT_MODE_4 0x08 // Skip videos - not supported!
- * #define COMPAT_MODE_5 0x10 // Emulate DVD-DL
- * #define COMPAT_MODE_6 0x20 // Disable IGR - not supported!
- * #define COMPAT_MODE_7 0x40 // Patch IOP buffer overrun (bug in the game)
- */
+#include "ee_core.h" // EECORE compat flags
+#include "../../../iop/common/cdvd_config.h" // CDVDMAN compat flags
 
 
 typedef struct
 {
-    char *game;
-    uint32_t flags;
-} gamecompat_t;
+    uint32_t flag;
+    uint32_t eecore_flags;
+    uint32_t cdvdman_flags;
+    const char *ioppatch;
+} flagcompat_t;
 
-static const gamecompat_t default_game_compat[] = {
-    {"SCES_524.12", COMPAT_MODE_2              }, // Jackie Chan Adventures                # only needed for USB ?
-    {"SCUS_971.24", COMPAT_MODE_3              }, // Jak and Daxter - The Precursor Legacy # game writes to 0x84000 region !
-    {"SCUS_973.30", COMPAT_MODE_3              }, // Jak 3                                 # game writes to 0x84000 region !
-    {"SCES_524.60", COMPAT_MODE_3              }, // Jak 3                                 # game writes to 0x84000 region !
-    {"SLES_548.38", COMPAT_MODE_7              }, // Donkey Xote                           # game has IOP buffer overrun issues
-    {"SCES_511.76", COMPAT_MODE_7              }, // Disney's Treasure Planet              # game has IOP buffer overrun issues
-    {NULL, 0},
+static const flagcompat_t flag_compat[] = {
+    {1<<0, 0,                    CDVDMAN_COMPAT_FAST_READS, NULL              }, // MODE 0
+    {1<<2, 0,                    CDVDMAN_COMPAT_ALT_READ,   NULL              }, // MODE 2
+    {1<<3, EECORE_COMPAT_UNHOOK, 0,                         NULL              }, // MODE 3
+    {1<<5, 0,                    CDVDMAN_COMPAT_EMU_DVDDL,  NULL              }, // MODE 5
+    {1<<7, 0,                    0,                         "patch_membo.irx" }, // MODE 7
+    {0<<0, 0, 0, NULL},
 };
 
-uint32_t get_compat(const char *id)
+void get_compat_flag(uint32_t flags, uint32_t *eecore, uint32_t *cdvdman, const char **ioppatch)
 {
-    // Default compatibility mode
-    uint32_t compat = COMPAT_MODE_1;
-
     // Game specific compatibility mode
-    const gamecompat_t *p = &default_game_compat[0];
+    const flagcompat_t *p = &flag_compat[0];
+    while (p->flag != 0) {
+        if ((p->flag & flags) != 0) {
+            *eecore  |= p->eecore_flags;  // multiple flags possible
+            *cdvdman |= p->cdvdman_flags; // multiple flags possible
+            *ioppatch = p->ioppatch;      // only 1 patch possible
+        }
+        p++;
+    }
+}
+
+typedef struct
+{
+    char *game;
+    uint32_t eecore_flags;
+    uint32_t cdvdman_flags;
+    const char *ioppatch;
+} gamecompat_t;
+
+static const gamecompat_t game_compat[] = {
+    {"SCES_524.12", 0,                    CDVDMAN_COMPAT_ALT_READ, NULL },              // Jackie Chan Adventures # only needed for USB ?
+
+    // These games write to the EE 0x84000 region, where our EECORE is loaded
+    {"SCUS_971.24", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCUS_973.30", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
+    {"SCES_524.60", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
+
+    // These games have IOP memory buffer overrun issues
+    {"SLES_548.38", 0,                    0,                       "patch_membo.irx" }, // Donkey Xote
+    {"SCES_511.76", 0,                    0,                       "patch_membo.irx" }, // Disney's Treasure Planet
+
+    // These games send a cdvd break command from EE directly into IOP memory map
+    // This causes an interrupt by cdvd, plus a callback that the game needs.
+    // In PCSX2 you can see the PCSX2 message "Read Abort" every time this happens.
+    //
+    // Emulation has so far not been able to reproduce this behaviour,
+    // as a workaround extra cdvd callbacks are fired.
+    {"SCUS_971.50", 0,                    CDVDMAN_COMPAT_F1_2001,  NULL },              // Formula One 2001 <- not checked
+    {"SCES_500.04", 0,                    CDVDMAN_COMPAT_F1_2001,  NULL },              // Formula One 2001 <- checked and working
+    {"SCED_502.54", 0,                    CDVDMAN_COMPAT_F1_2001,  NULL },              // Formula One 2001 <- not checked
+    {"SCED_503.13", 0,                    CDVDMAN_COMPAT_F1_2001,  NULL },              // Formula One 2001 <- not checked
+    {"SCPS_150.19", 0,                    CDVDMAN_COMPAT_F1_2001,  NULL },              // Formula One 2001 <- not checked
+    {NULL, 0, 0, NULL},
+};
+
+void get_compat_game(const char *id, uint32_t *eecore, uint32_t *cdvdman, const char **ioppatch)
+{
+    // Game specific compatibility mode
+    const gamecompat_t *p = &game_compat[0];
     while (p->game != NULL) {
         if (strcmp(id, p->game) == 0) {
-            compat |= p->flags;
+            *eecore  |= p->eecore_flags;  // multiple flags possible
+            *cdvdman |= p->cdvdman_flags; // multiple flags possible
+            *ioppatch = p->ioppatch;      // only 1 patch possible
             break;
         }
         p++;
     }
-
-    return compat;
 }
 
 
