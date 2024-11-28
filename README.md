@@ -116,6 +116,7 @@ Options:
 
   -dbc              Enable debug colors
   -logo             Enable logo (adds rom0:PS2LOGO to arguments)
+  -qb               Quick-Boot directly into load environment
 
   --b               Break, all following parameters are passed to the ELF
 

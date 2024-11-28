@@ -124,6 +124,7 @@ void print_usage()
     printf("\n");
     printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
+    printf("  -qb               Quick-Boot directly into load environment\n");
     printf("\n");
     printf("  --b               Break, all following parameters are passed to the ELF\n");
     printf("\n");
@@ -177,6 +178,7 @@ struct SSystemSettings {
     char *sCFGFile;
     int bDebugColors;
     int bLogo;
+    int bQuickBoot;
 
     char *eecore_elf;
     int eecore_mod_base;
@@ -245,13 +247,15 @@ int module_load(struct SModule *mod)
     return 0;
 }
 
-int modlist_load(struct SModList *ml)
+int modlist_load(struct SModList *ml, unsigned int filter)
 {
     int i;
 
     for (i = 0; i < ml->count; i++) {
-        if (module_load(&ml->mod[i]) < 0)
-            return -1;
+        if (ml->mod[i].env & filter) {
+            if (module_load(&ml->mod[i]) < 0)
+                return -1;
+        }
     }
 
     return 0;
@@ -987,6 +991,8 @@ int main(int argc, char *argv[])
             sys.bDebugColors = true;
         else if (!strncmp(argv[i], "-logo", 5))
             sys.bLogo = true;
+        else if (!strncmp(argv[i], "-qb", 3))
+            sys.bQuickBoot = true;
         else if (!strncmp(argv[i], "--b", 3)) {
             iELFArgcStart = i + 1;
             break;
@@ -1138,39 +1144,39 @@ int main(int argc, char *argv[])
     mod_ee_core.sFileName = sys.eecore_elf;
     if (module_load(&mod_ee_core) < 0)
         return -1;
-    if (modlist_load(&drv.mod) < 0)
+    if (modlist_load(&drv.mod, (sys.bQuickBoot == false) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0)
         return -1;
 
-    /*
-     * Reboot IOP into Load Environment (LE)
-     */
-    printf("Reboot IOP into Load Environment (LE)\n");
-#if 1
-    //fileXioExit();
-    SifExitIopHeap();
-    SifLoadFileExit();
-    SifExitRpc();
-    SifInitRpc(0);
-    while(!SifIopReset(NULL, 0)){};
-    while(!SifIopSync()) {};
-    SifInitRpc(0);
-    SifInitIopHeap();
-    SifLoadFileInit();
-    sbv_patch_enable_lmb();
-#endif
+    if (sys.bQuickBoot == false) {
+        /*
+        * Reboot IOP into Load Environment (LE)
+        */
+        printf("Reboot IOP into Load Environment (LE)\n");
+        //fileXioExit();
+        SifExitIopHeap();
+        SifLoadFileExit();
+        SifExitRpc();
+        SifInitRpc(0);
+        while(!SifIopReset(NULL, 0)){};
+        while(!SifIopSync()) {};
+        SifInitRpc(0);
+        SifInitIopHeap();
+        SifLoadFileInit();
+        sbv_patch_enable_lmb();
 
-    /*
-     * Start load environment modules
-     */
-    for (i = 0; i < drv.mod.count; i++) {
-        struct SModule *pm = &drv.mod.mod[i];
-        if (pm->env & MOD_ENV_LE) {
-            if (module_start(pm) < 0)
-                return -1;
+        /*
+        * Start load environment modules
+        */
+        for (i = 0; i < drv.mod.count; i++) {
+            struct SModule *pm = &drv.mod.mod[i];
+            if (pm->env & MOD_ENV_LE) {
+                if (module_start(pm) < 0)
+                    return -1;
+            }
         }
+        if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
+            fileXioInit();
     }
-    if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
-        fileXioInit();
 
     // FAKEMOD optional module
     // Only loaded when modules need to be faked
