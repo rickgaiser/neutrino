@@ -7,8 +7,8 @@
   Some parts of the code are taken from HD Project by Polo
 */
 
-#ifndef _LOADER_H_
-#define _LOADER_H_
+#ifndef EE_CORE_H
+#define EE_CORE_H
 
 #include <tamtypes.h>
 #include <kernel.h>
@@ -20,6 +20,8 @@
 #include <sbv_patches.h>
 #include <smem.h>
 #include <smod.h>
+
+#include "ee_core_compat.h"
 
 #ifdef __EESIO_DEBUG
 #define DPRINTF(args...) _print(args)
@@ -39,8 +41,6 @@ extern int set_reg_disabled;
 extern int iop_reboot_count;
 
 extern u32 g_compat_mask;
-
-#define EECORE_COMPAT_UNHOOK (1<<0) // Unhook syscalls
 
 extern char GameID[16];
 extern int GameMode;

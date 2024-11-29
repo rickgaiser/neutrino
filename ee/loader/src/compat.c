@@ -51,6 +51,7 @@ static const gamecompat_t game_compat[] = {
 
     // These games write to the EE 0x84000 region, where our EECORE is loaded
     {"SCUS_971.24", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCUS_972.65", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 2
     {"SCUS_973.30", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
     {"SCES_524.60", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
 

@@ -13,7 +13,7 @@
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
 
-#define COMPAT_MODE_3     0x04 // Unhook syscalls
+#include "ee_core_compat.h"
 
 .set push
 .set noreorder
@@ -215,7 +215,7 @@ Hook_SifSetReg:
 2:
     /* check compat mode 3 is enabled */
     lw      $v0, g_compat_mask
-    andi    $v0, $v0, COMPAT_MODE_3
+    andi    $v0, $v0, EECORE_COMPAT_UNHOOK
     beq     $v0, $zero, 3f
 
     /* check iop_reboot_count is == 2 */
