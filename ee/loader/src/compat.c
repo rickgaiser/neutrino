@@ -49,11 +49,22 @@ typedef struct
 static const gamecompat_t game_compat[] = {
     {"SCES_524.12", 0,                    CDVDMAN_COMPAT_ALT_READ, NULL },              // Jackie Chan Adventures # only needed for USB ?
 
-    // These games write to the EE 0x84000 region, where our EECORE is loaded
+    // These games write to the EE 0x84000 to 1MiB region, where our EECORE is loaded
+    // To figure out if another game needs this mode: start the game in PCSX2 and see if this address is written by the game
     {"SCUS_971.24", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
-    {"SCUS_972.65", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 2
+    {"SCES_503.61", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCES_506.14", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCPS_150.21", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCPS_550.04", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCPS_560.03", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak and Daxter - The Precursor Legacy
+    {"SCUS_972.65", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak II
+    {"SCES_516.08", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak II
+    {"SCKA_200.10", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak II
+    {"SCPS_150.57", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak II
+    {"SCAJ_200.73", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak II
     {"SCUS_973.30", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
     {"SCES_524.60", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
+    {"SCKA_200.40", EECORE_COMPAT_UNHOOK, 0,                       NULL },              // Jak 3
 
     // These games have IOP memory buffer overrun issues
     {"SLES_548.38", 0,                    0,                       "patch_membo.irx" }, // Donkey Xote
