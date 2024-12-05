@@ -5,6 +5,7 @@
 */
 
 #include "internal.h"
+#include "cdvdman_read.h"
 
 static void cdvdman_trimspaces(char *str);
 static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLength, int layer);

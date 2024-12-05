@@ -90,12 +90,7 @@ struct dirTocEntry
     char filename[128];  // 33
 } __attribute__((packed));
 
-typedef void (*StmCallback_t)(void);
-
 // Internal (common) function prototypes
-extern void SetStm0Callback(StmCallback_t callback);
-
-extern int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum ECallSource source);
 extern int sceCdGetToc_internal(u8 *toc, enum ECallSource source);
 extern int sceCdSeek_internal(u32 lsn, enum ECallSource source);
 extern int sceCdStandby_internal(enum ECallSource source);
@@ -124,7 +119,6 @@ extern int cdvdman_searchfilesema;
 
 extern cdvdman_status_t cdvdman_stat;
 
-extern volatile unsigned char sync_flag_locked;
 extern volatile unsigned char cdvdman_cdinited;
 extern u32 mediaLsnCount;
 

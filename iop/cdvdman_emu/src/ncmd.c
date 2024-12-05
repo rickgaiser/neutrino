@@ -5,17 +5,28 @@
 */
 
 #include "internal.h"
+#include "cdvdman_read.h"
 
 //-------------------------------------------------------------------------
 int sceCdSync(int mode)
 {
-    M_DEBUG("%s(%d) locked = %d, ic=%d\n", __FUNCTION__, mode, sync_flag_locked, QueryIntrContext());
+    M_DEBUG("%s(%d) locked=%d, ic=%d\n", __FUNCTION__, mode, sync_flag_locked, QueryIntrContext());
 
     if (!sync_flag_locked)
         return 0; // Completed
 
-    if ((mode == 1) || (mode == 17))
-        return 1; // Not completed
+    if ((mode == 1) || (mode == 17)) {
+#if 0
+        // When the game is busy waiting with sceCdSync(1) then our
+        // reading never finishes and the game locks up.
+        // Adding a small delay+retry here will fix that issue.
+        DelayThread(10 * 1000); // 10ms
+        if (!sync_flag_locked)
+            return 0; // Completed
+        else
+#endif
+            return 1; // Not completed
+    }
 
     while (sync_flag_locked)
         WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
@@ -303,21 +314,33 @@ int sceCdPause(void)
 //-------------------------------------------------------------------------
 int sceCdDiskReady(int mode)
 {
-    M_DEBUG("%s(%d) locked = %d\n", __FUNCTION__, mode, sync_flag_locked);
+    M_DEBUG("%s(%d) locked=%d, ic=%d\n", __FUNCTION__, mode, sync_flag_locked, QueryIntrContext());
 
     cdvdman_stat.err = SCECdErNO;
 
-    if (cdvdman_cdinited) {
-        if (mode == 0) {
-            while (sync_flag_locked)
-                WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
-        }
+    if (!cdvdman_cdinited)
+        return SCECdNotReady;
 
+    if (!sync_flag_locked)
+        return SCECdComplete;
+
+    if (mode == 1) {
+#if 0
+        // When the game is busy waiting with sceCdDiskReady(1) then our
+        // reading never finishes and the game locks up.
+        // Adding a small delay+retry here will fix that issue.
+        DelayThread(10 * 1000); // 10ms
         if (!sync_flag_locked)
             return SCECdComplete;
+        else
+#endif
+            return SCECdNotReady;
     }
 
-    return SCECdNotReady;
+    while (sync_flag_locked)
+        WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
+
+    return SCECdComplete;
 }
 
 //-------------------------------------------------------------------------

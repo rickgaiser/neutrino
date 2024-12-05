@@ -139,7 +139,7 @@ static inline void rpcSCmd_cdreaddvddualinfo(void *buf)
 static void *cbrpc_cdvdScmds(int fno, void *buf, int size)
 { // CD SCMD RPC callback
 
-    //M_DEBUG("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
+    M_DEBUG("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
 
     switch (fno) {
         case CD_SCMD_READCLOCK:

@@ -398,7 +398,7 @@ static void *cbrpc_cdvdNcmds(int fno, void *buf, int size)
 { // CD NCMD RPC callback
     int sc_param;
 
-    //M_DEBUG("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
+    M_DEBUG("%s(%d, 0x%X, %d)\n", __FUNCTION__, fno, buf, size);
 
     sceCdSC(CDSC_IO_SEMA, &fno);
 

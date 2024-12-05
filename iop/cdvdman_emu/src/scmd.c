@@ -5,6 +5,7 @@
 */
 
 #include "internal.h"
+#include "cdvdman_read.h"
 
 static unsigned char cdvdman_media_changed = 1;
 

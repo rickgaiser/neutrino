@@ -5,6 +5,7 @@
 */
 
 #include "internal.h"
+#include "cdvdman_read.h"
 
 typedef struct
 {
@@ -148,6 +149,7 @@ static int cdvdman_open(iop_file_t *f, const char *filename, int mode)
     return r;
 }
 
+//--------------------------------------------------------------
 // SCE does this too, hence assuming that the version suffix will be either totally there or absent. The only version supported is 1.
 // Instead of using strcat like the original, append the version suffix manually for efficiency.
 static int cdrom_purifyPath(char *path)
@@ -185,11 +187,14 @@ static int cdrom_purifyPath(char *path)
 //--------------------------------------------------------------
 static int cdrom_dummy(void)
 {
+    M_DEBUG("%s\n", __FUNCTION__);
     return -EPERM;
 }
 
+//--------------------------------------------------------------
 static s64 cdrom_dummy64(void)
 {
+    M_DEBUG("%s\n", __FUNCTION__);
     return -EPERM;
 }
 
@@ -198,7 +203,7 @@ static int cdrom_init(iop_device_t *dev)
 {
     iop_sema_t smp;
 
-    M_DEBUG("cdrom_init\n");
+    M_DEBUG("%s\n", __FUNCTION__);
 
     smp.initial = 1;
     smp.max = 1;
@@ -214,7 +219,7 @@ static int cdrom_init(iop_device_t *dev)
 //--------------------------------------------------------------
 static int cdrom_deinit(iop_device_t *dev)
 {
-    M_DEBUG("cdrom_deinit\n");
+    M_DEBUG("%s\n", __FUNCTION__);
 
     DeleteSema(cdrom_io_sema);
     DeleteSema(cdvdman_searchfilesema);
@@ -222,12 +227,13 @@ static int cdrom_deinit(iop_device_t *dev)
     return 0;
 }
 
+//--------------------------------------------------------------
 static int cdrom_open(iop_file_t *f, const char *filename, int mode)
 {
     int result;
     char path_buffer[128]; // Original buffer size in the SCE CDVDMAN module.
 
-    M_DEBUG("cdrom_open %s mode=%d layer %d\n", filename, mode, f->unit);
+    M_DEBUG("%s %s mode=%d layer %d\n", __FUNCTION__, filename, mode, f->unit);
 
     strncpy(path_buffer, filename, sizeof(path_buffer));
     cdrom_purifyPath(path_buffer);
@@ -245,7 +251,7 @@ static int cdrom_close(iop_file_t *f)
 
     WaitSema(cdrom_io_sema);
 
-    M_DEBUG("cdrom_close\n");
+    M_DEBUG("%s\n", __FUNCTION__);
 
     memset(fh, 0, sizeof(FHANDLE));
     f->mode = 0; // SCE invalidates FDs by clearing the open flags.
@@ -264,7 +270,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
 
     WaitSema(cdrom_io_sema);
 
-    //M_DEBUG("cdrom_read size=%db (%ds) file_position=%d\n", size, size / 2048, fh->position);
+    M_DEBUG("%s size=%db (%ds) file_position=%d\n", __FUNCTION__, size, size / 2048, fh->position);
 
     if ((fh->position + size) > fh->filesize)
         size = fh->filesize - fh->position;
@@ -332,7 +338,7 @@ static int cdrom_lseek(iop_file_t *f, int offset, int where)
 
     WaitSema(cdrom_io_sema);
 
-    M_DEBUG("cdrom_lseek offset=%d where=%d\n", offset, where);
+    M_DEBUG("%s offset=%d where=%d\n", __FUNCTION__, offset, where);
 
     switch (where) {
         case SEEK_CUR:
@@ -351,7 +357,7 @@ static int cdrom_lseek(iop_file_t *f, int offset, int where)
     if (fh->position > fh->filesize)
         r = fh->position = fh->filesize;
 
-    M_DEBUG("cdrom_lseek file offset=%d\n", fh->position);
+    M_DEBUG("%s file offset=%d\n", __FUNCTION__, fh->position);
     SignalSema(cdrom_io_sema);
 
     return r;
@@ -362,7 +368,7 @@ static int cdrom_getstat(iop_file_t *f, const char *filename, iox_stat_t *stat)
 {
     char path_buffer[128]; // Original buffer size in the SCE CDVDMAN module.
 
-    M_DEBUG("cdrom_getstat %s layer %d\n", filename, f->unit);
+    M_DEBUG("%s %s layer %d\n", __FUNCTION__, filename, f->unit);
 
     strncpy(path_buffer, filename, sizeof(path_buffer));
     cdrom_purifyPath(path_buffer); // Unlike the SCE original, purify the path right away.
@@ -374,7 +380,7 @@ static int cdrom_getstat(iop_file_t *f, const char *filename, iox_stat_t *stat)
 //--------------------------------------------------------------
 static int cdrom_dopen(iop_file_t *f, const char *dirname)
 {
-    M_DEBUG("cdrom_dopen %s layer %d\n", dirname, f->unit);
+    M_DEBUG("%d %s layer %d\n", __FUNCTION__, dirname, f->unit);
 
     return cdvdman_open(f, dirname, 8);
 }
@@ -389,7 +395,7 @@ static int cdrom_dread(iop_file_t *f, iox_dirent_t *dirent)
 
     WaitSema(cdrom_io_sema);
 
-    M_DEBUG("cdrom_dread fh->lsn=%lu\n", fh->lsn);
+    M_DEBUG("%s fh->lsn=%lu\n", __FUNCTION__, fh->lsn);
 
     sceCdDiskReady(0);
     if ((r = sceCdRead_internal(fh->lsn, 1, cdvdman_fs_buf, NULL, ECS_EE_RPC)) == 1) {
@@ -414,9 +420,9 @@ static int cdrom_dread(iop_file_t *f, iox_dirent_t *dirent)
         strncpy(dirent->name, tocEntryPointer->filename, tocEntryPointer->filenameLength);
         dirent->name[tocEntryPointer->filenameLength] = '\0';
 
-        M_DEBUG("cdrom_dread r=%d mode=%04x name=%s\n", r, (int)mode, dirent->name);
+        M_DEBUG("%s r=%d mode=%04x name=%s\n", __FUNCTION__, r, (int)mode, dirent->name);
     } else
-        M_DEBUG("cdrom_dread r=%d\n", r);
+        M_DEBUG("%s r=%d\n", __FUNCTION__, r);
 
     SignalSema(cdrom_io_sema);
 
@@ -428,7 +434,7 @@ static int cdrom_ioctl(iop_file_t *f, u32 cmd, void *args)
 {
     int r = 0;
 
-    M_DEBUG("cdrom_ioctl 0x%X\n", cmd);
+    M_DEBUG("%s 0x%X\n", __FUNCTION__, cmd);
 
     WaitSema(cdrom_io_sema);
 
@@ -444,6 +450,8 @@ static int cdrom_ioctl(iop_file_t *f, u32 cmd, void *args)
 static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u32 arglen, void *buf, u32 buflen)
 {
     int result;
+
+    M_DEBUG("%s cmd=0x%X\n", __FUNCTION__, cmd);
 
     WaitSema(cdrom_io_sema);
 
@@ -533,7 +541,7 @@ static int cdrom_devctl(iop_file_t *f, const char *name, int cmd, void *args, u3
             result = cdvdman_stat.intr_ef;
             break;
         default:
-            M_DEBUG("cdrom_devctl unknown, cmd=0x%X\n", cmd);
+            M_DEBUG("%s unknown, cmd=0x%X\n", __FUNCTION__, cmd);
             result = -EIO;
             break;
     }
@@ -549,6 +557,8 @@ static int cdrom_ioctl2(iop_file_t *f, int cmd, void *args, unsigned int arglen,
     int r = 0;
 
     // There was a check here on whether the file was opened with mode 8.
+
+    M_DEBUG("%s\n", __FUNCTION__);
 
     WaitSema(cdrom_io_sema);
 
@@ -574,6 +584,8 @@ static int cdrom_ioctl2(iop_file_t *f, int cmd, void *args, unsigned int arglen,
 //-------------------------------------------------------------------------
 void *sceGetFsvRbuf2(int *size)
 {
+    M_DEBUG("%s\n", __FUNCTION__);
+
     *size = cdvdman_settings.fs_sectors * 2048 + CDVDMAN_FS_BUF_ALIGNMENT;
     return cdvdman_fs_buf;
 }
@@ -583,9 +595,11 @@ void cdvdman_initdev(void)
 {
     iop_event_t event;
 
+    M_DEBUG("%s\n", __FUNCTION__);
+
     event.attr = EA_MULTI;
     event.option = 0;
-    event.bits = 1;
+    event.bits = CDVDEF_MAN_UNLOCKED;
 
     cdvdman_stat.intr_ef = CreateEventFlag(&event);
 

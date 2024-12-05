@@ -133,9 +133,10 @@ int _start(int argc, char *argv[])
 //-------------------------------------------------------------------------
 static void init_thread(void *args)
 {
+    M_DEBUG("%s\n", __FUNCTION__);
+
     sceSifInitRpc(0);
 
-    cdvdfsv_size = 4096;
     cdvdfsv_buf = sceGetFsvRbuf2(&cdvdfsv_size);
     cdvdfsv_sectors = cdvdfsv_size / 2048;
     cdvdfsv_startrpcthreads();
@@ -147,6 +148,8 @@ static void init_thread(void *args)
 static void cdvdfsv_startrpcthreads(void)
 {
     iop_thread_t thread_param;
+
+    M_DEBUG("%s\n", __FUNCTION__);
 
     thread_param.attr = TH_C;
     thread_param.option = 0xABCD8001;
@@ -179,6 +182,8 @@ static void cdvdfsv_startrpcthreads(void)
 //-------------------------------------------------------------------------
 static void cdvdfsv_rpc0_th(void *args)
 {
+    M_DEBUG("%s\n", __FUNCTION__);
+
     sceSifSetRpcQueue(&rpc0_DQ, GetThreadId());
 
     sceSifRegisterRpc(&S596_rpcSD, 0x80000596, &cbrpc_S596, S596_rpcbuf, NULL, NULL, &rpc0_DQ);
@@ -193,6 +198,8 @@ static void cdvdfsv_rpc1_th(void *args)
     // Starts cd Init rpc Server
     // Starts cd Disk ready rpc server
     // Starts SCMD rpc server;
+
+    M_DEBUG("%s\n", __FUNCTION__);
 
     sceSifSetRpcQueue(&rpc1_DQ, GetThreadId());
 
@@ -209,6 +216,8 @@ static void cdvdfsv_rpc2_th(void *args)
     // Starts NCMD rpc server
     // Starts Search file rpc server
 
+    M_DEBUG("%s\n", __FUNCTION__);
+
     sceSifSetRpcQueue(&rpc2_DQ, GetThreadId());
 
     cdvdfsv_register_ncmd_rpc(&rpc2_DQ);
@@ -221,6 +230,8 @@ static void cdvdfsv_rpc2_th(void *args)
 static void *cbrpc_cdinit(int fno, void *buf, int size)
 { // CD Init RPC callback
     cdvdinit_res_t *r = (cdvdinit_res_t *)buf;
+
+    M_DEBUG("%s\n", __FUNCTION__);
 
     r->func_ret = sceCdInit(*(int *)buf);
 
@@ -235,6 +246,8 @@ static void *cbrpc_cdinit(int fno, void *buf, int size)
 static void *cbrpc_cddiskready(int fno, void *buf, int size)
 { // CD Disk Ready RPC callback
 
+    M_DEBUG("%s\n", __FUNCTION__);
+
     *(int *)buf = sceCdDiskReady((*(int *)buf == 0) ? 0 : 1);
 
     return buf;
@@ -243,6 +256,8 @@ static void *cbrpc_cddiskready(int fno, void *buf, int size)
 //-------------------------------------------------------------------------
 static void *cbrpc_cddiskready2(int fno, void *buf, int size)
 { // CD Disk Ready2 RPC callback
+
+    M_DEBUG("%s\n", __FUNCTION__);
 
     *(int *)buf = sceCdDiskReady(0);
 
@@ -253,6 +268,8 @@ static void *cbrpc_cddiskready2(int fno, void *buf, int size)
 static void *cbrpc_S596(int fno, void *buf, int size)
 {
     int cdvdman_intr_ef, dummy;
+
+    M_DEBUG("%s(%d, 0x%x, %d)\n", __FUNCTION__, fno, buf, size);
 
     if (fno == 1) {
         cdvdman_intr_ef = sceCdSC(CDSC_GET_INTRFLAG, &dummy);
@@ -269,6 +286,8 @@ void sysmemSendEE(void *buf, void *EE_addr, int size)
 {
     SifDmaTransfer_t dmat;
     int oldstate, id;
+
+    M_DEBUG("%s\n", __FUNCTION__);
 
     dmat.dest = (void *)EE_addr;
     dmat.size = size;
@@ -288,6 +307,8 @@ void sysmemSendEE(void *buf, void *EE_addr, int size)
 //-------------------------------------------------------------------------
 int sceCdChangeThreadPriority(int priority)
 {
+    M_DEBUG("%s(%d)\n", __FUNCTION__, priority);
+
     if ((u32)(priority - 9) < 0x73) {
         if (priority == 9)
             priority = 10;

@@ -5,6 +5,7 @@
 */
 
 #include "internal.h"
+#include "cdvdman_read.h"
 
 static int AllocBank(void **pointer);
 static int ReadSectors(int maxcount, void *buffer);
@@ -276,7 +277,7 @@ int sceCdStStart(u32 lsn, sceCdRMode *mode)
     cdvdman_stat.StreamingData.Stlsn = lsn;
     cdvdman_stat.StreamingData.StStat = 1;
     StReset();
-    SetStm0Callback(&StmCallback);
+    cdvdman_read_set_stm0_callback(&StmCallback);
     CpuResumeIntr(OldState);
 
     cdvdman_stat.err = SCECdErNO;
@@ -308,7 +309,7 @@ int sceCdStStop(void)
         CpuSuspendIntr(&OldState);
 
         // Stop.
-        SetStm0Callback(NULL);
+        cdvdman_read_set_stm0_callback(NULL);
         cdvdman_stat.StreamingData.StStreamed = 0;
         cdvdman_stat.StreamingData.StStat = 0;
         StReset();
@@ -334,7 +335,7 @@ int sceCdStPause(void)
 
         CpuSuspendIntr(&OldState);
         // Pause.
-        SetStm0Callback(NULL);
+        cdvdman_read_set_stm0_callback(NULL);
         cdvdman_stat.StreamingData.StIsReading = 0;
         CpuResumeIntr(OldState);
 
@@ -357,7 +358,7 @@ int sceCdStResume(void)
     if (cdvdman_stat.StreamingData.StStat) {
         CpuSuspendIntr(&OldState);
         // Resume
-        SetStm0Callback(&StmCallback);
+        cdvdman_read_set_stm0_callback(&StmCallback);
         CpuResumeIntr(OldState);
 
         StStartFillStreamBuffer();

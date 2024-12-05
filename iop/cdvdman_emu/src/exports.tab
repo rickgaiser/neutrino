@@ -86,7 +86,7 @@ DECLARE_EXPORT_TABLE(cdvdman, 1, 1)
     DECLARE_EXPORT(_dummy)           // sceCdBlueLEDCtl
     DECLARE_EXPORT(_dummy)           // sceCdCancelPOffRdy
     DECLARE_EXPORT(sceCdPowerOff)
-    DECLARE_EXPORT(_dummy)           // sceCdMmode
+    DECLARE_EXPORT(sceCdMmode)
     DECLARE_EXPORT(_dummy)           // sceCdReadFull
     DECLARE_EXPORT(sceCdStSeek)      // sceCdStSeekF ?
     DECLARE_EXPORT(_dummy)           // sceCdPOffCallback
