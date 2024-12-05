@@ -8,12 +8,18 @@
 */
 
 #include "ee_core.h"
+#include "iopmgr.h"
+#include "patches.h"
 #include "util.h"
+#include "asm.h"
 #include "syshook.h"
 #include "cheat_api.h"
 
+#include <loadfile.h>
+
 void *ModStorageStart, *ModStorageEnd;
 void *eeloadCopy, *initUserMemory;
+extern void *_stack_end;
 
 int isInit = 0;
 
@@ -21,7 +27,6 @@ int isInit = 0;
 u32 g_compat_mask = 0;
 char GameID[16] = "__UNKNOWN__";
 int GameMode = BDM_NOP_MODE;
-int EnableDebug = 0;
 int *gCheatList = NULL; // Store hooks/codes addr+val pairs
 
 // This function is defined as weak in ps2sdkc, so how
@@ -44,11 +49,6 @@ static void set_args_drv(const char *arg)
     else if (!_strncmp(arg, "BDM_ATA_MODE", 12))
         GameMode = BDM_ATA_MODE;
     DPRINTF("Game Mode = %d\n", GameMode);
-}
-
-static void set_args_v(const char *arg)
-{
-    EnableDebug = 1;
 }
 
 static void set_args_kernel(char *arg)
@@ -87,14 +87,12 @@ static int eecoreInit(int argc, char **argv)
 
     SifInitRpc(0);
 
-    DINIT();
+    // DINIT(); // In PCSX2 I see double messages after this call, why?
     DPRINTF("EE core start!\n");
 
     for (i=0; i<argc; i++) {
         if (!_strncmp(argv[i], "-drv=", 5))
             set_args_drv(&argv[i][5]);
-        if (!_strncmp(argv[i], "-v=", 3))
-            set_args_v(&argv[i][3]);
         if (!_strncmp(argv[i], "-ec=", 4))
             set_args_cheat(&argv[i][4]);
         if (!_strncmp(argv[i], "-kernel=", 8))
@@ -118,42 +116,76 @@ static int eecoreInit(int argc, char **argv)
     DPRINTF("Installing Kernel Hooks...\n");
     Install_Kernel_Hooks();
 
-    if (EnableDebug)
-        GS_BGCOLOUR = BGR_BLUE;
-
     SifExitRpc();
 
     return i;
 }
 
+static int callcount = 0;
 int main(int argc, char **argv)
 {
+    int i;
+
+    callcount++;
+    DPRINTF("EE_CORE main called (count=%d):\n", callcount);
+    for (i = 0; i < argc; i++) {
+        DPRINTF("- argv[%d]=%s\n", i, argv[i]);
+    }
+
     if (isInit == 0) {
-        // 1st time the ee_core is started (from OPL GUI)
+        // 1st time the ee_core is started (from neutrino)
 
         // Initialize the ee_core
         int argOffset = eecoreInit(argc, argv);
+
+        // Reboot the IOP into the Emulation Environment
+        services_start();
+        New_Reset_Iop(NULL, 0);
+
         isInit = 1;
 
         // Start selected elf file (should be something like "cdrom0:\ABCD_123.45;1")
+        services_exit();
         LoadExecPS2(argv[argOffset], argc - 1 - argOffset, &argv[1 + argOffset]);
     } else {
         // 2nd time and later the ee_core is started (from LoadExecPS2)
         // LoadExecPS2 is patched so instead of running rom0:EELOAD, this ee_core is started
 
-        // Ignore argv[0], as it contains the name of this module ("EELOAD")
-        int i;
+        t_ExecData elf;
 
+        // Ignore argv[0], as it contains the name of this module ("EELOAD")
         argv++;
         argc--;
 
-        DPRINTF("Starting ELF: %s\n", argv[0]);
-        for (i = 0; i < argc; i++) {
-            DPRINTF("- argv[%d]=%s\n", i, argv[i]);
+        if (callcount > 2) {
+            // Skip 1st time: initialization of ee_core
+            // Skip 2nd time: after initialization we are already rebooted once
+
+            // Reboot the IOP again into the Emulation Environment
+            services_start();
+            New_Reset_Iop(NULL, 0);
         }
 
+        // wipe user memory
+        WipeUserMemory((void *)&_stack_end, (void *)ModStorageStart);
+        // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
+        // WipeUserMemory((void *)ModStorageEnd, (void *)GetMemorySize());
 
-        sysLoadElf(argv[0], argc, argv);
+        SifInitRpc(0);
+        int r = SifLoadElf(argv[0], &elf);
+        if (!r) {
+            apply_patches(argv[0]);
+
+            FlushCache(WRITEBACK_DCACHE);
+            FlushCache(INVALIDATE_ICACHE);
+
+            services_exit();
+            CleanExecPS2((void *)elf.epc, (void *)elf.gp, argc, argv);
+        }
+
+        // Error
+        DPRINTF("%s: failed, error code = -%x\n", __FUNCTION__, -r);
+        SleepThread();
     }
 
     return 0;

@@ -19,22 +19,33 @@
 #include <ps2_reg_defs.h>
 #include <loadfile.h>
 
-int set_reg_hook;
-int get_reg_hook;
-int set_reg_disabled;
-int iop_reboot_count = 0;
+int set_reg_hook = 0;
+int get_reg_hook = 0;
+int new_iop_reboot_count = 0;
 
 extern void *ModStorageStart, *ModStorageEnd;
 extern void *eeloadCopy, *initUserMemory;
-extern void *_stack_end;
 
 // Global data
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
 int (*Old_SifSetReg)(u32 register_num, int register_value);
 int (*Old_SifGetReg)(u32 register_num);
-int (*Old_ExecPS2)(void *entry, void *gp, int num_args, char *args[]);
-int (*Old_CreateThread)(ee_thread_t *thread_param);
-void (*Old_Exit)(s32 exit_code);
+
+void services_start()
+{
+    DPRINTF("Starting services...\n");
+    SifInitRpc(0);
+    SifInitIopHeap();
+    SifLoadFileInit();
+}
+
+void services_exit()
+{
+    DPRINTF("Exiting services...\n");
+    SifExitIopHeap();
+    SifLoadFileExit();
+    SifExitRpc();
+}
 
 /*----------------------------------------------------------------------------------------*/
 /* This function is called when SifSetDma catches a reboot request.                       */
@@ -43,107 +54,16 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
 {
     struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
 
-    // does IOP reset
+    // Do IOP reset
+    services_start();
     New_Reset_Iop(reset_pkt->arg, reset_pkt->arglen);
+    // Exit services
+    services_exit();
+    // Ignore EE still trying to complete the IOP reset
+    set_reg_hook = 4;
+    get_reg_hook = 1;
 
     return 1;
-}
-
-// ------------------------------------------------------------------------
-void sysLoadElf(char *filename, int argc, char **argv)
-{
-    int r;
-    t_ExecData elf;
-
-    SifInitRpc(0);
-
-    DPRINTF("t_loadElf()\n");
-
-#if 1
-    DPRINTF("t_loadElf: Resetting IOP...\n");
-
-    set_reg_disabled = 0;
-    New_Reset_Iop(NULL, 0);
-    set_reg_disabled = 1;
-
-    iop_reboot_count = 1;
-
-    SifInitRpc(0);
-#endif
-    SifLoadFileInit();
-
-    DPRINTF("t_loadElf: elf path = '%s'\n", filename);
-
-    if (EnableDebug)
-        GS_BGCOLOUR = BGR_GREEN;
-
-    DPRINTF("t_loadElf: cleaning user memory...");
-
-    // wipe user memory
-    WipeUserMemory((void *)&_stack_end, (void *)ModStorageStart);
-    // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
-    // WipeUserMemory((void *)ModStorageEnd, (void *)GetMemorySize());
-
-    FlushCache(0);
-
-    DPRINTF(" done\n");
-
-    DPRINTF("t_loadElf: loading elf...");
-    r = SifLoadElf(filename, &elf);
-
-    if (!r) {
-        DPRINTF(" done\n");
-
-        DPRINTF("t_loadElf: trying to apply patches...\n");
-        // applying needed patches
-        apply_patches(filename);
-
-        FlushCache(0);
-        FlushCache(2);
-
-        DPRINTF("t_loadElf: exiting services...\n");
-        // exit services
-        SifExitIopHeap();
-        SifLoadFileExit();
-        SifExitRpc();
-
-        DPRINTF("t_loadElf: executing...\n");
-        CleanExecPS2((void *)elf.epc, (void *)elf.gp, argc, argv);
-    }
-
-    DPRINTF(" failed, error code = -%x\n", -r);
-
-    // Error
-    GS_BGCOLOUR = BGR_WHITE;
-    SleepThread();
-}
-
-static void unpatchEELOADCopy(void)
-{
-    vu32 *p = (vu32 *)eeloadCopy;
-
-    p[1] = 0x0240302D; /* daddu    a2, s2, zero */
-    p[2] = 0x8FA50014; /* lw       a1, 0x0014(sp) */
-    p[3] = 0x8C67000C; /* lw       a3, 0x000C(v1) */
-}
-
-static void unpatchInitUserMemory(void)
-{
-    vu16 *p = (vu16 *)initUserMemory;
-
-    /*
-     * Reset the start of user memory to 0x00082000, by changing the immediate value being loaded into $a0.
-     *  lui  $a0, 0x0008
-     *  jal  InitializeUserMemory
-     *  ori  $a0, $a0, 0x2000
-     */
-    p[0] = 0x0008;
-    p[4] = 0x2000;
-}
-
-void sysExit(s32 exit_code)
-{
-    Remove_Kernel_Hooks();
 }
 
 static int Hook_SifGetReg(u32 register_num)
@@ -157,7 +77,7 @@ static int Hook_SifGetReg(u32 register_num)
 }
 
 /*----------------------------------------------------------------------------------------*/
-/* Replace SifSetDma, SifSetReg, Exit syscalls in kernel. (Game Loader)                   */
+/* Replace SifSetDma, SifSetReg and SifGetReg syscalls in kernel.                         */
 /*----------------------------------------------------------------------------------------*/
 void Install_Kernel_Hooks(void)
 {
@@ -169,30 +89,4 @@ void Install_Kernel_Hooks(void)
 
     Old_SifGetReg = GetSyscallHandler(__NR_SifGetReg);
     SetSyscall(__NR_SifGetReg, &Hook_SifGetReg);
-
-    Old_Exit = GetSyscallHandler(__NR_KExit);
-    SetSyscall(__NR_KExit, &Hook_Exit);
-}
-
-/*----------------------------------------------------------------------------------------*/
-/* Restore original SifSetDma, SifSetReg, Exit syscalls in kernel. (Game loader)          */
-/*----------------------------------------------------------------------------------------*/
-void Remove_Kernel_Hooks(void)
-{
-    SetSyscall(__NR_SifSetDma, Old_SifSetDma);
-    SetSyscall(__NR_SifSetReg, Old_SifSetReg);
-    SetSyscall(__NR_SifGetReg, Old_SifGetReg);
-    SetSyscall(__NR_KExit, Old_Exit);
-
-    DI();
-    ee_kmode_enter();
-
-    unpatchEELOADCopy();
-    unpatchInitUserMemory();
-
-    ee_kmode_exit();
-    EI();
-
-    FlushCache(0);
-    FlushCache(2);
 }

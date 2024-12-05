@@ -122,7 +122,6 @@ void print_usage()
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
     printf("\n");
-    printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
     printf("  -qb               Quick-Boot directly into load environment\n");
     printf("\n");
@@ -176,7 +175,6 @@ struct SSystemSettings {
     char *sMT;
     char *sGC;
     char *sCFGFile;
-    int bDebugColors;
     int bLogo;
     int bQuickBoot;
 
@@ -764,7 +762,6 @@ int load_driver(const char * type, const char * subtype)
     toml_string_in_overwrite(tbl_root, "default_mt",     &sys.sMT);
     toml_string_in_overwrite(tbl_root, "default_gc",     &sys.sGC);
     toml_string_in_overwrite(tbl_root, "default_cfg",    &sys.sCFGFile);
-    toml_bool_in_overwrite  (tbl_root, "default_dbc",    &sys.bDebugColors);
     toml_bool_in_overwrite  (tbl_root, "default_logo",   &sys.bLogo);
 
     toml_string_in_overwrite(tbl_root, "eecore_elf",      &sys.eecore_elf);
@@ -987,8 +984,6 @@ int main(int argc, char *argv[])
             sys.sCFGFile = &argv[i][5];
         else if (!strncmp(argv[i], "-cwd=", 5))
             continue;
-        else if (!strncmp(argv[i], "-dbc", 4))
-            sys.bDebugColors = true;
         else if (!strncmp(argv[i], "-logo", 5))
             sys.bLogo = true;
         else if (!strncmp(argv[i], "-qb", 3))
@@ -1612,7 +1607,6 @@ int main(int argc, char *argv[])
     eecc_setKernelConfig(&eeconf, eeloadCopy, initUserMemory);
     eecc_setModStorageConfig(&eeconf, irxtable, irxptr);
     eecc_setCompatFlags(&eeconf, eecore_compat);
-    eecc_setDebugColors(&eeconf, sys.bDebugColors);
     eecc_setPS2Logo(&eeconf, sys.bLogo);
     printf("Starting ee_core with following arguments:\n");
     eecc_print(&eeconf);

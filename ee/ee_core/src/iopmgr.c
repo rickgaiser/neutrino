@@ -16,7 +16,7 @@
 #include "util.h"
 #include "syshook.h"
 
-extern int _iop_reboot_count;
+extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
 extern void *ModStorageStart;
 
 int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
@@ -69,15 +69,7 @@ int New_Reset_Iop(const char *arg, int arglen)
     print_iop_args(arglen, arg);
 #endif
 
-    if (EnableDebug)
-        GS_BGCOLOUR = BGR_PURPLE;
-
-    iop_reboot_count++;
-
-    SifInitRpc(0);
-    SifInitIopHeap();
-    SifLoadFileInit();
-    sbv_patch_enable_lmb();
+    new_iop_reboot_count++;
 
     udnl_cmdlen = 0;
     if (arglen >= 10) {
@@ -159,17 +151,14 @@ int New_Reset_Iop(const char *arg, int arglen)
     ee_kmode_exit();
     EIntr();
 
-    SifLoadFileExit(); // OPL's integrated LOADFILE RPC does not automatically unbind itself after IOP resets.
-
     _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
 
     while (!SifIopSync()) {
         ;
     }
 
-    SifInitRpc(0);
-    SifInitIopHeap();
-    SifLoadFileInit();
+    services_start();
+    // Patch the IOP to support LoadModuleBuffer
     sbv_patch_enable_lmb();
 
     DPRINTF("Loading extra IOP modules...\n");
@@ -182,23 +171,7 @@ int New_Reset_Iop(const char *arg, int arglen)
         SifExecModuleBuffer((void *)p.ptr, p.size, p.arg_len, p.args, NULL);
     }
 
-    if (EnableDebug)
-        GS_BGCOLOUR = BGR_YELLOW;
-
-    DPRINTF("Exiting services...\n");
-    SifExitIopHeap();
-    SifLoadFileExit();
-    SifExitRpc();
-
     DPRINTF("New_Reset_Iop complete!\n");
-    // we have 4 SifSetReg calls to skip in ELF's SifResetIop, not when we use it ourselves
-    if (set_reg_disabled) {
-        set_reg_hook = 4;
-        get_reg_hook = 1;
-    }
-
-    if (EnableDebug)
-        GS_BGCOLOUR = BGR_BLACK;
 
     return 1;
 }

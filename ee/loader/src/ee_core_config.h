@@ -29,7 +29,6 @@ struct SEECoreConfig
     unsigned int _compatFlags;
 
     // Enable bits
-    bool _enableDebugColors;
     bool _enablePS2Logo;
     bool _enablePademu;
     bool _enableGSM;
@@ -55,7 +54,6 @@ void eecc_setModStorageConfig(struct SEECoreConfig *eecc, const void *irxtable, 
 void eecc_setCompatFlags(struct SEECoreConfig *eecc, unsigned int compatFlags);
 
 // Enable bits
-void eecc_setDebugColors(struct SEECoreConfig *eecc, bool enable);
 void eecc_setPS2Logo(struct SEECoreConfig *eecc, bool enable);
 void eecc_setPademu(struct SEECoreConfig *eecc, bool enable);
 void eecc_setGSM(struct SEECoreConfig *eecc, bool enable);

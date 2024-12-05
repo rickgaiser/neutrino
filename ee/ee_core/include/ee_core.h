@@ -36,9 +36,7 @@
 #endif
 
 extern int set_reg_hook;
-extern int get_reg_hook;
-extern int set_reg_disabled;
-extern int iop_reboot_count;
+extern int new_iop_reboot_count;
 
 extern u32 g_compat_mask;
 
@@ -50,16 +48,6 @@ extern int GameMode;
 #define BDM_UDP_MODE (1<<3)
 #define BDM_ATA_MODE (1<<4)
 #define BDM_NOP_MODE (1<<31)
-
-extern int EnableDebug;
-#define GS_BGCOLOUR *((volatile unsigned long int *)0x120000E0)
-
-#define BGR_PURPLE 0xFF00FF
-#define BGR_YELLOW 0x00FFFF
-#define BGR_BLACK  0x000000
-#define BGR_BLUE   0xFF0000
-#define BGR_GREEN  0x00FF00
-#define BGR_WHITE  0xFFFFFF
 
 extern int *gCheatList; // Store hooks/codes addr+val pairs
 

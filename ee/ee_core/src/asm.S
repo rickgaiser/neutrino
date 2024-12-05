@@ -30,33 +30,22 @@
 .extern _stack_end
 
 /* libkernel */
-.extern memset
-.extern memcpy
-.extern strlen
-.extern strncpy
 .extern ExecPS2
 
+/* iopmgr.c */
+.extern new_iop_reboot_count
+
 /* syshook.c */
-.extern g_argc
-.extern g_argv
-.extern set_reg_hook
-.extern iop_reboot_count
 .extern New_SifSetDma
 .extern Old_SifSetDma
 .extern Old_SifSetReg
 .extern Old_SifGetReg
-.extern Old_ExecPS2
-.extern Old_CreateThread
-.extern sysExit
 
-/* loader.h */
-.extern g_compat_mask
-.extern EnableDebug
+/* main.c */
+.extern g_ee_core_flags
 
-.globl  g_argbuf
 .globl  Hook_SifSetDma
 .globl  Hook_SifSetReg
-.globl  Hook_Exit
 .globl  CleanExecPS2
 
 /*
@@ -204,23 +193,14 @@ Hook_SifSetReg:
     bne     $v0, $zero, 3f
     nop
 
-    lw      $v0, EnableDebug
-    bne     $v0, $zero, 2f
-    nop
-
-    /* black BG color */
-    lui     $v0, 0x1200
-    ori     $v0, $v0, 0x00e0
-    sd      $zero, 0x0000($v0)
-2:
     /* check compat mode 3 is enabled */
     lw      $v0, g_compat_mask
     andi    $v0, $v0, EECORE_COMPAT_UNHOOK
     beq     $v0, $zero, 3f
 
-    /* check iop_reboot_count is == 2 */
+    /* check new_iop_reboot_count is == 2 */
     addiu   $v1, $zero, 2
-    lw      $v0, iop_reboot_count
+    lw      $v0, new_iop_reboot_count
     bne     $v0, $v1, 3f
     nop
 
@@ -232,14 +212,6 @@ Hook_SifSetReg:
     addiu   $v0, $zero, 1
 
 .end    Hook_SifSetReg
-
-.ent    Hook_Exit
-Hook_Exit:
-    la      $v1, sysExit
-    jr      $ra
-    sw      $v1, 0x0008($sp)
-
-.end    Hook_Exit
 
 .ent CleanExecPS2
 CleanExecPS2:

@@ -16,7 +16,6 @@
 
 u32 Hook_SifSetDma(SifDmaTransfer_t *sdd, s32 len);
 int Hook_SifSetReg(u32 register_num, int register_value);
-void Hook_Exit(s32 exit_code);
 void CleanExecPS2(void *epc, void *gp, int argc, char **argv);
 
 #endif /* ASM */

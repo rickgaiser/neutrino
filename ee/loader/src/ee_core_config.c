@@ -19,7 +19,6 @@ void eecc_init(struct SEECoreConfig *eecc)
     eecc_setCompatFlags(eecc, 0);
 
     // Enable bits
-    eecc_setDebugColors(eecc, false);
     eecc_setPS2Logo(eecc, false);
     eecc_setPademu(eecc, false);
     eecc_setGSM(eecc, false);
@@ -74,11 +73,6 @@ void eecc_setCompatFlags(struct SEECoreConfig *eecc, unsigned int compatFlags)
 
 //---------------------------------------------------------------------------
 // Enable bits
-void eecc_setDebugColors(struct SEECoreConfig *eecc, bool enable)
-{
-    eecc->_enableDebugColors = enable;
-}
-
 void eecc_setPS2Logo(struct SEECoreConfig *eecc, bool enable)
 {
     eecc->_enablePS2Logo = enable;
@@ -142,14 +136,6 @@ const char **eecc_argv(struct SEECoreConfig *eecc)
     // Base config
     if (eecc->_sGameMode != NULL) {
         snprintf(psConfig, maxStrLen, "-drv=%s", eecc->_sGameMode);
-        eecc->_argv[eecc->_argc++] = psConfig;
-        maxStrLen -= strlen(psConfig) + 1;
-        psConfig += strlen(psConfig) + 1;
-    }
-
-    // Debug colors
-    if (eecc->_enableDebugColors) {
-        snprintf(psConfig, maxStrLen, "-v=1");
         eecc->_argv[eecc->_argc++] = psConfig;
         maxStrLen -= strlen(psConfig) + 1;
         psConfig += strlen(psConfig) + 1;

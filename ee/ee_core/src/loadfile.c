@@ -26,7 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-extern int _iop_reboot_count;
+extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
 extern SifRpcClientData_t _lf_cd;
 extern int _lf_init;
 
