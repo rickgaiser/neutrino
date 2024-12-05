@@ -70,6 +70,11 @@ static const gamecompat_t game_compat[] = {
     {"SLES_548.38", 0,                    0,                       "patch_membo.irx" }, // Donkey Xote
     {"SCES_511.76", 0,                    0,                       "patch_membo.irx" }, // Disney's Treasure Planet
 
+    // This game allocates a buffer at a fixed memory location
+    // NOTE: only needed for online gaming (I5BOOTN.ELF)
+    {"SLUS_973.53", 0,                    0,                       "patch_rc_uya.irx" }, // Ratchet Clank - Up Your Arsenal
+    {"SCES_524.56", 0,                    0,                       "patch_rc_uya.irx" }, // Ratchet Clank 3
+
     // These games send a cdvd break command from EE directly into IOP memory map
     // This causes an interrupt by cdvd, plus a callback that the game needs.
     // In PCSX2 you can see the PCSX2 message "Read Abort" every time this happens.
