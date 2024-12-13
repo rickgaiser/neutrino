@@ -1,0 +1,8 @@
+name = "IOP Exception Handler module"
+
+#does not directly depend on anything. but something must be used to deliver the printf to the developer
+#depends = [...]
+
+[[module]]
+file = "ioptrap.irx"
+env = ["LE", "EE"]
