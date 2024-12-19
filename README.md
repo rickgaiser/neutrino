@@ -110,6 +110,11 @@ Options:
                     - 7: IOP: Fix game buffer overrun
                     Multiple options possible, for example -gc=23
 
+  -gsm=<mode>       GS video mode forcing (also know as GSM)
+                    - 0: off (default)
+                    - 1: on  576i/480i -> 576p/480p
+                    - 2: on  576i/480i -> 576p/480p + line doubling
+
   -cwd=<path>       Change working directory
 
   -cfg=<file>       Load extra user/game specific config file (without .toml extension)

@@ -14,6 +14,7 @@ default_dvd = "no"
 default_elf = "auto"
 #default_mt = "dvd"
 #default_gc = "12"
+#default_gsm = "2"
 #default_cfg = ""
 default_dbc = false
 default_logo = false

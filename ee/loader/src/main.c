@@ -21,6 +21,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "patch.h"
 #include "modules.h"
 #include "ee_core_config.h"
+#include "ee_core_flag.h"
 #include "ioprp.h"
 #include "xparam.h"
 #include "../../../iop/common/cdvd_config.h"
@@ -118,6 +119,11 @@ void print_usage()
     printf("                    - 7: IOP: Fix game buffer overrun\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
+    printf("  -gsm=<mode>       GS video mode forcing (also know as GSM)\n");
+    printf("                    - 0: off (default)\n");
+    printf("                    - 1: on  576i/480i -> 576p/480p\n");
+    printf("                    - 2: on  576i/480i -> 576p/480p + line doubling\n");
+    printf("\n");
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
@@ -174,6 +180,7 @@ struct SSystemSettings {
     char *sELFFile;
     char *sMT;
     char *sGC;
+    char *sGSM;
     char *sCFGFile;
     int bLogo;
     int bQuickBoot;
@@ -761,6 +768,7 @@ int load_driver(const char * type, const char * subtype)
     toml_string_in_overwrite(tbl_root, "default_elf",    &sys.sELFFile);
     toml_string_in_overwrite(tbl_root, "default_mt",     &sys.sMT);
     toml_string_in_overwrite(tbl_root, "default_gc",     &sys.sGC);
+    toml_string_in_overwrite(tbl_root, "default_gsm",    &sys.sGSM);
     toml_string_in_overwrite(tbl_root, "default_cfg",    &sys.sCFGFile);
     toml_bool_in_overwrite  (tbl_root, "default_logo",   &sys.bLogo);
 
@@ -980,6 +988,8 @@ int main(int argc, char *argv[])
             sys.sMT = &argv[i][4];
         else if (!strncmp(argv[i], "-gc=", 4))
             sys.sGC = &argv[i][4];
+        else if (!strncmp(argv[i], "-gsm=", 5))
+            sys.sGSM = &argv[i][5];
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
         else if (!strncmp(argv[i], "-cwd=", 5))
@@ -1073,6 +1083,20 @@ int main(int argc, char *argv[])
     uint32_t cdvdman_compat = 0;
     const char * patch_compat = NULL;
     get_compat_flag(iCompat, &eecore_compat, &cdvdman_compat, &patch_compat);
+
+    if (sys.sGSM != NULL) {
+        if (sys.sGSM[0] == '0')
+            ;
+        else if (sys.sGSM[0] == '1')
+            eecore_compat |= EECORE_FLAG_GSM1;
+        else if (sys.sGSM[0] == '2')
+            eecore_compat |= EECORE_FLAG_GSM2;
+        else {
+            printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
+            print_usage();
+            return -1;
+        }
+    }
 
     /*
      * Load backing store driver settings

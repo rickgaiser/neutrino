@@ -8,12 +8,14 @@
 */
 
 #include "ee_core.h"
+#include "ee_core_flag.h"
 #include "iopmgr.h"
 #include "patches.h"
 #include "util.h"
 #include "asm.h"
 #include "syshook.h"
 #include "cheat_api.h"
+#include "gsm_api.h"
 
 #include <loadfile.h>
 
@@ -24,7 +26,7 @@ extern void *_stack_end;
 int isInit = 0;
 
 // Global data
-u32 g_compat_mask = 0;
+u32 g_ee_core_flags = 0;
 char GameID[16] = "__UNKNOWN__";
 int GameMode = BDM_NOP_MODE;
 int *gCheatList = NULL; // Store hooks/codes addr+val pairs
@@ -77,8 +79,8 @@ static void set_args_gameid(const char *arg)
 static void set_args_compat(const char *arg)
 {
     // bitmask of the compat. settings
-    g_compat_mask = _strtoui(arg);
-    DPRINTF("Compat Mask = 0x%02x\n", g_compat_mask);
+    g_ee_core_flags = _strtoui(arg);
+    DPRINTF("Compat Mask = 0x%02x\n", g_ee_core_flags);
 }
 
 static int eecoreInit(int argc, char **argv)
@@ -111,6 +113,10 @@ static int eecoreInit(int argc, char **argv)
     // Enable cheat engine
     if (gCheatList != NULL)
         EnableCheats();
+
+    // Enable GSM, only possible when kernel hooks are allowed
+    if (((g_ee_core_flags & (EECORE_FLAG_GSM1 | EECORE_FLAG_GSM2)) != 0) && ((g_ee_core_flags & EECORE_FLAG_UNHOOK) == 0))
+        EnableGSM();
 
     /* installing kernel hooks */
     DPRINTF("Installing Kernel Hooks...\n");

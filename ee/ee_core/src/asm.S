@@ -13,7 +13,7 @@
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
 
-#include "ee_core_compat.h"
+#include "ee_core_flag.h"
 
 .set push
 .set noreorder
@@ -194,8 +194,8 @@ Hook_SifSetReg:
     nop
 
     /* check compat mode 3 is enabled */
-    lw      $v0, g_compat_mask
-    andi    $v0, $v0, EECORE_COMPAT_UNHOOK
+    lw      $v0, g_ee_core_flags
+    andi    $v0, $v0, EECORE_FLAG_UNHOOK
     beq     $v0, $zero, 3f
 
     /* check new_iop_reboot_count is == 2 */

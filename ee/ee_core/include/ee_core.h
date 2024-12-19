@@ -21,8 +21,6 @@
 #include <smem.h>
 #include <smod.h>
 
-#include "ee_core_compat.h"
-
 #ifdef __EESIO_DEBUG
 #define DPRINTF(args...) _print(args)
 #define DINIT()          InitDebug()
@@ -38,7 +36,7 @@
 extern int set_reg_hook;
 extern int new_iop_reboot_count;
 
-extern u32 g_compat_mask;
+extern u32 g_ee_core_flags;
 
 extern char GameID[16];
 extern int GameMode;
