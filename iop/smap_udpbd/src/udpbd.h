@@ -111,4 +111,7 @@ struct SUDPBDv2_RDMA {
 } __attribute__((__packed__));
 
 
+int udpbd_init(void);
+
+
 #endif

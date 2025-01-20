@@ -1,10 +1,14 @@
 # Name of loaded config, to show to user
-name = "USB BDM driver"
+name = "USB BDM driver - with UDPTTY debugging"
 
 # Drivers this driver depends on (config file must exist)
-depends = ["i_bdm"]
+depends = ["i_bdm", "i_dev9_hidden"]
 
 # Modules to load
+[[module]]
+file = "smap_udptty.irx"
+args = ["ip=192.168.1.10"]
+env = ["LE", "EE"]
 [[module]]
 file = "usbd_mini.irx"
 # Modules that emulate the sceCdRead function must operate at a higher
@@ -43,3 +47,22 @@ file = "USBD.IRX"
 name = "USB_driver"
 version = 0x0204
 startrv = 2 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+
+# Faking strategy
+# ---------------
+# To prevent games from trying to use networing:
+# - we try to simulate that there is no dev9 hardware present:
+#   - dev9 returns NO_RESIDENT_END, module is hidden
+#   - all modules depending on dev9 fail to load becouse dev9 is not resident
+[[fake]]
+file = "ENT_SMAP.IRX"
+name = "ent_smap"
+version = 0x021f
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1    # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "SMAP.IRX"
+name = "INET_SMAP_driver"
+version = 0x0219
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1    # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

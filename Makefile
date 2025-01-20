@@ -22,6 +22,7 @@ all:
 	$(MAKE) -C iop/patch_membo  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/patch_rc_uya all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/smap_udpbd   all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/smap_udptty  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/usbd_null    all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C ee/ee_core       all EESIO_DEBUG=$(EESIO_DEBUG)
 	$(MAKE) -C ee/loader        all DEBUG=0
@@ -53,6 +54,7 @@ clean:
 	$(MAKE) -C iop/patch_membo  clean
 	$(MAKE) -C iop/patch_rc_uya clean
 	$(MAKE) -C iop/smap_udpbd   clean
+	$(MAKE) -C iop/smap_udptty  clean
 	$(MAKE) -C iop/usbd_null    clean
 	$(MAKE) -C ee/ee_core       clean
 	$(MAKE) -C ee/loader        clean

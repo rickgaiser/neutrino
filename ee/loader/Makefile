@@ -174,6 +174,7 @@ copy:
 	cp ../../iop/patch_membo/irx/patch_membo.irx   modules
 	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
+	cp ../../iop/smap_udptty/irx/smap_udptty.irx   modules
 	cp ../../iop/usbd_null/irx/usbd_null.irx       modules
 	cp ../ee_core/ee_core.elf                      modules
 	cp $(PS2SDK)/iop/irx/udnl.irx                  modules
