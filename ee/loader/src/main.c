@@ -1304,7 +1304,11 @@ int main(int argc, char *argv[])
                 return -1;
         }
         if (set_fhi_file != NULL) {
-            strcpy(set_fhi_file->file[FHI_FID_CDVD].name, sDVDFile);
+            if (strlen(sDVDFile) > FHI_FILE_MAX_LEN) {
+                printf("ERROR: File name too long: %s\n", sDVDFile);
+                return -1;
+            }
+            strncpy(set_fhi_file->file[FHI_FID_CDVD].name, sDVDFile, FHI_FILE_MAX_LEN);
             set_fhi_file->file[FHI_FID_CDVD].size = iso_size;
         }
         close(fd_iso);
