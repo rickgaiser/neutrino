@@ -1,0 +1,12 @@
+#ifdef DEBUG
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+#endif
+
+sysmem_IMPORTS_start
+I_AllocSysMemory
+I_FreeSysMemory
+I_QueryMaxFreeMemSize
+I_QueryTotalFreeMemSize
+sysmem_IMPORTS_end

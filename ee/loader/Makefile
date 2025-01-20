@@ -166,10 +166,12 @@ copy:
 	cp ../../iop/fhi_bd/irx/fhi_bd.irx             modules
 	cp ../../iop/fhi_bd_defrag/irx/fhi_bd_defrag.irx modules
 	cp ../../iop/fhi_file/irx/fhi_file.irx         modules
+	cp ../../iop/gapfill/irx/gapfill.irx           modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
 	cp ../../iop/isofs/irx/isofs.irx               modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
+	cp ../../iop/memcheck/irx/memcheck.irx         modules
 	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules
 	cp ../../iop/patch_membo/irx/patch_membo.irx   modules
 	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules

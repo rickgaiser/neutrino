@@ -14,10 +14,12 @@ all:
 	$(MAKE) -C iop/fhi_bd       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_bd_defrag all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_file     all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/gapfill      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/hdlfs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/mc_emu       all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/memcheck     all DEBUG=1
 	$(MAKE) -C iop/patch_freemem all DEBUG=1
 	$(MAKE) -C iop/patch_membo  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/patch_rc_uya all DEBUG=$(IOPCORE_DEBUG)
@@ -46,10 +48,12 @@ clean:
 	$(MAKE) -C iop/fhi_bd       clean
 	$(MAKE) -C iop/fhi_bd_defrag clean
 	$(MAKE) -C iop/fhi_file     clean
+	$(MAKE) -C iop/gapfill      clean
 	$(MAKE) -C iop/hdlfs        clean
 	$(MAKE) -C iop/imgdrv       clean
 	$(MAKE) -C iop/isofs        clean
 	$(MAKE) -C iop/mc_emu       clean
+	$(MAKE) -C iop/memcheck     clean
 	$(MAKE) -C iop/patch_freemem clean
 	$(MAKE) -C iop/patch_membo  clean
 	$(MAKE) -C iop/patch_rc_uya clean

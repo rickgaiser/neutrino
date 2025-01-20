@@ -65,3 +65,21 @@ env = ["EE"]
 file = "fakemod.irx"
 func = "FAKEMOD" # loaded last, so we don't fake our own modules
 env = ["EE"]
+
+#[[module]]
+#file = "patch_freemem.irx"
+#args = ["512", "X"] # "X" = block above limit (default no blocking), number is limit in KiB (default 512KiB)
+#env = ["EE"]
+
+#[[module]]
+#file = "memcheck.irx"
+#env = ["EE"]
+
+#[[module]]
+#file = "patch_membo.irx"
+#env = ["EE"]
+
+# It's best to load this module last (bottom of bsd-usb.toml for instance)
+#[[module]]
+#file = "gapfill.irx"
+#env = ["EE"]
