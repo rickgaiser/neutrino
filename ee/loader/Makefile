@@ -31,6 +31,10 @@ all: $(EE_BIN_PACKED)
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'          # neutrino github issue  8: UDPBD: sfx missing or random freezes when starting match
 #GAME = 'DVD/Scooby-Doo! Mystery Mayhem (U).iso'        # neutrino github issue 19: When starting a new game, the cutscene freezes
 #GAME = 'DVD/Silent Hill 3 (U).iso'                     # neutrino github issue 30: USB:   freezes on startup logo, only on real ps2, works in pcsx2
+#GAME = 'DVD/The Incredibles - Rise of the Underminer (E).iso' # sound issues, starting at second level
+#GAME = "CD/Donald Duck - Goin' Quackers (U).iso"       # timing issue during boot, hangs at black screen
+#GAME = 'DVD/Donald Duck - Quack Attack (E).iso'        # timing issue during boot, hangs at black screen
+#GAME = 'DVD/Driv3r (U).iso'                            # neutrino github issue 56: USB: freezes and unfreezes during gameplay
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
@@ -90,7 +94,7 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/Ratchet Clank - Going Commando (E).iso'
 #GAME = 'CD/Quake III Revolution (E).iso'
 #GAME = 'DVD/Super Dragon Ball Z (E).iso'
-#GAME = 'CD/Tekken Tag Tournament (E) v2.iso'
+#GAME = 'CD/Tekken Tag Tournament (E) v2.iso' # USB compatibility issues ?
 #GAME = 'CD/Madden NFL 2001 (U).iso'
 #GAME = 'CD/Madden NFL 2002 (U).iso'
 #GAME = 'CD/NASCAR Thunder 2002 (U).iso'
@@ -121,8 +125,11 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/Kidou Senshi Gundam - Ichinen Sensou (J).iso'
 #GAME = 'DVD/Auto Modellista (E).iso'
 #GAME = 'DVD/Disney's Treasure Planet (E).iso' # buffer overrun issue
-#GAME = 'DVD/Donkey Xote (E).iso' # buffer overrun issue
-#GAME = 'DVD/Formula One 2001 (E).iso' # cdvdman break command
+#GAME = 'DVD/Donkey Xote (E).iso' -gc=7 # buffer overrun issue
+#GAME = 'DVD/Formula One 2001 (E).iso' # cdvdman break command, currently works 99% good, but hacky
+#GAME = 'DVD/Jak and Daxter - Complete Trilogy (U).iso'
+#GAME = 'DVD/Jak and Daxter - The Lost Frontier (U).iso'
+#GAME = 'DVD/Crash of the Titans (E).iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
