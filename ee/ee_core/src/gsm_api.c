@@ -359,6 +359,10 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
     if ((mode != 2) && (mode != 3))
         goto no_gsm;
 
+    // 576p not supported
+    if (mode == 3 && (g_ee_core_flags & EECORE_FLAG_GSM_NO_576P))
+        goto no_gsm;
+
     // Only do line doubling if asked
     if (ffmd == 1 && (g_ee_core_flags & EECORE_FLAG_GSM2) == 0)
         goto no_gsm;

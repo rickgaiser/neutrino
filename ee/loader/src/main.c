@@ -1084,6 +1084,9 @@ int main(int argc, char *argv[])
     const char * patch_compat = NULL;
     get_compat_flag(iCompat, &eecore_compat, &cdvdman_compat, &patch_compat);
 
+    /*
+     * GSM: process user flags
+     */
     if (sys.sGSM != NULL) {
         if (sys.sGSM[0] == '0')
             ;
@@ -1095,6 +1098,28 @@ int main(int argc, char *argv[])
             printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
             print_usage();
             return -1;
+        }
+    }
+
+    /*
+     * GSM: check for 576p capability
+     */
+    if (eecore_compat & (EECORE_FLAG_GSM1 | EECORE_FLAG_GSM2)) {
+        int fd_ROMVER;
+        if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) >= 0) {
+            char romver[16], romverNum[5];
+
+            // Read ROM version
+            read(fd_ROMVER, romver, sizeof(romver));
+            close(fd_ROMVER);
+
+            strncpy(romverNum, romver, 4);
+            romverNum[4] = '\0';
+
+            if (strtoul(romverNum, NULL, 10) < 210) {
+                printf("WARNING: disabling GSM 576p mode on incompatible ps2 model\n");
+                eecore_compat |= EECORE_FLAG_GSM_NO_576P;
+            }
         }
     }
 
