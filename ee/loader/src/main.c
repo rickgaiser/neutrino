@@ -123,9 +123,13 @@ void print_usage()
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
     printf("  -gsm=<mode>       GS video mode forcing (also know as GSM)\n");
-    printf("                    - 0: off (default)\n");
-    printf("                    - 1: on  576i/480i -> 576p/480p\n");
-    printf("                    - 2: on  576i/480i -> 576p/480p + line doubling\n");
+    printf("                    - 0 : off (default)\n");
+    printf("                    - 1 : on  576i/480i -> 576p/480p\n");
+    printf("                    - 2 : on  576i/480i -> 576p/480p + line doubling\n");
+    printf("                    - 1F: on  576i/480i -> 576p/480p                 + filed flipping\n");
+    printf("                    - 2F: on  576i/480i -> 576p/480p + line doubling + filed flipping\n");
+    printf("                    Note that many games are not compatible with GSM.\n");
+    printf("                    1 or 1F are the advised options to try.\n");
     printf("\n");
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
@@ -1152,6 +1156,10 @@ int main(int argc, char *argv[])
             print_usage();
             return -1;
         }
+
+        // Field flipping
+        if (sys.sGSM[1] == 'F')
+            eecore_compat |= EECORE_FLAG_GSM_FFLIP;
     }
 
     /*

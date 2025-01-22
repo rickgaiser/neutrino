@@ -113,9 +113,13 @@ Options:
                     Multiple options possible, for example -gc=23
 
   -gsm=<mode>       GS video mode forcing (also know as GSM)
-                    - 0: off (default)
-                    - 1: on  576i/480i -> 576p/480p
-                    - 2: on  576i/480i -> 576p/480p + line doubling
+                    - 0:  off (default)
+                    - 1:  on  576i/480i -> 576p/480p
+                    - 2:  on  576i/480i -> 576p/480p + line doubling
+                    - 1F: on  576i/480i -> 576p/480p                 + filed flipping
+                    - 2F: on  576i/480i -> 576p/480p + line doubling + filed flipping
+                    Note that many games are not compatible with GSM.
+                    1 or 1F are the advised options to try.
 
   -cwd=<path>       Change working directory
 

@@ -32,7 +32,9 @@ struct gsm_state {
 
     u32 SetGsCrt : 1;
     u32 LineDouble : 1;
-    u32 Spare : 30;
+    u32 Field : 1;
+    u32 FieldPrev : 1;
+    u32 Spare : 28;
 };
 static struct gsm_state state = {
     NULL,
@@ -54,6 +56,7 @@ enum MIPS_OP {
     MOP_BLEZL   = 0x16,
     MOP_BGTZL   = 0x17,
     MOP_MMI     = 0x1C,
+    MOP_LD      = 0x37,
     MOP_SD      = 0x3f
 };
 
@@ -171,11 +174,14 @@ void el2_c_handler(ee_registers_t *regs)
     u32 rs  = (instr >> 21) & 0x001f;
     u32 rt  = (instr >> 16) & 0x001f;
     u32 imm = (instr      ) & 0xffff;
-    u64 *dest;
-    u64 value;
+    u64 *dest = NULL;
+    u64 *source = NULL;
+    u64 value = 0;
     if (op == MOP_SD) {
-        value = (u64)regs->gpr[rt];
-        dest  = (u64*)((u32)regs->gpr[rs] + imm);
+        value  = (u64)regs->gpr[rt];
+        dest   = (u64*)((u32)regs->gpr[rs] + imm);
+    } else if (op == MOP_LD) {
+        source = (u64*)((u32)regs->gpr[rs] + imm);
     } else {
         *GS_REG_BGCOLOR = debug_color[1]; // Orange
         _ee_disable_bpc();
@@ -186,7 +192,36 @@ void el2_c_handler(ee_registers_t *regs)
     // Disable breakpoint while handling GS registers
     u32 bpc_save = _ee_disable_bpc();
 
-    // Store the written value
+    // Process LD instruction (read from register)
+    switch((u32)source & 0x1fffffff) {
+        case (u32)GS_REG_CSR:
+            // Field flip
+            u64 csr = *source;
+#if 1
+            if (csr & (1<<2)) {
+                // HSINT present
+                u32 field = (csr >> 13) & 1;
+                if (field != pstate->FieldPrev) {
+                    // FIELD changed
+                    pstate->FieldPrev = field;
+                    // Toggle FIELD only on rising edge of original FIELD
+                    if (field) {
+                        pstate->Field = !pstate->FieldPrev;
+                    }
+                }
+            }
+            // Insert 2x slower toggling FIELD bit
+            csr = (csr & ~(1<<13)) | pstate->Field << 13;
+#endif
+            regs->gpr[rt] = csr;
+            break;
+        case 0:
+            break;
+        default:
+            regs->gpr[rt] = *source;
+    }
+
+    // Process SD instruction (write to register)
     switch((u32)dest & 0x1fffffff) {
         case (u32)GS_REG_DISPLAY1:
             *GS_REG_DISPLAY1 = mod_DISPLAY(pstate, value);
@@ -202,15 +237,10 @@ void el2_c_handler(ee_registers_t *regs)
                 pstate->LineDouble = (value & 2) ? 1 : 0;
             *GS_REG_SMODE2 = GS_SET_SMODE2(0,1,0);
             break;
+        case 0:
+            break;
         default:
-#if 1
             *dest = value;
-#else
-            *GS_REG_BGCOLOR = debug_color[2]; // Yellow
-            //_ee_disable_bpc(); // already disabled
-            while(1){}
-            return;
-#endif
     }
 
     // Make sure data is written to RAM
@@ -359,7 +389,7 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
     if ((mode != 2) && (mode != 3))
         goto no_gsm;
 
-    // 576p not supported
+    // 576p not supported on pre-DECKARD consoles
     if (mode == 3 && (g_ee_core_flags & EECORE_FLAG_GSM_NO_576P))
         goto no_gsm;
 
@@ -376,7 +406,12 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
     ffmd = 1;
 
     pstate->SetGsCrt = 1;
-    _ee_enable_bpc(EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
+    if (g_ee_core_flags & EECORE_FLAG_GSM_FFLIP) {
+        // For FIELD flipping we need to also set a breakpoint for reading
+        _ee_enable_bpc(EE_BPC_DRE | EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
+    } else {
+        _ee_enable_bpc(EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
+    }
     pstate->org_SetGsCrt(interlace, mode, ffmd);
     return;
 
@@ -405,14 +440,21 @@ void EnableGSM(void)
     FlushCache(INVALIDATE_ICACHE);
 
     // Set breakpoint for:
+    //   0x12000000 = GS_REG_PMODE    (unwanted)
     //   0x12000020 = GS_REG_SMODE2   (write only)
     //   0x12000080 = GS_REG_DISPLAY1 (write only)
     //   0x120000a0 = GS_REG_DISPLAY2 (write only)
+    //   0x12001000 = GS_REG_CSR      (read / write) - only when FIELD flipping
+    //   0x12001080 = GS_REG_SIGLBLID (unwanted)     - only when FIELD flipping
     //   0x1fffff5f = mask
+    //   0x1fffef5f = mask + CSR
     _ee_mtdab(0x12000000);
-    _ee_mtdabm(0x1fffff5f);
-    // Enable breakpoint in SetGsCrt
-    //_ee_enable_bpc(EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
+    if (g_ee_core_flags & EECORE_FLAG_GSM_FFLIP) {
+        // For FIELD flipping we need to also set a breakpoint for CSR register
+        _ee_mtdabm(0x1fffef5f);
+    } else {
+        _ee_mtdabm(0x1fffff5f);
+    }
 }
 
 void DisableGSM(void)
