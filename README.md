@@ -139,7 +139,6 @@ The following third-party projects use neutrino:
 Loader | Author
 -|-
 [XEB+ neutrino Launcher Plugin](https://github.com/sync-on-luma/xebplus-neutrino-loader-plugin) | sync-on-luma
-[OPLNEUTRINO](https://www.psx-place.com/threads/opl-based-gui-frontend-for-neutrino.42166/) | crt0
 [NHDDL](https://github.com/pcm720/nhddl) | pcm720
 [RETROLauncher](https://github.com/Spaghetticode-Boon-Tobias/RETROLauncher) | Boon Tobias
 
