@@ -135,10 +135,14 @@ Options:
   --b               Break, all following parameters are passed to the ELF
 
 Usage examples:
-  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso
-  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
+  neutrino.elf -bsd=usb    -dvd=mass:path/to/filename.iso
+  neutrino.elf -bsd=mx4sio -dvd=mass:path/to/filename.iso
+  neutrino.elf -bsd=mmce   -dvd=mmce:path/to/filename.iso
+  neutrino.elf -bsd=ilink  -dvd=mass:path/to/filename.iso
+  neutrino.elf -bsd=udpbd  -dvd=mass:path/to/filename.iso
+  neutrino.elf -bsd=ata    -dvd=mass:path/to/filename.iso
+  neutrino.elf -bsd=ata    -dvd=hdl:filename.iso -bsdfs=hdl
+  neutrino.elf -bsd=udpbd  -dvd=bdfs:udp0p0      -bsdfs=bd
 ```
 
 ## Third-Party Loaders

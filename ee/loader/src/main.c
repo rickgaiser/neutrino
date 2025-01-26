@@ -141,10 +141,14 @@ void print_usage()
     printf("  --b               Break, all following parameters are passed to the ELF\n");
     printf("\n");
     printf("Usage examples:\n");
-    printf("  neutrino.elf -bsd=usb -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=ata -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso\n");
-    printf("  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0\n");
+    printf("  neutrino.elf -bsd=usb    -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=mx4sio -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=mmce   -dvd=mmce:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=ilink  -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=udpbd  -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=ata    -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=ata    -dvd=hdl:filename.iso -bsdfs=hdl\n");
+    printf("  neutrino.elf -bsd=udpbd  -dvd=bdfs:udp0p0      -bsdfs=bd\n");
 }
 
 #define MOD_ENV_LE (1<<0)
