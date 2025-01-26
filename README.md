@@ -149,5 +149,6 @@ Loader | Author
 [XEB+ neutrino Launcher Plugin](https://github.com/sync-on-luma/xebplus-neutrino-loader-plugin) | sync-on-luma
 [NHDDL](https://github.com/pcm720/nhddl) | pcm720
 [RETROLauncher](https://github.com/Spaghetticode-Boon-Tobias/RETROLauncher) | Boon Tobias
+[OSD-XMB](https://github.com/HiroTex/OSD-XMB) | Hiro Tex
 
 Add your project here? Send me a PR.
