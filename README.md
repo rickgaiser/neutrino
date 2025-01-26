@@ -17,15 +17,19 @@ An environment in neutrino describes what IOP modules are loaded and defines wha
 ## Backing Store Driver
 A backing store driver provides a storage location for storing virtual disk images. For instance of DVD's, HDD's or MC's.
 The following backing storage devices are supported:
-- USB (`usb`)
-- MX4SIO (`sdc`)
-- ATA (internal HDD) (`ata`)
-- UDPBD (`udp`)
-- iLink / IEEE1394 (`sd`)
+Device             | PS2 model | Speed                                                      | Device comp.                       | Type         | bsd      | internal
+-------------------|-----------|------------------------------------------------------------|------------------------------------|--------------|----------|-----
+USB                | FAT       |![x](https://progress-bar.xyz/800?scale=2200&suffix=KB/s)   | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
+USB                | slim      |![x](https://progress-bar.xyz/1000?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
+MX4SIO             | slim      |![x](https://progress-bar.xyz/1200?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
+MMCE               | slim      |![x](https://progress-bar.xyz/1200?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
+MX4SIO             | FAT       |![x](https://progress-bar.xyz/1800?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
+MMCE               | FAT       |![x](https://progress-bar.xyz/1800?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
+iLink / IEEE1394   | FAT       |![x](https://progress-bar.xyz/6?scale=2&suffix=MB/s)        | ![x](https://progress-bar.xyz/10)  | Block Device | `ilink`  | `sd`
+UDPBD              | ALL       |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)       | ![x](https://progress-bar.xyz/100) | Block Device | `udpbd`  | `udp`
+ATA (internal HDD) | FAT       |![x](https://progress-bar.xyz/20?scale=2&suffix=MB/s)       | ![x](https://progress-bar.xyz/100) | Block Device | `ata`    | `ata`
 
-NOTE: Internal block device names between (parenthesis), these must be used for `bdfs:`
-
-These are all BDM drivers, or "Block Devices". On all devices the following partitioning schemes are supported:
+On "Block Devices" the following partitioning schemes are supported:
 - MBR (Master Boot Record)
 - GPT (GUID Partition Table)
 
