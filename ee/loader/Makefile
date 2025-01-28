@@ -1,6 +1,9 @@
+GIT_TAG = $(shell git describe --tags)
+
 EE_OBJS = main.o compat.o xparam.o patch.o ee_core_config.o ioprp.o toml.o
 EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
+EE_CFLAGS = -DGIT_TAG=\"$(GIT_TAG)\"
 
 EE_NEWLIB_NANO = 1
 EE_COMPACT_EXECUTABLE = 1
@@ -12,7 +15,10 @@ EE_BIN_PACKED = $(EE_BIN_NAME).elf
 $(EE_BIN_PACKED): $(EE_BIN)
 	ps2-packer $< $@ > /dev/null
 
-all: $(EE_BIN_PACKED)
+version.txt:
+	echo $(GIT_TAG) > $@
+
+all: $(EE_BIN_PACKED) version.txt
 
 # TODO:
 # SCUS_971.01 Twisted Metal Black (same as opl, when quit to menu the games crash with black screen)

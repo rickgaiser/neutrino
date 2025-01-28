@@ -27,6 +27,7 @@ jobs:
           make copy
           mkdir $TARGET
           cp *.elf $TARGET/
+          cp version.txt $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
           cp ../../README.md $TARGET/
@@ -72,6 +73,7 @@ jobs:
           make copy
           mkdir $TARGET
           cp *.elf $TARGET/
+          cp version.txt $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
           cp ../../README.md $TARGET/
@@ -107,6 +109,7 @@ jobs:
           make copy
           mkdir $TARGET
           cp *.elf $TARGET/
+          cp version.txt $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
           cp ../../README.md $TARGET/
@@ -142,6 +145,7 @@ jobs:
           make copy
           mkdir $TARGET
           cp *.elf $TARGET/
+          cp version.txt $TARGET/
           cp -r modules/ $TARGET/modules/
           cp -r config/ $TARGET/config/
           cp ../../README.md $TARGET/

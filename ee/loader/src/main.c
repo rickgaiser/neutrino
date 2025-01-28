@@ -978,8 +978,9 @@ int main(int argc, char *argv[])
     off_t iso_size = 0;
 
     printf("--------------------------------\n");
-    printf("- Neutrino PS2 Device Emulator -\n");
-    printf("-         By Maximus32         -\n");
+    printf("- Neutrino PS2 Device Emulator\n");
+    printf("- Version: %s\n", GIT_TAG);
+    printf("- By Maximus32\n");
     printf("--------------------------------\n");
 
     /*

@@ -8,6 +8,7 @@ obj/
 obj.*/
 
 ee/loader/irx/
+ee/loader/version.txt
 iop/patches/
 iop/fileio/
 releases/
