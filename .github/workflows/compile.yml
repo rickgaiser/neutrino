@@ -9,10 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Compile
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           make clean all
 
       - name: Define target name
@@ -55,10 +58,13 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Compile
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           make clean all IOPCORE_DEBUG=1
 
       - name: Define target name
@@ -91,10 +97,13 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Compile
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           make clean all EESIO_DEBUG=1
 
       - name: Define target name
@@ -127,10 +136,13 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/ps2homebrew/ps2homebrew:main
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Compile
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           make clean all IOPCORE_DEBUG=1 EESIO_DEBUG=1
 
       - name: Define target name
