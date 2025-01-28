@@ -17,17 +17,23 @@ An environment in neutrino describes what IOP modules are loaded and defines wha
 ## Backing Store Driver
 A backing store driver provides a storage location for storing virtual disk images. For instance of DVD's, HDD's or MC's.
 The following backing storage devices are supported:
-Device             | PS2 model | Speed                                                      | Device comp.                       | Type         | bsd      | internal
--------------------|-----------|------------------------------------------------------------|------------------------------------|--------------|----------|-----
-USB                | FAT       |![x](https://progress-bar.xyz/800?scale=2200&suffix=KB/s)   | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
-USB                | slim      |![x](https://progress-bar.xyz/1000?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
-MX4SIO             | slim      |![x](https://progress-bar.xyz/1200?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
-MMCE               | slim      |![x](https://progress-bar.xyz/1200?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
-MX4SIO             | FAT       |![x](https://progress-bar.xyz/1800?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
-MMCE               | FAT       |![x](https://progress-bar.xyz/1800?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
-iLink / IEEE1394   | FAT       |![x](https://progress-bar.xyz/6?scale=2&suffix=MB/s)        | ![x](https://progress-bar.xyz/10)  | Block Device | `ilink`  | `sd`
-UDPBD              | ALL       |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)       | ![x](https://progress-bar.xyz/100) | Block Device | `udpbd`  | `udp`
-ATA (internal HDD) | FAT       |![x](https://progress-bar.xyz/20?scale=2&suffix=MB/s)       | ![x](https://progress-bar.xyz/100) | Block Device | `ata`    | `ata`
+Device             | PS2 model  | Speed                                                     | Device comp.                       | Type         | bsd      | internal
+-------------------|------------|-----------------------------------------------------------|------------------------------------|--------------|----------|-----
+USB                | FAT + 70k  |![x](https://progress-bar.xyz/750?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
+USB                | slim       |![x](https://progress-bar.xyz/900?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
+MX4SIO             | slim       |![x](https://progress-bar.xyz/1150?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
+MMCE               | slim       |![x](https://progress-bar.xyz/1350?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
+MX4SIO             | FAT + 70k  |![x](https://progress-bar.xyz/1500?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
+MMCE               | FAT + 70k  |![x](https://progress-bar.xyz/1700?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
+iLink / IEEE1394   | FAT        |![x](https://progress-bar.xyz/6?scale=2&suffix=MB/s)       | ![x](https://progress-bar.xyz/10)  | Block Device | `ilink`  | `sd`
+UDPBD              | ALL        |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)      | ![x](https://progress-bar.xyz/100) | Block Device | `udpbd`  | `udp`
+ATA (internal HDD) | FAT        |![x](https://progress-bar.xyz/30?scale=2&suffix=MB/s)      | ![x](https://progress-bar.xyz/100) | Block Device | `ata`    | `ata`
+
+PS2 model: The older FAT PS2 models and the first slim PS2 model (70k) have the original PS1 MIPS R3000 CPU. Later slim PS2 models have a new CPU with 'DECKARD' emulating the MIPS R3000. This is why there is a speed difference between those two groups of PS2 models.
+
+Speed: USB, MX4SIO and MMCE have been tested with neutrino v1.5.0. The other speeds are based on older tests and should serve as an indication. For proper emulation of the ps2 DVD drive a speed of at least 2.2MB/s is needed. The slower the speed, the more likely video's will stutter. Due to game-bugs, some games will not even run if the device is too slow.
+
+"Device comp.": how many devices will work with neutrino. For instance most USB sticks work, but some (mostly USB3.0 sticks) don't work. With mx4sio, many SD cards are not compatible, etc... Don't hold these values for fact, they are based on my personal observations and should give you an indication on what devices would fit your need.
 
 On "Block Devices" the following partitioning schemes are supported:
 - MBR (Master Boot Record)
