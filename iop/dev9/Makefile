@@ -34,6 +34,4 @@ IOP_OBJS_DIR = obj.ns/
 IOP_BIN = dev9_ns.irx
 endif
 
-include ../../Defs.make
-include ../Rules.bin.make
 include ../Rules.make

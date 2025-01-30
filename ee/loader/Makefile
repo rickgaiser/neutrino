@@ -210,5 +210,5 @@ copy:
 #	cp $(PS2SDK)/iop/irx/mmceman.irx               modules
 #	cp $(PS2SDK)/iop/irx/mmcefhi.irx               modules
 
-include ../../Defs.make
+include $(PS2SDK)/Defs.make
 include ../Rules.make
