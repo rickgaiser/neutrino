@@ -308,6 +308,7 @@ void CopyToIop(const void *eedata, unsigned int size, void *iopptr)
     dmadata.dest = iopptr;
     dmadata.size = size;
     dmadata.attr = 0;
+    SifWriteBackDCache((void *)eedata, size);
 
     do {
         id = SifSetDma(&dmadata, 1);

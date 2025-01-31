@@ -399,13 +399,14 @@ int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *arg
     dmat.size = size;
     dmat.attr = 0;
     SifWriteBackDCache((void *)ptr, size);
-    qid = SifSetDma(&dmat, 1);
 
-    if (!qid)
-        return -1; // should have a better error here...
+    do {
+        qid = SifSetDma(&dmat, 1);
+    } while (!qid);
 
-    while (SifDmaStat(qid) >= 0)
+    while (SifDmaStat(qid) >= 0) {
         ;
+    }
 
     res = _SifLoadModuleBuffer(iop_addr, arg_len, args, mod_res, dontwait);
 
