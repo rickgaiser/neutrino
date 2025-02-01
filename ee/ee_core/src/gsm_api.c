@@ -31,10 +31,16 @@ struct gsm_state {
     fp_SetGsCrt org_SetGsCrt;
 
     u32 SetGsCrt : 1;
+    u32 HalfHeight : 1;
     u32 LineDouble : 1;
-    u32 Field : 1;
+    u32 Field : 4;
     u32 FieldPrev : 1;
-    u32 Spare : 28;
+    u32 VCKDiv : 2; // VCK devide (1 or 2)
+    u32 Spare : 22;
+
+    u32 flags;
+
+    u64 smode2;
 };
 static struct gsm_state state = {
     NULL,
@@ -92,6 +98,7 @@ enum MIPS_OP_IMM {
 static u64 mod_DISPLAY(struct gsm_state *pstate, u64 r)
 {
     u32 dx, dy, magh, magv, dw, dh;
+    u32 magh_new, magv_new, dw_new;
 
     dx   = (r      ) & 0xfff;
     dy   = (r >> 12) & 0x7ff;
@@ -102,24 +109,33 @@ static u64 mod_DISPLAY(struct gsm_state *pstate, u64 r)
 
     if (pstate->LineDouble) {
         // From 288p/240p to 576p/480p
-        magv = ((magv + 1) * 2) - 1;
+        magv_new = ((magv + 1) * 2) - 1;
+    } else {
+        // Do not adjust
+        magv_new = magv;
     }
 
-    // From PAL/NTSC to 576p/480p, the VCK units are twice as small
+    if (pstate->VCKDiv > 1) {
+        // From PAL/NTSC to 576p/480p, the VCK units are twice as small
 
-    // Divide MAGH by 2
-    u32 magh_new = ((magh + 1) / 2) - 1;
+        // Divide MAGH
+        magh_new = ((magh + 1) / pstate->VCKDiv) - 1;
 
-    // Rescale width to match new MAGH
-    u32 dw_new = ((dw + 1) * (magh_new + 1) / (magh + 1)) - 1;
+        // Rescale width to match new MAGH
+        dw_new = ((dw + 1) * (magh_new + 1) / (magh + 1)) - 1;
 
-    // Re-adjust offset by compensating for both:
-    // - VCK change (/2)
-    // - possible in-perfect MAGH change making the image smaller
-    dx /= 2;
-    dx += (((dw + 1) / 2) - (dw_new + 1)) / 2;
+        // Re-adjust offset by compensating for both:
+        // - VCK change (/2)
+        // - possible in-perfect MAGH change making the image smaller
+        dx /= 2;
+        dx += (((dw + 1) / 2) - (dw_new + 1)) / 2;
+    } else {
+        // Do not adjust
+        magh_new = magh;
+        dw_new = dw;
+    }
 
-    return GS_SET_DISPLAY(dx, dy, magh_new, magv, dw_new, dh);
+    return GS_SET_DISPLAY(dx, dy, magh_new, magv_new, dw_new, dh);
 }
 
 // Rainbow color scheme
@@ -197,50 +213,78 @@ void el2_c_handler(ee_registers_t *regs)
         case (u32)GS_REG_CSR:
             // Field flip
             u64 csr = *source;
-#if 1
-            if (csr & (1<<2)) {
-                // HSINT present
-                u32 field = (csr >> 13) & 1;
-                if (field != pstate->FieldPrev) {
-                    // FIELD changed
-                    pstate->FieldPrev = field;
-                    // Toggle FIELD only on rising edge of original FIELD
-                    if (field) {
-                        pstate->Field = !pstate->FieldPrev;
+            if (pstate->flags & EECORE_FLAG_GSM_C_1) {
+                if (csr & (1<<2)) {
+                    // HSINT present
+                    u32 field = (csr >> 13) & 1;
+                    if (field != pstate->FieldPrev) {
+                        // FIELD changed
+                        pstate->FieldPrev = field;
+                        pstate->Field++;
                     }
                 }
+                // Insert emulated FIELD bit
+                csr = (csr & ~(1<<13)) | ((pstate->Field >> 1) & 1) << 13;
+            } else if (pstate->flags & EECORE_FLAG_GSM_C_2) {
+                if (csr & (1<<2))
+                    pstate->Field++;
+                // Insert emulated FIELD bit
+                csr = (csr & ~(1<<13)) | ((pstate->Field >> 1) & 1) << 13;
+            } else if (pstate->flags & EECORE_FLAG_GSM_C_3) {
+                if (csr & (1<<2))
+                    pstate->Field++;
+                // Insert emulated FIELD bit
+                csr = (csr & ~(1<<13)) | ((pstate->Field >> 0) & 1) << 13;
             }
-            // Insert 2x slower toggling FIELD bit
-            csr = (csr & ~(1<<13)) | pstate->Field << 13;
-#endif
             regs->gpr[rt] = csr;
             break;
         case 0:
             break;
-        default:
+        case (u32)GS_REG_PMODE:
+        case (u32)GS_REG_SMODE2:
+        case (u32)GS_REG_DISPLAY1:
+        case (u32)GS_REG_DISPLAY2:
+        case (u32)GS_REG_SIGLBLID:
             regs->gpr[rt] = *source;
+            break;
+        default:
+            // Just freeze!
+            *GS_REG_BGCOLOR = debug_color[4]; // L-Blue
+            while(1){}
     }
 
     // Process SD instruction (write to register)
     switch((u32)dest & 0x1fffffff) {
         case (u32)GS_REG_DISPLAY1:
-            *GS_REG_DISPLAY1 = mod_DISPLAY(pstate, value);
+            *dest = mod_DISPLAY(pstate, value);
             break;
         case (u32)GS_REG_DISPLAY2:
-            *GS_REG_DISPLAY2 = mod_DISPLAY(pstate, value);
+            *dest = mod_DISPLAY(pstate, value);
             break;
         case (u32)GS_REG_SMODE2:
             // Check if line-doubling is needed
-            if (pstate->SetGsCrt)
+            if (pstate->SetGsCrt) {
                 pstate->SetGsCrt = 0;
-            else
+            } else if (pstate->HalfHeight == 0) {
                 pstate->LineDouble = (value & 2) ? 1 : 0;
-            *GS_REG_SMODE2 = GS_SET_SMODE2(0,1,0);
+                // TODO: What if the game switches modes without calling SetGsCrt?
+                *dest = pstate->smode2;
+            } else {
+                // Allow game to change mode
+                *dest = value;
+            }
             break;
         case 0:
             break;
-        default:
+        case (u32)GS_REG_PMODE:
+        case (u32)GS_REG_CSR:
+        case (u32)GS_REG_SIGLBLID:
             *dest = value;
+            break;
+        default:
+            // Just freeze!
+            *GS_REG_BGCOLOR = debug_color[5]; // D-Blue
+            while(1){}
     }
 
     // Make sure data is written to RAM
@@ -385,28 +429,61 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
 
     //printf("%s(%d, 0x%x, %d)\n", __FUNCTION__, interlace, mode, ffmd);
 
+    pstate->HalfHeight = 0; // Normal height = 480p/576p, half height = 240p/288p
+    pstate->VCKDiv = 1; // Do not devide
+
     // Only NTSC(2) and PAL(3) modes are supported
     if ((mode != 2) && (mode != 3))
         goto no_gsm;
 
-    // 576p not supported on pre-DECKARD consoles
-    if (mode == 3 && (g_ee_core_flags & EECORE_FLAG_GSM_NO_576P))
-        goto no_gsm;
+    if (ffmd == 1) {
+        // interlaced FRAME mode
+        if (pstate->flags & EECORE_FLAG_GSM_FRM_FP1 /*&& interlace*/) {
+            // Force 240p/288p
+            pstate->VCKDiv = 1; // Devide by 2
+            pstate->HalfHeight = 1;
+            pstate->LineDouble = 0;
+            interlace = 0;
+            //if (mode == 2) mode = 0x50; // 480p
+            //if (mode == 3) mode = 0x53; // 576p
+            ffmd = 1;
+        } else if (pstate->flags & EECORE_FLAG_GSM_FRM_FP2) {
+            // 576p not supported on pre-DECKARD consoles
+            if (mode == 3 && (pstate->flags & EECORE_FLAG_GSM_NO_576P))
+                goto no_gsm;
 
-    // Only do line doubling if asked
-    if (ffmd == 1 && (g_ee_core_flags & EECORE_FLAG_GSM2) == 0)
-        goto no_gsm;
+            // Force line-doubling to 480p/576p
+            pstate->VCKDiv = 2; // Devide by 2
+            pstate->LineDouble = 1;
+            interlace = 0;
+            if (mode == 2) mode = 0x50; // 480p
+            if (mode == 3) mode = 0x53; // 576p
+            ffmd = 1;
+        } else {
+            goto no_gsm;
+        }
+    } else {
+        // interlaced FIELD mode
+        if (pstate->flags & EECORE_FLAG_GSM_FLD_FP) {
+            // 576p not supported on pre-DECKARD consoles
+            if (mode == 3 && (pstate->flags & EECORE_FLAG_GSM_NO_576P))
+                goto no_gsm;
 
-    pstate->LineDouble = ffmd;
-
-    // Enable GSM
-    interlace = 0;
-    if (mode == 2) mode = 0x50; // 480p
-    if (mode == 3) mode = 0x53; // 576p
-    ffmd = 1;
+            // Force 480p/576p
+            pstate->VCKDiv = 2; // Devide by 2
+            pstate->LineDouble = 0;
+            interlace = 0;
+            if (mode == 2) mode = 0x50; // 480p
+            if (mode == 3) mode = 0x53; // 576p
+            ffmd = 1;
+        } else {
+            goto no_gsm;
+        }
+    }
 
     pstate->SetGsCrt = 1;
-    if (g_ee_core_flags & EECORE_FLAG_GSM_FFLIP) {
+    pstate->smode2 = GS_SET_SMODE2(interlace, ffmd, 0);
+    if (pstate->flags & (EECORE_FLAG_GSM_C_1 | EECORE_FLAG_GSM_C_2 | EECORE_FLAG_GSM_C_3)) {
         // For FIELD flipping we need to also set a breakpoint for reading
         _ee_enable_bpc(EE_BPC_DRE | EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
     } else {
@@ -423,6 +500,8 @@ no_gsm:
 void EnableGSM(void)
 {
     vu32 *v_debug = (vu32 *)0x80000100;
+
+    state.flags = g_ee_core_flags;
 
     // Hook SetGsCrt
     state.org_SetGsCrt = GetSyscallHandler(__NR_SetGsCrt);
@@ -449,7 +528,7 @@ void EnableGSM(void)
     //   0x1fffff5f = mask
     //   0x1fffef5f = mask + CSR
     _ee_mtdab(0x12000000);
-    if (g_ee_core_flags & EECORE_FLAG_GSM_FFLIP) {
+    if (g_ee_core_flags & (EECORE_FLAG_GSM_C_1 | EECORE_FLAG_GSM_C_2 | EECORE_FLAG_GSM_C_3)) {
         // For FIELD flipping we need to also set a breakpoint for CSR register
         _ee_mtdabm(0x1fffef5f);
     } else {

@@ -123,14 +123,29 @@ void print_usage()
     printf("                    - 7: IOP: Fix game buffer overrun\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
-    printf("  -gsm=<mode>       GS video mode forcing (also know as GSM)\n");
-    printf("                    - 0 : off (default)\n");
-    printf("                    - 1 : on  576i/480i -> 576p/480p\n");
-    printf("                    - 2 : on  576i/480i -> 576p/480p + line doubling\n");
-    printf("                    - 1F: on  576i/480i -> 576p/480p                 + filed flipping\n");
-    printf("                    - 2F: on  576i/480i -> 576p/480p + line doubling + filed flipping\n");
-    printf("                    Note that many games are not compatible with GSM.\n");
-    printf("                    1 or 1F are the advised options to try.\n");
+    printf("  -gsm=x:y:z        GS video mode\n");
+    printf("\n");
+    printf("                    Parameter x = Interlaced field mode\n");
+    printf("                    A full height buffer is used by the game for displaying. Force video output to:\n");
+    printf("                    -      : don't force (default)  (480i/576i)\n");
+    printf("                    - fp   : force progressive scan (480p/576p)\n");
+    printf("\n");
+    printf("                    Parameter y = Interlaced frame mode\n");
+    printf("                    A half height buffer is used by the game for displaying. Force video output to:\n");
+    printf("                    -      : don't force (default)  (480i/576i)\n");
+    printf("                    - fp1  : force progressive scan (240p/288p)\n");
+    printf("                    - fp2  : force progressive scan (480p/576p line doubling)\n");
+    printf("\n");
+    printf("                    Parameter z = Compatibility mode\n");
+    printf("                    -      : no compatibility mode (default)\n");
+    printf("                    - 1    : field flipping type 1 (GSM/OPL)\n");
+    printf("                    - 2    : field flipping type 2\n");
+    printf("                    - 3    : field flipping type 3\n");
+    printf("\n");
+    printf("                    Examples:\n");
+    printf("                    -gsm=fp       - recommended mode\n");
+    printf("                    -gsm=fp::1    - recommended mode, with compatibility 1\n");
+    printf("                    -gsm=fp:fp1:2 - all parameters\n");
     printf("\n");
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
@@ -1150,28 +1165,79 @@ int main(int argc, char *argv[])
     /*
      * GSM: process user flags
      */
-    if (sys.sGSM != NULL) {
-        if (sys.sGSM[0] == '0')
-            ;
-        else if (sys.sGSM[0] == '1')
-            eecore_compat |= EECORE_FLAG_GSM1;
-        else if (sys.sGSM[0] == '2')
-            eecore_compat |= EECORE_FLAG_GSM2;
-        else {
-            printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
-            print_usage();
-            return -1;
-        }
+    if (sys.sGSM == NULL)
+        goto gsm_done;
 
-        // Field flipping
-        if (sys.sGSM[1] == 'F')
-            eecore_compat |= EECORE_FLAG_GSM_FFLIP;
+    char *pgsm = sys.sGSM;
+
+    if (pgsm[0] == 0) {
+        goto gsm_done;
+    } else if (pgsm[0] != ':') {
+        // Interlaced field mode
+        if (!strncmp(pgsm, "fp", 2)) {
+            printf("GSM: Interlaced Field Mode = Force Progressive\n");
+            eecore_compat |= EECORE_FLAG_GSM_FLD_FP;
+            pgsm += 2;
+        } else {
+            goto gsm_error;
+        }
     }
+
+    if (pgsm[0] == 0) {
+        goto gsm_done;
+    } else if (pgsm[0] == ':') {
+        pgsm++; // this argument
+        if (pgsm[0] != ':') {
+            // Interlaced frame mode
+            if (!strncmp(pgsm, "fp1", 3)) {
+                printf("GSM: Interlaced Frame Mode = Force Progressive 1\n");
+                eecore_compat |= EECORE_FLAG_GSM_FRM_FP1;
+                pgsm += 3;
+            } else if (!strncmp(pgsm, "fp2", 3)) {
+                printf("GSM: Interlaced Frame Mode = Force Progressive 2\n");
+                eecore_compat |= EECORE_FLAG_GSM_FRM_FP2;
+                pgsm += 3;
+            } else {
+                goto gsm_error;
+            }
+        }
+    }
+
+    if (pgsm[0] == 0) {
+        goto gsm_done;
+    } else if (pgsm[0] == ':') {
+        pgsm++; // this argument
+        //if (pgsm[0] != ':') {
+            // Compatibility mode
+            if (!strncmp(pgsm, "1", 1)) {
+                printf("GSM: Compatibility Mode = 1\n");
+                eecore_compat |= EECORE_FLAG_GSM_C_1;
+                pgsm += 1;
+            } else if (!strncmp(pgsm, "2", 1)) {
+                printf("GSM: Compatibility Mode = 2\n");
+                eecore_compat |= EECORE_FLAG_GSM_C_2;
+                pgsm += 1;
+            } else if (!strncmp(pgsm, "3", 1)) {
+                printf("GSM: Compatibility Mode = 3\n");
+                eecore_compat |= EECORE_FLAG_GSM_C_3;
+                pgsm += 1;
+            } else {
+                goto gsm_error;
+            }
+        //}
+    }
+
+    goto gsm_done;
+gsm_error:
+    printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
+    print_usage();
+    return -1;
+gsm_done:
 
     /*
      * GSM: check for 576p capability
      */
-    if (eecore_compat & (EECORE_FLAG_GSM1 | EECORE_FLAG_GSM2)) {
+    if (eecore_compat & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) {
         int fd_ROMVER;
         if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) >= 0) {
             char romver[16], romverNum[5];

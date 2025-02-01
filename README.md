@@ -122,14 +122,29 @@ Options:
                     - 7: IOP: Fix game buffer overrun
                     Multiple options possible, for example -gc=23
 
-  -gsm=<mode>       GS video mode forcing (also know as GSM)
-                    - 0:  off (default)
-                    - 1:  on  576i/480i -> 576p/480p
-                    - 2:  on  576i/480i -> 576p/480p + line doubling
-                    - 1F: on  576i/480i -> 576p/480p                 + filed flipping
-                    - 2F: on  576i/480i -> 576p/480p + line doubling + filed flipping
-                    Note that many games are not compatible with GSM.
-                    1 or 1F are the advised options to try.
+  -gsm=x:y:z        GS video mode
+
+                    Parameter x = Interlaced field mode
+                    A full height buffer is used by the game for displaying. Force video output to:
+                    -      : don't force (default)  (480i/576i)
+                    - fp   : force progressive scan (480p/576p)
+
+                    Parameter y = Interlaced frame mode
+                    A half height buffer is used by the game for displaying. Force video output to:
+                    -      : don't force (default)  (480i/576i)
+                    - fp1  : force progressive scan (240p/288p)
+                    - fp2  : force progressive scan (480p/576p line doubling)
+
+                    Parameter z = Compatibility mode
+                    -      : no compatibility mode (default)
+                    - 1    : field flipping type 1 (GSM/OPL)
+                    - 2    : field flipping type 2
+                    - 3    : field flipping type 3
+
+                    Examples:
+                    -gsm=fp       - recommended mode
+                    -gsm=fp::1    - recommended mode, with compatibility 1
+                    -gsm=fp:fp2:2 - all parameters
 
   -cwd=<path>       Change working directory
 

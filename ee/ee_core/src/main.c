@@ -115,7 +115,7 @@ static int eecoreInit(int argc, char **argv)
         EnableCheats();
 
     // Enable GSM, only possible when kernel hooks are allowed
-    if (((g_ee_core_flags & (EECORE_FLAG_GSM1 | EECORE_FLAG_GSM2)) != 0) && ((g_ee_core_flags & EECORE_FLAG_UNHOOK) == 0))
+    if (((g_ee_core_flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) != 0) && ((g_ee_core_flags & EECORE_FLAG_UNHOOK) == 0))
         EnableGSM();
 
     /* installing kernel hooks */
