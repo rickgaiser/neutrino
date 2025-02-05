@@ -1290,6 +1290,13 @@ int main(int argc, char *argv[])
         }
         if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
             fileXioInit();
+    } else {
+        // Quickboot requires certain IOP modules to be loaded before starting Neutrino
+        // Re-initialize EE-side libraries using those modules
+        if (fileXioInit() < 0) {
+            printf("ERROR: failed to initialize fileXio\n");
+            return -1;
+        }
     }
 
     // FAKEMOD optional module
