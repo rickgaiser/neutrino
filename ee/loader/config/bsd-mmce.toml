@@ -8,9 +8,6 @@ env = ["LE"]
 file = "fileXio.irx"
 env = ["LE"]
 [[module]]
-file = "isofs.irx"
-env = ["LE"]
-[[module]]
 file = "mmceman.irx"
 env = ["LE"]
 

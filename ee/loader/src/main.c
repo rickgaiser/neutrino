@@ -23,6 +23,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "ee_core_config.h"
 #include "ee_core_flag.h"
 #include "ioprp.h"
+#include "iso_cnf.h"
 #include "xparam.h"
 #include "../../../iop/common/cdvd_config.h"
 #include "../../../iop/common/fakemod.h"
@@ -1289,6 +1290,13 @@ int main(int argc, char *argv[])
         }
         if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
             fileXioInit();
+    } else {
+        // Quickboot requires certain IOP modules to be loaded before starting Neutrino
+        // Re-initialize EE-side libraries using those modules
+        if (fileXioInit() < 0) {
+            printf("ERROR: failed to initialize fileXio\n");
+            return -1;
+        }
     }
 
     // FAKEMOD optional module
@@ -1452,26 +1460,24 @@ int main(int argc, char *argv[])
      */
     if (strcmp(sys.sELFFile, "auto") == 0) {
         if (sDVDFile != NULL) {
-            /*
-            * Mount as ISO so we can get ELF name to boot
-            */
-            if (fileXioMount("iso:", sDVDFile, FIO_MT_RDONLY) < 0) {
-                printf("ERROR: Unable to mount %s as iso\n", sDVDFile);
+            // Read SYSTEM.CNF from ISO file
+            fd_system_cnf = read_system_cnf(sDVDFile, system_cnf_data, 128);
+            if (fd_system_cnf < 0) {
+                printf("ERROR: Unable to read SYSTEM.CNF from ISO\n");
                 return -1;
             }
-            fd_system_cnf = open("iso:\\SYSTEM.CNF;1", O_RDONLY);
-        }
-        else {
+        } else {
+            // Read SYSTEM.CNF from CD/DVD
             fd_system_cnf = open("cdrom:\\SYSTEM.CNF;1", O_RDONLY);
-        }
+            if (fd_system_cnf < 0) {
+                printf("ERROR: Unable to open SYSTEM.CNF from disk\n");
+                return -1;
+            }
 
-        if (fd_system_cnf < 0) {
-            printf("ERROR: Unable to open SYSTEM.CNF from disk\n");
-            return -1;
+            // Read file contents
+            read(fd_system_cnf, system_cnf_data, 128);
+            close(fd_system_cnf);
         }
-
-        // Read file contents
-        read(fd_system_cnf, system_cnf_data, 128);
 
         // Locate and set ELF file name
         sys.sELFFile = strstr(system_cnf_data, "cdrom0:");
@@ -1486,10 +1492,6 @@ int main(int argc, char *argv[])
         // Locate and set GameID
         memcpy(sGameID, &sys.sELFFile[8], 11);
         sGameID[11] = '\0';
-        close(fd_system_cnf);
-
-        if (sDVDFile != NULL)
-            fileXioUmount("iso:");
     }
     else {
         // Manually specifying an ELF file == no GameID
