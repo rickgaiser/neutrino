@@ -1,6 +1,6 @@
 GIT_TAG = $(shell git describe --tags)
 
-EE_OBJS = main.o compat.o xparam.o patch.o ee_core_config.o ioprp.o toml.o
+EE_OBJS = main.o compat.o xparam.o patch.o ee_core_config.o ioprp.o toml.o iso_cnf.o
 EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
 EE_CFLAGS = -DGIT_TAG=\"$(GIT_TAG)\"
@@ -181,7 +181,7 @@ copy:
 	cp ../../iop/gapfill/irx/gapfill.irx           modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
-	cp ../../iop/isofs/irx/isofs.irx               modules
+#	cp ../../iop/isofs/irx/isofs.irx               modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
 	cp ../../iop/memcheck/irx/memcheck.irx         modules
 	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules

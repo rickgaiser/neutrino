@@ -5,16 +5,11 @@ name = "Block Device Manager (with FHI)"
 [[module]]
 file = "bdm.irx"
 env = ["LE"]
-# These 3 drivers are needed for isofs
-# it would be nice if we could remove that dependency
 [[module]]
 file = "iomanX.irx"
 env = ["LE"]
 [[module]]
 file = "fileXio.irx"
-env = ["LE"]
-[[module]]
-file = "isofs.irx"
 env = ["LE"]
 
 # Modules to load in emulation environment
