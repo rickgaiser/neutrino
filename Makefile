@@ -17,7 +17,6 @@ all:
 	$(MAKE) -C iop/gapfill      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/hdlfs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/imgdrv       all DEBUG=$(IOPCORE_DEBUG)
-#	$(MAKE) -C iop/isofs        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/mc_emu       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/memcheck     all DEBUG=1
 	$(MAKE) -C iop/patch_freemem all DEBUG=1
@@ -51,7 +50,6 @@ clean:
 	$(MAKE) -C iop/gapfill      clean
 	$(MAKE) -C iop/hdlfs        clean
 	$(MAKE) -C iop/imgdrv       clean
-#	$(MAKE) -C iop/isofs        clean
 	$(MAKE) -C iop/mc_emu       clean
 	$(MAKE) -C iop/memcheck     clean
 	$(MAKE) -C iop/patch_freemem clean

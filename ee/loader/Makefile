@@ -181,7 +181,6 @@ copy:
 	cp ../../iop/gapfill/irx/gapfill.irx           modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
-#	cp ../../iop/isofs/irx/isofs.irx               modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
 	cp ../../iop/memcheck/irx/memcheck.irx         modules
 	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules
