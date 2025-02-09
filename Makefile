@@ -1,3 +1,4 @@
+RELEASE_DIR = releases/neutrino_$(shell git describe --tags)
 EESIO_DEBUG?=0
 IOPCORE_DEBUG?=0
 
@@ -77,5 +78,11 @@ sim:
 sim_mount:
 	losetup -Pf ee/loader/bd_exfat.raw
 
-opl:
-	ps2client -h 192.168.1.10 execee host:OPNPS2LD.ELF
+release: all copy
+	mkdir -p                     $(RELEASE_DIR)
+	cp    README.md              $(RELEASE_DIR)
+	cp -R ee/loader/config       $(RELEASE_DIR)
+	cp -R ee/loader/modules      $(RELEASE_DIR)
+	cp    ee/loader/neutrino.elf $(RELEASE_DIR)
+	cp    ee/loader/version.txt  $(RELEASE_DIR)
+	7z a -t7z $(RELEASE_DIR).7z $(RELEASE_DIR)/*
