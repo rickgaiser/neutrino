@@ -1,4 +1,3 @@
-RELEASE_DIR = releases/neutrino_$(shell git describe --tags)
 EESIO_DEBUG?=0
 IOPCORE_DEBUG?=0
 
@@ -70,6 +69,20 @@ run:
 run_mmce_qb:
 	$(MAKE) -C ee/loader     run_mmce_qb
 
+# Copy neutrino to UDPBD shared drive, then run nhddl
+UDPBD_BD = /dev/zd0p1
+run_nhddl: all copy
+	mkdir -p temp
+	sudo mount $(UDPBD_BD) temp
+	sudo cp    README.md              temp
+	sudo cp -R ee/loader/config       temp
+	sudo cp -R ee/loader/modules      temp
+	sudo cp    ee/loader/neutrino.elf temp
+	sudo cp    ee/loader/version.txt  temp
+	sudo umount $(UDPBD_BD)
+	rmdir temp
+	ps2client -h 192.168.1.10 execee host:nhddl.elf
+
 # Start on PCSX2
 sim:
 	$(MAKE) -C ee/loader     sim
@@ -78,6 +91,7 @@ sim:
 sim_mount:
 	losetup -Pf ee/loader/bd_exfat.raw
 
+RELEASE_DIR = releases/neutrino_$(shell git describe --tags)
 release: all copy
 	mkdir -p                     $(RELEASE_DIR)
 	cp    README.md              $(RELEASE_DIR)
