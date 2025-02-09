@@ -15,8 +15,9 @@ EE_BIN_PACKED = $(EE_BIN_NAME).elf
 $(EE_BIN_PACKED): $(EE_BIN)
 	ps2-packer $< $@ > /dev/null
 
-version.txt:
+version.txt: FORCE
 	echo $(GIT_TAG) > $@
+FORCE:
 
 all: $(EE_BIN_PACKED) version.txt
 
