@@ -65,6 +65,10 @@ clean:
 run:
 	$(MAKE) -C ee/loader     run
 
+# Start on PS2 (ps2link/ps2client), using mmce device and quickboot
+run_mmce_qb:
+	$(MAKE) -C ee/loader     run_mmce_qb
+
 # Start on PCSX2
 sim:
 	$(MAKE) -C ee/loader     sim

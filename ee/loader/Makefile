@@ -153,6 +153,12 @@ ARGS = -bsd=udpbd -dvd=mass:$(GAME)
 run: all copy
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS)
 
+run_mmce_qb: all copy
+	ps2client -h 192.168.1.10 -t 1 execiop host:modules/iomanX.irx
+	ps2client -h 192.168.1.10 -t 1 execiop host:modules/fileXio.irx
+	ps2client -h 192.168.1.10 -t 1 execiop host:modules/mmceman.irx
+	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS) -qb
+
 sim: all copy
 	flatpak --filesystem=host run net.pcsx2.PCSX2 $(PWD)/ee/loader/$(EE_BIN_PACKED)
 
