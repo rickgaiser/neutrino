@@ -60,7 +60,7 @@ int read_system_cnf(const char *path, char *system_cnf_data, int bufSize)
     }
 
     // Seek to SYSTEM.CNF location and read file contents
-    int64_t res = lseek64(fd, toc_entry->fileLBA * SECTOR_SIZE, SEEK_SET);
+    int64_t res = lseek64(fd, (int64_t)toc_entry->fileLBA * SECTOR_SIZE, SEEK_SET);
     if (res < 0) {
         printf("ERROR: Failed to seek to SYSTEM.CNF\n");
         close(fd);
@@ -81,7 +81,7 @@ int read_system_cnf(const char *path, char *system_cnf_data, int bufSize)
 static int get_pvd(int fd, uint32_t *lba, int *length)
 {
     // Seek to PVD LBA
-    int64_t res = lseek64(fd, TOC_LBA * SECTOR_SIZE, SEEK_SET);
+    int64_t res = lseek64(fd, (int64_t)TOC_LBA * SECTOR_SIZE, SEEK_SET);
     if (res < 0) {
         return -EIO;
     }
@@ -108,7 +108,7 @@ static struct dir_toc_entry *get_toc_entry(int fd, uint32_t toc_lba, int toc_len
     int64_t res = 0;
     while (toc_len > 0) {
         // Seek to next LBA
-        res = lseek64(fd, toc_lba * SECTOR_SIZE, SEEK_SET);
+        res = lseek64(fd, (int64_t)toc_lba * SECTOR_SIZE, SEEK_SET);
         if (res < 0) {
             return NULL;
         }
