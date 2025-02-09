@@ -972,8 +972,8 @@ int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *name)
     }
 
     // FIXME! remove need for ioctl
-    ffid->file[FHI_FID_CDVD].id = fileXioIoctl2(ps2sdk_get_iop_fd(fd), 0x80, NULL, 0, NULL, 0);
-    ffid->file[FHI_FID_CDVD].size = lseek64(fd, 0, SEEK_END);
+    ffid->file[fhi_fid].id = fileXioIoctl2(ps2sdk_get_iop_fd(fd), 0x80, NULL, 0, NULL, 0);
+    ffid->file[fhi_fid].size = lseek64(fd, 0, SEEK_END);
 
     // Leave file open!
     //close(fd);
