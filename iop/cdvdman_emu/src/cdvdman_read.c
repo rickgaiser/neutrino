@@ -22,89 +22,141 @@ static unsigned int cdvdman_read_sectors_end_cb(void *arg)
 }
 
 //-------------------------------------------------------------------------
+// Calculate and return the time it takes to read these sectors
+static u32 accurate_read_clocks(u32 lsn, unsigned int sectors)
+{
+    u32 usec_per_sector;
+    // Read-ahead tracking
+    static u64 clock_last_read_end; // clock at which the next read will start reading into the read-ahead buffer
+    static u32 next_read_lsn; // lsn of the next read into the read-ahead buffer
+
+    /*
+     * Limit transfer speed to match the physical drive in the ps2
+     *
+     * Base read speeds:
+     * -  1x =  150KiB/s =   75 sectors/s for CD
+     * -  1x = 1350KiB/s =  675 sectors/s for DVD
+     *
+     * Maximum read speeds:
+     * - 24x = 3600KiB/s = 1900 sectors/s for CD
+     * -  4x = 5400KiB/s = 2700 sectors/s for DVD
+     *
+     * CLV read speed is constant (Maximum / 2.4):
+     * - 10.00x = 1500KiB/s for CD
+     * -  1.67x = 2250KiB/s for DVD
+     *
+     * CAV read speed is:
+     * - Same as CLV at the inner sectors
+     * - Same as max at the outer sectors
+     *
+     * Sony documentation states only CAV is used.
+     * But there is some discussion about if this is true 100% of the time.
+     */
+
+    if (cdvdman_settings.media == 0x12) {
+        // CD constant values
+        // ------------------
+        // 2 KiB
+        // 1000000 us / s
+        // 333000 sectors per CD
+        // 1500 KiB/s inner speed (10X)
+        // 3600 KiB/s outer speed (24X)
+        const u32 cd_const_1 = (1000000 * 2 * 333000ll) / (3600 - 1500);
+        const u32 cd_const_2 = (       1500 * 333000ll) / (3600 - 1500);
+        usec_per_sector = cd_const_1 / (cd_const_2 + lsn);
+        // CD is limited to 3000KiB/s = 667us / sector
+        // Compensation: our code seems 23us / sector slower than sony CDVD
+        if (usec_per_sector < (667-23))
+            usec_per_sector = (667-23);
+    } else if (cdvdman_settings.layer1_start != 0) {
+        // DVD dual layer constant values
+        // ------------------------------
+        // 2 KiB
+        // 1000000 us / s
+        // 2084960 sectors per DVD (8.5GB/2)
+        // 2250 KiB/s inner speed (1.67X)
+        // 5400 KiB/s outer speed (4X)
+        const u32 dvd_dl_const_1 = (1000000 * 2 * 2084960ll) / (5400 - 2250);
+        const u32 dvd_dl_const_2 = (       2250 * 2084960ll) / (5400 - 2250);
+        // For dual layer DVD, the second layer starts at 0
+        // PS2 uses PTP = Parallel Track Path
+        u32 effective_lsn = lsn;
+        if (effective_lsn >= cdvdman_settings.layer1_start)
+            effective_lsn -= cdvdman_settings.layer1_start;
+
+        usec_per_sector = dvd_dl_const_1 / (dvd_dl_const_2 + effective_lsn);
+    }
+    else {
+        // DVD single layer constant values
+        // --------------------------------
+        // 2 KiB
+        // 1000000 us / s
+        // 2298496 sectors per DVD (4.7GB)
+        // 2250 KiB/s inner speed (1.67X)
+        // 5400 KiB/s outer speed (4X)
+        const u32 dvd_sl_const_1 = (1000000 * 2 * 2298496ll) / (5400 - 2250);
+        const u32 dvd_sl_const_2 = (       2250 * 2298496ll) / (5400 - 2250);
+        usec_per_sector = dvd_sl_const_1 / (dvd_sl_const_2 + lsn);
+    }
+
+    M_DEBUG("    Sector %lu (%u sectors) CAV usec_per_sector = %d\n", lsn, sectors, usec_per_sector);
+
+    // Delay clocks for the actual read
+    u32 clocks_delay = usec_per_sector * sectors * 37; // 36.864 MHz
+
+    // Current system clock @ 36.864 MHz
+    iop_sys_clock_t sysclock;
+    GetSystemTime(&sysclock);
+    // Convert to easy to use u64 value
+    // NOTE that using u64 is EXPENSIVE becouse the IOP is only 32 bit
+    u64 clock_now = (u64)sysclock.hi << 32 | sysclock.lo;
+    // First time initialization
+    if (clock_last_read_end == 0)
+        clock_last_read_end = clock_now;
+
+    if (lsn == next_read_lsn) {
+        // Reading consecutive sectors
+        // These sectors can be read into the read-ahead buffer of the DVD drive
+        // Size = 16 sectors = 32KiB
+        // source: https://github.com/PCSX2/pcsx2/blob/master/pcsx2/CDVD/CDVD.cpp
+
+        // How much has been read-ahead
+        u32 clocks_read_ahead = clock_now - clock_last_read_end;
+        // Limit to 16 sectors
+        if (clocks_read_ahead > (usec_per_sector * 37 * 16)) { // 36.864 MHz
+            clocks_read_ahead = usec_per_sector * 37 * 16; // 36.864 MHz
+        }
+
+        if (clocks_delay < clocks_read_ahead) {
+            // All sectors have already been read
+            clocks_delay = 0;
+            //M_PRINTF("clocks to 0\n");
+        } else {
+            // Some sectors have been read-ahead
+            //M_PRINTF("clocks %d - %d\n", clocks_delay, clocks_read_ahead);
+            clocks_delay -= clocks_read_ahead;
+            clock_last_read_end = clock_now + clocks_delay;
+        }
+    } else {
+        // Reading random sectors
+        // Add seek time?
+    }
+
+    next_read_lsn = lsn + sectors;
+    clock_last_read_end = clock_now + clocks_delay;
+
+    return clocks_delay;
+}
+
+//-------------------------------------------------------------------------
 static void cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
 {
     unsigned int remaining;
     void *ptr;
     int endOfMedia = 0;
-    u32 usec_per_sector = 0;
+    u32 clocks_delay = 0;
 
     M_DEBUG("    %s lsn=%lu sectors=%u buf=%p\n", __FUNCTION__, lsn, sectors, buf);
-
-    if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
-        /*
-         * Limit transfer speed to match the physical drive in the ps2
-         *
-         * Base read speeds:
-         * -  1x =  150KiB/s =   75 sectors/s for CD
-         * -  1x = 1350KiB/s =  675 sectors/s for DVD
-         *
-         * Maximum read speeds:
-         * - 24x = 3600KiB/s = 1900 sectors/s for CD
-         * -  4x = 5400KiB/s = 2700 sectors/s for DVD
-         *
-         * CLV read speed is constant (Maximum / 2.4):
-         * - 10.00x = 1500KiB/s for CD
-         * -  1.67x = 2250KiB/s for DVD
-         *
-         * CAV read speed is:
-         * - Same as CLV at the inner sectors
-         * - Same as max at the outer sectors
-         *
-         * Sony documentation states only CAV is used.
-         * But there is some discussion about if this is true 100% of the time.
-         */
-
-        if (cdvdman_settings.media == 0x12) {
-            // CD constant values
-            // ------------------
-            // 2 KiB
-            // 1000000 us / s
-            // 333000 sectors per CD
-            // 1500 KiB/s inner speed (10X)
-            // 3600 KiB/s outer speed (24X)
-            const u32 cd_const_1 = (1000000 * 2 * 333000ll) / (3600 - 1500);
-            const u32 cd_const_2 = (       1500 * 333000ll) / (3600 - 1500);
-            usec_per_sector = cd_const_1 / (cd_const_2 + lsn);
-            // CD is limited to 3000KiB/s = 667us / sector
-            // Compensation: our code seems 23us / sector slower than sony CDVD
-            if (usec_per_sector < (667-23))
-                usec_per_sector = (667-23);
-        } else if (cdvdman_settings.layer1_start != 0) {
-            // DVD dual layer constant values
-            // ------------------------------
-            // 2 KiB
-            // 1000000 us / s
-            // 2084960 sectors per DVD (8.5GB/2)
-            // 2250 KiB/s inner speed (1.67X)
-            // 5400 KiB/s outer speed (4X)
-            const u32 dvd_dl_const_1 = (1000000 * 2 * 2084960ll) / (5400 - 2250);
-            const u32 dvd_dl_const_2 = (       2250 * 2084960ll) / (5400 - 2250);
-            // For dual layer DVD, the second layer starts at 0
-            // PS2 uses PTP = Parallel Track Path
-            u32 effective_lsn = lsn;
-            if (effective_lsn >= cdvdman_settings.layer1_start)
-                effective_lsn -= cdvdman_settings.layer1_start;
-
-            usec_per_sector = dvd_dl_const_1 / (dvd_dl_const_2 + effective_lsn);
-        }
-        else {
-            // DVD single layer constant values
-            // --------------------------------
-            // 2 KiB
-            // 1000000 us / s
-            // 2298496 sectors per DVD (4.7GB)
-            // 2250 KiB/s inner speed (1.67X)
-            // 5400 KiB/s outer speed (4X)
-            const u32 dvd_sl_const_1 = (1000000 * 2 * 2298496ll) / (5400 - 2250);
-            const u32 dvd_sl_const_2 = (       2250 * 2298496ll) / (5400 - 2250);
-            usec_per_sector = dvd_sl_const_1 / (dvd_sl_const_2 + lsn);
-        }
-        // Compensation: our code seems 30us / sector slower than sony CDVD
-        usec_per_sector -= 30;
-
-        M_DEBUG("    Sector %lu (%u sectors) CAV usec_per_sector = %d\n", lsn, sectors, usec_per_sector);
-    }
 
     if (mediaLsnCount) {
 
@@ -124,25 +176,31 @@ static void cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
         }
     }
 
+    if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
+        // Get the number of clocks delay per sector
+        clocks_delay = accurate_read_clocks(lsn, sectors) / sectors;
+    }
+
     cdvdman_stat.err = SCECdErNO;
     for (ptr = buf, remaining = sectors; remaining > 0;) {
         unsigned int SectorsToRead = remaining;
 
-        if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
+        if (clocks_delay > 0) {
             // Limit transfers to a maximum length of 8, with a restricted transfer rate.
             iop_sys_clock_t TargetTime;
 
             if (SectorsToRead > 8)
                 SectorsToRead = 8;
 
-            USec2SysClock(usec_per_sector * SectorsToRead, &TargetTime);
+            TargetTime.hi = 0;
+            TargetTime.lo = clocks_delay * SectorsToRead;
             ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_READ_END);
             SetAlarm(&TargetTime, &cdvdman_read_sectors_end_cb, NULL);
         }
 
         cdvdman_stat.err = DeviceReadSectors(lsn, ptr, SectorsToRead);
         if (cdvdman_stat.err != SCECdErNO) {
-            if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0)
+            if (clocks_delay > 0)
                 CancelAlarm(&cdvdman_read_sectors_end_cb, NULL);
             break;
         }
@@ -171,7 +229,7 @@ static void cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
         lsn += SectorsToRead;
         ReadPos += SectorsToRead * 2048;
 
-        if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
+        if (clocks_delay > 0) {
             // Sleep until the required amount of time has been spent.
             WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_READ_END, WEF_AND, NULL);
         }

@@ -67,6 +67,7 @@ I_CancelAlarm
 I_USec2SysClock
 I_SleepThread
 I_iWakeupThread
+I_GetSystemTime
 thbase_IMPORTS_end
 
 thevent_IMPORTS_start
