@@ -1356,13 +1356,6 @@ gsm_done:
         }
         if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
             fileXioInit();
-    } else {
-        // Quickboot requires certain IOP modules to be loaded before starting Neutrino
-        // Re-initialize EE-side libraries using those modules
-        if (fileXioInit() < 0) {
-            printf("ERROR: failed to initialize fileXio\n");
-            return -1;
-        }
     }
 
     // FAKEMOD optional module
@@ -1388,6 +1381,18 @@ gsm_done:
     struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod, "fakemod.irx");
     if (set_fakemod != NULL)
         memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
+
+    // Quickboot requires certain IOP modules to be loaded before starting Neutrino
+    // Re-initialize EE-side libraries using those modules
+    if (sys.bQuickBoot == true) {
+        // fileXioIoctl2 needed ?
+        if ((set_fhi_bd_defrag != NULL) || (set_fhi_fileid != NULL)) {
+            if (fileXioInit() < 0) {
+                printf("ERROR: failed to initialize fileXio\n");
+                return -1;
+            }
+        }
+    }
 
     /*
      * Enable DVD emulation
