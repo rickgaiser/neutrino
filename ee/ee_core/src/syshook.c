@@ -56,6 +56,7 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
 
     // Do IOP reset
     services_start();
+    New_Reset_Iop(NULL, 0);
     New_Reset_Iop(reset_pkt->arg, reset_pkt->arglen);
     // Exit services
     services_exit();

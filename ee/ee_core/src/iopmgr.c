@@ -53,7 +53,7 @@ static void print_iop_args(int arg_len, const char *args)
 /*----------------------------------------------------------------*/
 /* Reset IOP to include our modules.                              */
 /*----------------------------------------------------------------*/
-int New_Reset_Iop(const char *arg, int arglen)
+void New_Reset_Iop(const char *arg, int arglen)
 {
     int i;
     void *pIOP_buffer;
@@ -63,11 +63,21 @@ int New_Reset_Iop(const char *arg, int arglen)
     char udnl_cmd[RESET_ARG_MAX + 1];
     irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
     static int imgdrv_offset = 0;
+    static const char *last_arg = (char*)1;
 
     DPRINTF("%s()\n", __FUNCTION__);
 #ifdef __EESIO_DEBUG
     print_iop_args(arglen, arg);
 #endif
+
+    // 2x IOP reboot to default state is not needed
+    // - 1x from loading into the Emulation Environment
+    // - 1x from the game IOP reboot request
+    if ((arg == NULL) && (last_arg == NULL)) {
+        DPRINTF("%s() - request ignored\n", __FUNCTION__);
+        return;
+    }
+    last_arg = arg;
 
     new_iop_reboot_count++;
 
@@ -118,6 +128,7 @@ int New_Reset_Iop(const char *arg, int arglen)
     for (i = 0; i < size_imgdrv_irx; i += 4) {
         if (*(u32 *)((&((unsigned char *)imgdrv_irx)[i])) == 0xDEC1DEC1) {
             imgdrv_offset = i;
+            break;
         }
     }
     *(void **)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset+4])) = pIOP_buffer;
@@ -173,5 +184,5 @@ int New_Reset_Iop(const char *arg, int arglen)
 
     DPRINTF("New_Reset_Iop complete!\n");
 
-    return 1;
+    return;
 }

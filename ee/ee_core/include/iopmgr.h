@@ -10,6 +10,6 @@
 #ifndef IOPMGR_H
 #define IOPMGR_H
 
-int New_Reset_Iop(const char *arg, int arglen);
+void New_Reset_Iop(const char *arg, int arglen);
 
 #endif /* IOPMGR */

@@ -163,15 +163,6 @@ int main(int argc, char **argv)
         argv++;
         argc--;
 
-        if (callcount > 2) {
-            // Skip 1st time: initialization of ee_core
-            // Skip 2nd time: after initialization we are already rebooted once
-
-            // Reboot the IOP again into the Emulation Environment
-            services_start();
-            New_Reset_Iop(NULL, 0);
-        }
-
         // wipe user memory
         WipeUserMemory((void *)&_stack_end, (void *)ModStorageStart);
         // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
