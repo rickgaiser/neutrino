@@ -1178,7 +1178,33 @@ int main(int argc, char *argv[])
             printf("GSM: Interlaced Field Mode = Force Progressive\n");
             eecore_compat |= EECORE_FLAG_GSM_FLD_FP;
             pgsm += 2;
-        } else {
+        }
+
+        //
+        // Start: support for deprecated GSM modes
+        //
+        else if (!strncmp(pgsm, "1F", 2)) {
+            printf("GSM: Deprecated mode 1F\n");
+            eecore_compat |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_C_1;
+            goto gsm_done;
+        } else if (!strncmp(pgsm, "1", 1)) {
+            printf("GSM: Deprecated mode 1\n");
+            eecore_compat |= EECORE_FLAG_GSM_FLD_FP;
+            goto gsm_done;
+        } else if (!strncmp(pgsm, "2F", 2)) {
+            printf("GSM: Deprecated mode 2F\n");
+            eecore_compat |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2 | EECORE_FLAG_GSM_C_1;
+            goto gsm_done;
+        } else if (!strncmp(pgsm, "2", 1)) {
+            printf("GSM: Deprecated mode 2\n");
+            eecore_compat |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2;
+            goto gsm_done;
+        }
+        //
+        // End: support for deprecated GSM modes
+        //
+
+        else {
             goto gsm_error;
         }
     }
