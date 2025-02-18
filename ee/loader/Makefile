@@ -33,22 +33,29 @@ all: $(EE_BIN_PACKED) version.txt
 #[SLUS_202.13] Test Drive: Start any race and then restart, the graphics will glitch and also the game will freeze at some point (the last OPL that worked well with this game is r790)
 #[SLUS_202.33] Mobile Suit Gundam Zeonic Front: I believe the last working OPL is r726 (only for USB, it won't render the graphics on SMB), you will get black screen if you select the mission and if you're not pressing X constantly and even then the game will not render the graphics
 #
-#GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso' # opl github issue 1073: gfx missing, only on real ps2, works in pcsx2
+#GAME = 'DVD/Mobile Suit Gundam - Zeonic Front (U).iso' # opl github issue 1073: gfx missing, only on real ps2, works in pcsx2 # interlaced frame mode
 #GAME = 'DVD/Giants - Citizen Kabuto (E).iso'           # opl github issue 1260: sfx issues + gfx text issues
-#GAME = 'DVD/Inuyasha - Feudal Combat (U).iso'          # neutrino github issue  8: UDPBD: sfx missing or random freezes when starting match
+#GAME = 'DVD/Inuyasha - Feudal Combat (U).iso' -gsm=fp  # neutrino github issue  8: UDPBD: sfx missing or random freezes when starting match
 #GAME = 'DVD/Scooby-Doo! Mystery Mayhem (U).iso'        # neutrino github issue 19: When starting a new game, the cutscene freezes
 #GAME = 'DVD/Silent Hill 3 (U).iso'                     # neutrino github issue 30: USB:   freezes on startup logo, only on real ps2, works in pcsx2
-#GAME = 'DVD/The Incredibles - Rise of the Underminer (E).iso' # sound issues, starting at second level
+#GAME = 'DVD/The Incredibles - Rise of the Underminer (E).iso' -gsm=fp # sound issues, starting at second level
 #GAME = "CD/Donald Duck - Goin' Quackers (U).iso"       # timing issue during boot, hangs at black screen
 #GAME = 'DVD/Donald Duck - Quack Attack (E).iso'        # timing issue during boot, hangs at black screen
 #GAME = 'DVD/Driv3r (U).iso'                            # neutrino github issue 56: USB: freezes and unfreezes during gameplay
+#GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 1).iso' # neutrino github issue 76: black screen on boot
+#GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 2).iso' # neutrino github issue 76: black screen on boot
+#GAME = 'DVD/Syberia II (E).iso' # -gsm=fp # with GSM some things run at 2x speed?
+
+# This game gets stuck trying to start the first battle
+#GAME = 'DVD/World Destruction League - Thunder Tanks (E).iso' -gsm=fp:fp2
+#GAME = 'CD/World Destruction League - Thunder Tanks (U).iso' -gsm=fp:fp2
 
 # Games that use the HDD in one way or another
 #GAME = 'DVD/The Sims 2 (U).iso'
-#GAME = 'DVD/Metal Saga (U).iso'
+#GAME = 'DVD/Metal Saga (U).iso' -gsm=fp
 # Test SOCOM II with DLC on HDD
 # https://psrewired.com/guides/socom2#install-dlc-pcsx2
-#GAME = 'DVD/SOCOM II - U.S. Navy SEALs (E).iso'
+#GAME = 'DVD/SOCOM II - U.S. Navy SEALs (E).iso' # -gsm=fp # with GSM some things run at 2x speed?!
 #ATA0 = 'HDD/SOCOM II HDD.raw'
 
 # These games allocate ALL IOP RAM as an anti-piracy method
@@ -58,7 +65,7 @@ all: $(EE_BIN_PACKED) version.txt
 
 # ALL  : BSOD when returning back to menu
 # Game uses different ELF files for menu and game
-#GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso'
+#GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso' # interlaced frame mode
 
 # CD "MODE2" based games, with multiple tracks
 # not supported
@@ -69,12 +76,11 @@ all: $(EE_BIN_PACKED) version.txt
 # UDPBD : works
 #GAME = 'CD/Super Bust-A-Move (U).iso'
 
-# USB  : works only with mode2
-# UDPBD: works
-#GAME = 'DVD/Jackie Chan Adventures (E).iso'
+# Works only with mode 0 + 2 ?
+#GAME = 'DVD/Jackie Chan Adventures (E).iso' -gc=02 # interlaced frame mode
 
 # ALL  : NOT WORKING! - random crashes (on OPL too)
-#GAME = 'DVD/Gun (U).iso'
+#GAME = 'DVD/Gun (U).iso' # use game settings for better progressive
 
 # ALL  : works
 # This game uses a high priority IOP thread to wait for sceCdRead to complete
@@ -82,33 +88,31 @@ all: $(EE_BIN_PACKED) version.txt
 # resulting in the game to freeze.
 # mode2 can 'fix' this, but the proper fix is to make sure sceCdRead executes
 # at a priority <9.
-#GAME = 'DVD/Power Rangers - Super Legends (E).iso'
+#GAME = 'DVD/Power Rangers - Super Legends (E).iso' -gsm=fp
 
 # Tested, working offline
 #   ONLINE this game uses a huge amount of IOP RAM. This causes IRX modules to fail to load
 #   causing random crashes such as black screen or network adapter not detected.
-GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
-#GAME = 'DVD/Ratchet Clank 3 (E).iso'
+#GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso' -gsm=fp::1
+#GAME = 'DVD/Ratchet Clank 3 (E).iso' -gsm=fp::1
 
 # Tested, working
-#GAME = 'CD/ICO (U).iso'
-#GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso'
+#GAME = 'CD/ICO (U).iso' # 240p game
+GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' # -gsm=fp
 #GAME = 'DVD/PES 2023 (E).iso'
 #GAME = 'DVD/Sonic Unleashed (E).iso'
 #GAME = 'DVD/007 - Agent Under Fire (E).iso'
-#GAME = 'DVD/MotorStorm Arctic Edge (E).iso'
+#GAME = 'DVD/MotorStorm Arctic Edge (E).iso' -gsm=fp
 #GAME = 'DVD/Need for Speed Pro Street (E).iso'
 #GAME = 'DVD/Ratchet Clank - Going Commando (E).iso'
-#GAME = 'CD/Quake III Revolution (E).iso'
+#GAME = 'CD/Quake III Revolution (E).iso' -gsm=fp
 #GAME = 'DVD/Super Dragon Ball Z (E).iso'
-#GAME = 'CD/Tekken Tag Tournament (E) v2.iso' # USB compatibility issues ?
+#GAME = 'CD/Tekken Tag Tournament (E) v2.iso' # USB compatibility issues ? # interlaced frame mode
 #GAME = 'CD/Madden NFL 2001 (U).iso'
 #GAME = 'CD/Madden NFL 2002 (U).iso'
 #GAME = 'CD/NASCAR Thunder 2002 (U).iso'
-#GAME = 'CD/Downforce (U).iso'
+#GAME = 'CD/Downforce (U).iso' # interlaced frame mode
 #GAME = 'DVD/Winx Club (E).iso'
-#GAME = 'DVD/World Destruction League - Thunder Tanks (E).iso'
-#GAME = 'CD/World Destruction League - Thunder Tanks (U).iso'
 #GAME = 'DVD/Spyro - Enter the Dragonfly (E).iso'
 #GAME = 'DVD/Spyro - Enter the Dragonfly (U).iso'
 #GAME = 'DVD/Jak and Daxter - The Precursor Legacy (U).iso' # OVERLORD.IRX
@@ -117,26 +121,32 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #GAME = 'DVD/Prince of Persia - The Two Thrones (U).iso'
 #GAME = 'CD/Star Wars - Racer Revenge (E).iso'
 #GAME = 'CD/Star Wars - Racer Revenge (U).iso'
-#GAME = 'CD/LEGO Racers 2 (E).iso' # uses a lot of IOP RAM for caching files (many iop debug printf's about it)
-#GAME = 'DVD/Metal Gear Solid 3 - Snake Eater (E).iso' # VMC unreliable
+#GAME = 'CD/LEGO Racers 2 (E).iso' -gsm=fp # uses a lot of IOP RAM for caching files (many iop debug printf's about it)
+#GAME = 'DVD/Metal Gear Solid 3 - Snake Eater (E).iso' -gsm=fp # VMC unreliable
 #GAME = "DVD/Splinter Cell - Pandora Tomorrow (E).iso"
 #GAME = "DVD/Splinter Cell - Double Agent (E).iso"
 #GAME = "DVD/Splinter Cell - Chaos Theory (E).iso"
 #GAME = "DVD/Jak X (E).iso"
 #GAME = "DVD/007 - Nightfire (E).iso"
-#GAME = "DVD/Splinter Cell (E).iso" # Skips FMV (IOP memory overrun issue? fixed!)
-#GAME = "DVD/Splashdown (E).iso" # IOP memory allocation issue: allocates too little for the DVD reads that follow (fixed!)
+#GAME = "DVD/Splinter Cell (E).iso" -gc=7 -gsm=fp:fp2 # Skips FMV (IOP memory overrun issue? fixed!)
+#GAME = "DVD/Splashdown (E).iso" -gc=7 -gsm=fp # IOP memory allocation issue: allocates too little for the DVD reads that follow (fixed!)
 #GAME = 'DVD/God of War II (U).iso'
-#GAME = 'DVD/Gran Turismo 4 (U).iso'
+#GAME = 'DVD/Gran Turismo 4 (U).iso' # interlaced frame mode, use game settings for progressive
 #GAME = 'CD/OPL_Accurate_Read_v1.0.iso'
 #GAME = 'DVD/Kidou Senshi Gundam - Ichinen Sensou (J).iso'
-#GAME = 'DVD/Auto Modellista (E).iso'
+#GAME = 'DVD/Auto Modellista (E).iso' -gsm=fp
 #GAME = 'DVD/Disney's Treasure Planet (E).iso' # buffer overrun issue
 #GAME = 'DVD/Donkey Xote (E).iso' -gc=7 # buffer overrun issue
-#GAME = 'DVD/Formula One 2001 (E).iso' # cdvdman break command, currently works 99% good, but hacky
+#GAME = 'DVD/Formula One 2001 (E).iso' # cdvdman break command, currently works 99% good, but hacky # interlaced frame mode
 #GAME = 'DVD/Jak and Daxter - Complete Trilogy (U).iso'
 #GAME = 'DVD/Jak and Daxter - The Lost Frontier (U).iso'
 #GAME = 'DVD/Crash of the Titans (E).iso'
+#GAME = 'DVD/EyeToy Play 3 (E).iso' # interlaced frame mode
+#GAME = 'DVD/GTA Vice City Stories (E).iso' -gsm=fp
+#GAME = 'DVD/Medal of Honor - Frontline (U).iso' -gsm=fp::1
+#GAME = 'DVD/Silent Hill 2 (U).iso' -gsm=fp::1
+#GAME = 'DVD/Silent Hill 4 - The Room (E).iso' -gsm=fp::1
+#GAME = 'DVD/SOCOM 3 - U.S. Navy SEALs (E).iso' # -gsm=fp # with GSM some things run at 2x speed?!
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
@@ -150,6 +160,8 @@ GAME = 'DVD/Ratchet Clank - Up Your Arsenal (U).iso'
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
 ARGS = -bsd=udpbd -dvd=mass:$(GAME)
+#ARGS = -bsd=mmce -dvd=mmce1:$(GAME)
+#ARGS = -bsd=udpbd -dvd=bdfs:udp0p0 -bsdfs=bd
 
 run: all copy
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS)
