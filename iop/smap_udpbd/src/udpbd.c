@@ -146,13 +146,20 @@ static int _udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, u
 static int udpbd_read(struct block_device *bd, uint64_t sector, void *buffer, uint16_t count)
 {
     int retries;
-    uint16_t count_left = count;
+    uint16_t count_left;
 
     //M_DEBUG("%s: sector=%d, count=%d\n", __func__, (uint32_t)sector, count);
 
     if (bdm_connected == 0)
         return -EIO;
 
+    if (sector >= bd->sectorCount)
+        return -EINVAL;
+
+    if ((sector + count) > bd->sectorCount)
+        count = bd->sectorCount - sector;
+
+    count_left = count;
     while (count_left > 0)
     {
         uint16_t count_block = count_left > UDPBD_MAX_SECTOR_READ ? UDPBD_MAX_SECTOR_READ : count_left;
@@ -185,6 +192,15 @@ static int udpbd_write(struct block_device *bd, uint64_t sector, const void *buf
     uint32_t EFBits;
 
     M_DEBUG("%s: sector=%d, count=%d\n", __func__, (uint32_t)sector, count);
+
+    if (bdm_connected == 0)
+        return -EIO;
+
+    if (sector >= bd->sectorCount)
+        return -EINVAL;
+
+    if ((sector + count) > bd->sectorCount)
+        count = bd->sectorCount - sector;
 
     g_cmdid = (g_cmdid + 1) & 0x7;
 
