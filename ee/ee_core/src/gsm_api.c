@@ -33,8 +33,8 @@ struct gsm_state {
     u32 SetGsCrt : 1;
     u32 HalfHeight : 1;
     u32 LineDouble : 1;
-    u32 Field : 4;
-    u32 FieldPrev : 1;
+    u32 VSINTCount : 4;
+    u32 VSINTPrev : 1;
     u32 VCKDiv : 2; // VCK devide (1 or 2)
     u32 Spare : 22;
 
@@ -211,31 +211,41 @@ void el2_c_handler(ee_registers_t *regs)
     // Process LD instruction (read from register)
     switch((u32)source & 0x1fffffff) {
         case (u32)GS_REG_CSR:
-            // Field flip
+            // Emulate field flipping
             u64 csr = *source;
+            u32 VSINT = (csr >> 3) & 1;
+            u32 FIELD_emu = (csr >> 13) & 1;
+
             if (pstate->flags & EECORE_FLAG_GSM_C_1) {
-                if (csr & (1<<2)) {
-                    // HSINT present
-                    u32 field = (csr >> 13) & 1;
-                    if (field != pstate->FieldPrev) {
-                        // FIELD changed
-                        pstate->FieldPrev = field;
-                        pstate->Field++;
-                    }
+                //
+                // mode 1: FIELD flips at VSYNC interrupt with forced ACK
+                //
+                if (VSINT == 1) {
+                    pstate->VSINTCount++;
+                    // ACK the VSYNC interrupt
+                    // Normally the game would do this!
+                    *GS_REG_CSR = (1 << 3);
                 }
-                // Insert emulated FIELD bit
-                csr = (csr & ~(1<<13)) | ((pstate->Field >> 1) & 1) << 13;
+                FIELD_emu = pstate->VSINTCount & 1;
             } else if (pstate->flags & EECORE_FLAG_GSM_C_2) {
-                if (csr & (1<<2))
-                    pstate->Field++;
-                // Insert emulated FIELD bit
-                csr = (csr & ~(1<<13)) | ((pstate->Field >> 1) & 1) << 13;
+                //
+                // mode 2: FIELD flips at VSYNC interrupt rising edge
+                //
+                if (VSINT == 1 && pstate->VSINTPrev == 0) {
+                    pstate->VSINTCount++;
+                }
+                FIELD_emu = pstate->VSINTCount & 1;
             } else if (pstate->flags & EECORE_FLAG_GSM_C_3) {
-                if (csr & (1<<2))
-                    pstate->Field++;
-                // Insert emulated FIELD bit
-                csr = (csr & ~(1<<13)) | ((pstate->Field >> 0) & 1) << 13;
+                //
+                // mode 3: not implemented yet
+                //
             }
+
+            // Insert emulated FIELD bit
+            csr = (csr & ~(1<<13)) | FIELD_emu << 13;
+            // Store old value
+            pstate->VSINTPrev = VSINT;
+            // Return emulated CSR
             regs->gpr[rt] = csr;
             break;
         case 0:
@@ -274,10 +284,15 @@ void el2_c_handler(ee_registers_t *regs)
                 *dest = value;
             }
             break;
+        case (u32)GS_REG_CSR:
+            // Detect ACK of VSINT interrupt
+            if (value & (1 << 3))
+                pstate->VSINTPrev = 0;
+            *dest = value;
+            break;
         case 0:
             break;
         case (u32)GS_REG_PMODE:
-        case (u32)GS_REG_CSR:
         case (u32)GS_REG_SIGLBLID:
             *dest = value;
             break;
