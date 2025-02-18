@@ -1,5 +1,5 @@
 # Name of loaded config, to show to user
-name = "Block Device Manager (with FHI)"
+name = "Block Device Manager"
 
 # Modules to load in load environment
 [[module]]
@@ -11,9 +11,3 @@ env = ["LE"]
 [[module]]
 file = "fileXio.irx"
 env = ["LE"]
-
-# Modules to load in emulation environment
-[[module]]
-file = "fhi_bd_defrag.irx"
-func = "FHI_BD"
-env = ["EE"]

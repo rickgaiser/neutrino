@@ -8,3 +8,9 @@ name = "exFat filesystem driver"
 [[module]]
 file = "bdmfs_fatfs.irx"
 env = ["LE"]
+
+# Modules to load in emulation environment
+[[module]]
+file = "fhi_bd_defrag.irx"
+func = "FHI_BD_DEFRAG"
+env = ["EE"]

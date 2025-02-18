@@ -8,3 +8,9 @@ name = "Block Device filesystem driver"
 [[module]]
 file = "bdfs.irx"
 env = ["LE"]
+
+# Modules to load in emulation environment
+[[module]]
+file = "fhi_bd.irx"
+func = "FHI_BD"
+env = ["EE"]

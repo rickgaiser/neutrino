@@ -952,9 +952,32 @@ int fhi_bd_defrag_add_file(struct fhi_bd_defrag *bdm, int fhi_fid, const char *n
     return rv;
 }
 
+int fhi_bd_add_file_by_fd(struct fhi_bd *bdm, int fhi_fid, int fd)
+{
+    int iop_fd = ps2sdk_get_iop_fd(fd);
+
+    // Set BDM driver name and number
+    bdm->drvName = (uint32_t)fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
+    fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
+    char *drvName = (char *)&bdm->drvName;
+    printf("Using BDM device: %s%d\n", drvName, (int)bdm->devNr);
+
+    return 0;
+}
+
+int fhi_fileid_add_file_by_fd(struct fhi_fileid *ffid, int fhi_fid, int fd)
+{
+    int iop_fd = ps2sdk_get_iop_fd(fd);
+
+    ffid->file[fhi_fid].id = fileXioIoctl2(iop_fd, 0x80, NULL, 0, NULL, 0);
+    ffid->file[fhi_fid].size = lseek64(iop_fd, 0, SEEK_END);
+
+    return 0;
+}
+
 int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *name)
 {
-    int i, fd;
+    int i, fd, rv;
 
     // Open file
     printf("Loading %s...\n", name);
@@ -971,14 +994,12 @@ int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *name)
         return -1;
     }
 
-    // FIXME! remove need for ioctl
-    ffid->file[fhi_fid].id = fileXioIoctl2(ps2sdk_get_iop_fd(fd), 0x80, NULL, 0, NULL, 0);
-    ffid->file[fhi_fid].size = lseek64(fd, 0, SEEK_END);
+    rv = fhi_fileid_add_file_by_fd(ffid, fhi_fid, fd);
 
     // Leave file open!
     //close(fd);
 
-    return 0;
+    return rv;
 }
 
 int main(int argc, char *argv[])
@@ -1389,9 +1410,14 @@ gsm_done:
     struct SModule *mod_fakemod = modlist_get_by_func(&drv.mod, "FAKEMOD");
 
     // Load module settings for fhi_bd_defrag backing store
-    struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings_by_func(&drv.mod, "FHI_BD");
+    struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings_by_func(&drv.mod, "FHI_BD_DEFRAG");
     if (set_fhi_bd_defrag != NULL)
         memset((void *)set_fhi_bd_defrag, 0, sizeof(struct fhi_bd_defrag));
+
+    // Load module settings for fhi_bd backing store
+    struct fhi_bd *set_fhi_bd = modlist_get_settings_by_func(&drv.mod, "FHI_BD");
+    if (set_fhi_bd != NULL)
+        memset((void *)set_fhi_bd, 0, sizeof(struct fhi_bd));
 
     // Load module settings for fhi_fileid backing store
     struct fhi_fileid *set_fhi_fileid = modlist_get_settings_by_func(&drv.mod, "FHI_FILEID");
@@ -1412,7 +1438,7 @@ gsm_done:
     // Re-initialize EE-side libraries using those modules
     if (sys.bQuickBoot == true) {
         // fileXioIoctl2 needed ?
-        if ((set_fhi_bd_defrag != NULL) || (set_fhi_fileid != NULL)) {
+        if ((set_fhi_bd_defrag != NULL) || (set_fhi_bd != NULL) || (set_fhi_fileid != NULL)) {
             if (fileXioInit() < 0) {
                 printf("ERROR: failed to initialize fileXio\n");
                 return -1;
@@ -1427,7 +1453,7 @@ gsm_done:
         uint32_t layer1_lba_start = 0;
         int fd_iso = 0;
 
-        if (set_fhi_bd_defrag == NULL && set_fhi_fileid == NULL) {
+        if (set_fhi_bd_defrag == NULL && set_fhi_bd == NULL && set_fhi_fileid == NULL) {
             printf("ERROR: DVD emulator needs FHI backing store!\n");
             return -1;
         }
@@ -1497,11 +1523,15 @@ gsm_done:
             default:           sMT = "unknown";
         }
         printf("- media = %s\n", sMT);
-        close(fd_iso);
 
         if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_CDVD, sDVDFile) < 0)
+            if (fhi_bd_defrag_add_file_by_fd(set_fhi_bd_defrag, FHI_FID_CDVD, fd_iso) < 0)
                 return -1;
+            close(fd_iso);
+        } else if (set_fhi_bd != NULL) {
+            if (fhi_bd_add_file_by_fd(set_fhi_bd, FHI_FID_CDVD, fd_iso) < 0)
+                return -1;
+            close(fd_iso);
         } else if (set_fhi_fileid != NULL) {
             const char *s = strchr(sDVDFile, ':');
 
@@ -1512,8 +1542,11 @@ gsm_done:
                     set_fhi_fileid->devNr = *s - '0';
             }
 
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_CDVD, sDVDFile) < 0)
+            if (fhi_fileid_add_file_by_fd(set_fhi_fileid, FHI_FID_CDVD, fd_iso) < 0)
                 return -1;
+
+            // Leave file open!
+            //close(fd_iso);
         }
 
         set_cdvdman->media = eMediaType;
@@ -1633,7 +1666,7 @@ gsm_done:
                     return -1;
             }
         } else {
-            printf("ERROR: ATA emulator needs FHI backing store!\n");
+            printf("ERROR: ATA emulator needs compatible FHI backing store!\n");
             return -1;
         }
     }
@@ -1649,7 +1682,7 @@ gsm_done:
             if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA1, sys.sATA1File) < 0)
                 return -1;
         } else {
-            printf("ERROR: ATA emulator needs FHI backing store!\n");
+            printf("ERROR: ATA emulator needs compatible FHI backing store!\n");
             return -1;
         }
     }
@@ -1665,7 +1698,7 @@ gsm_done:
             if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC0, sys.sMC0File) < 0)
                 return -1;
         } else {
-            printf("ERROR: MC0 emulator needs FHI backing store!\n");
+            printf("ERROR: MC0 emulator needs compatible FHI backing store!\n");
             return -1;
         }
     }
@@ -1681,7 +1714,7 @@ gsm_done:
             if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC1, sys.sMC1File) < 0)
                 return -1;
         } else {
-            printf("ERROR: MC1 emulator needs FHI backing store!\n");
+            printf("ERROR: MC1 emulator needs compatible FHI backing store!\n");
             return -1;
         }
     }
@@ -1791,13 +1824,19 @@ gsm_done:
         irxptr = module_install(modlist_get_by_func(&drv.mod, "UDNL"), irxptr, irxptr_tab);
     irxptr_tab++;
     irxtable->count++;
-    // FHI BD
+    // FHI
     if (modlist_get_by_func(&drv.mod, "FHI_BD") != NULL) {
+        // FHI BD
         irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD"), irxptr, irxptr_tab++);
         irxtable->count++;
     }
-    // FHI FILEID
-    if (modlist_get_by_func(&drv.mod, "FHI_FILEID") != NULL) {
+    else if (modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG") != NULL) {
+        // FHI BD DEFRAG
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"), irxptr, irxptr_tab++);
+        irxtable->count++;
+    }
+    else if (modlist_get_by_func(&drv.mod, "FHI_FILEID") != NULL) {
+        // FHI FILEID
         irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_FILEID"), irxptr, irxptr_tab++);
         irxtable->count++;
     }
