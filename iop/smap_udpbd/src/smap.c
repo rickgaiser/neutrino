@@ -406,10 +406,10 @@ static void IntrHandlerThread(struct SmapDriverData *SmapDrivPrivData)
                 DelayThread(10000);
                 SmapDrivPrivData->SmapIsInitialized = 1;
 
+                udptty_init();
 #ifndef NO_BDM
                 udpbd_init();
 #endif
-                udptty_init();
 
                 if (!SmapDrivPrivData->EnableLinkCheckTimer) {
                     USec2SysClock(1000000, &SmapDrivPrivData->LinkCheckTimer);
