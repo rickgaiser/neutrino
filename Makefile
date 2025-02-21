@@ -91,7 +91,7 @@ sim:
 sim_mount:
 	losetup -Pf ee/loader/bd_exfat.raw
 
-RELEASE_DIR = releases/neutrino_$(shell git describe --tags)
+RELEASE_DIR = ./releases/neutrino_$(shell git describe --tags)
 release: all copy
 	mkdir -p                     $(RELEASE_DIR)
 	cp    README.md              $(RELEASE_DIR)
