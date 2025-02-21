@@ -1618,15 +1618,16 @@ gsm_done:
         }
         fname_end[1] = '1';
         fname_end[2] = '\0';
-
-        // Locate and set GameID
+    }
+    
+    /*
+     * Check if ELF file path contains Game ID
+     */
+    if ((strlen(sys.sELFFile) > 18) && (sys.sELFFile[12] == '_') && (sys.sELFFile[16] == '.')) {
         memcpy(sGameID, &sys.sELFFile[8], 11);
         sGameID[11] = '\0';
-    }
-    else {
-        // Manually specifying an ELF file == no GameID
+    } else 
         sGameID[0] = '\0';
-    }
 
     /*
      * Get ELF/game compatibility flags
