@@ -1881,6 +1881,26 @@ gsm_done:
     eeloadCopy = sbvpp_replace_eeload((void *)eh->entry);
     initUserMemory = sbvpp_patch_user_mem_clear(irxptr);
 
+#ifdef DEBUG
+    //
+    // Simple checksum
+    //
+    uint32_t *pms = (uint32_t *)irxtable;
+    printf("Module memory checksum:\n");
+    while (pms < (uint32_t *)0x100000) {
+        uint32_t ssv = 0;
+        int i;
+        for (i=0; i<1024; i++) {
+            ssv += pms[i];
+            // Skip imgdrv patch area
+            if (pms[i] == 0xDEC1DEC1)
+                i += 2;
+        }
+        printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
+        pms += 1024;
+    }
+#endif
+
     //
     // Set arguments, and start EECORE
     //

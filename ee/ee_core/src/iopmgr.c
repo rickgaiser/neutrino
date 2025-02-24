@@ -79,6 +79,26 @@ void New_Reset_Iop(const char *arg, int arglen)
     }
     last_arg = arg;
 
+#ifdef __EESIO_DEBUG
+    //
+    // Simple checksum
+    //
+    u32 *pms = (u32 *)ModStorageStart;
+    DPRINTF("Module memory checksum:\n");
+    while (pms < (u32 *)0x100000) {
+        u32 ssv = 0;
+        int i;
+        for (i=0; i<1024; i++) {
+            ssv += pms[i];
+            // Skip imgdrv patch area
+            if (pms[i] == 0xDEC1DEC1)
+                i += 2;
+        }
+        DPRINTF("- 0x%08x = 0x%08x\n", (u32)pms, ssv);
+        pms += 1024;
+    }
+#endif
+
     new_iop_reboot_count++;
 
     udnl_cmdlen = 0;
