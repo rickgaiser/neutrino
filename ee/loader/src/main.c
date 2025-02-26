@@ -20,7 +20,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "compat.h"
 #include "patch.h"
 #include "modules.h"
-#include "ee_core_config.h"
+#include "ee_core.h"
 #include "ee_core_flag.h"
 #include "ioprp.h"
 #include "iso_cnf.h"
@@ -32,6 +32,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "../../../iop/common/fhi_file.h"
 #include "../../../iop/common/fhi_fileid.h"
 #include "../../../iop/common/fhi.h"
+#include "../../ee_core/include/interface.h"
 #include "toml.h"
 
 #define NEWLIB_PORT_AWARE
@@ -61,8 +62,6 @@ OPL Module Storage Memory Map:
     imgdrv.irx
     <extra modules>
 */
-
-static struct SEECoreConfig eeconf;
 
 void print_usage()
 {
@@ -846,30 +845,8 @@ err_exit:
 /*
  * Get a pointer to the settings data structure of a module
  */
-void *modlist_get_settings(struct SModList *ml, const char *name)
+void *module_get_settings(struct SModule *mod)
 {
-    struct SModule *mod = modlist_get_by_name(ml, name);
-    void *settings = NULL;
-
-    if (mod != NULL) {
-        int i;
-        for (i = 0; i < mod->iSize; i += 4) {
-            if (*(uint32_t *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
-                settings = (void *)(mod->pData + i);
-                break;
-            }
-        }
-    }
-
-    return settings;
-}
-
-/*
- * Get a pointer to the settings data structure of a module
- */
-void *modlist_get_settings_by_func(struct SModList *ml, const char *func)
-{
-    struct SModule *mod = modlist_get_by_func(ml, func);
     void *settings = NULL;
 
     if (mod != NULL) {
@@ -1007,8 +984,7 @@ int main(int argc, char *argv[])
     irxtab_t *irxtable;
     irxptr_t *irxptr_tab;
     uint8_t *irxptr;
-    int i;
-    void *eeloadCopy, *initUserMemory;
+    int i, j;
     char sGameID[12];
     int fd_system_cnf;
     char system_cnf_data[128];
@@ -1094,9 +1070,9 @@ int main(int argc, char *argv[])
         else if (!strncmp(argv[i], "-cwd=", 5))
             continue;
         else if (!strncmp(argv[i], "-logo", 5))
-            sys.bLogo = true;
+            sys.bLogo = 1;
         else if (!strncmp(argv[i], "-qb", 3))
-            sys.bQuickBoot = true;
+            sys.bQuickBoot = 1;
         else if (!strncmp(argv[i], "--b", 3)) {
             iELFArgcStart = i + 1;
             break;
@@ -1371,10 +1347,10 @@ gsm_done:
     mod_ee_core.sFileName = sys.eecore_elf;
     if (module_load(&mod_ee_core) < 0)
         return -1;
-    if (modlist_load(&drv.mod, (sys.bQuickBoot == false) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0)
+    if (modlist_load(&drv.mod, (sys.bQuickBoot == 0) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0)
         return -1;
 
-    if (sys.bQuickBoot == false) {
+    if (sys.bQuickBoot == 0) {
         /*
         * Reboot IOP into Load Environment (LE)
         */
@@ -1405,38 +1381,41 @@ gsm_done:
             fileXioInit();
     }
 
+    // Load EE_CORE settings
+    struct ee_core_data *set_ee_core = module_get_settings(&mod_ee_core);
+
     // FAKEMOD optional module
     // Only loaded when modules need to be faked
     struct SModule *mod_fakemod = modlist_get_by_func(&drv.mod, "FAKEMOD");
 
     // Load module settings for fhi_bd_defrag backing store
-    struct fhi_bd_defrag *set_fhi_bd_defrag = modlist_get_settings_by_func(&drv.mod, "FHI_BD_DEFRAG");
+    struct fhi_bd_defrag *set_fhi_bd_defrag = module_get_settings(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"));
     if (set_fhi_bd_defrag != NULL)
         memset((void *)set_fhi_bd_defrag, 0, sizeof(struct fhi_bd_defrag));
 
     // Load module settings for fhi_bd backing store
-    struct fhi_bd *set_fhi_bd = modlist_get_settings_by_func(&drv.mod, "FHI_BD");
+    struct fhi_bd *set_fhi_bd = module_get_settings(modlist_get_by_func(&drv.mod, "FHI_BD"));
     if (set_fhi_bd != NULL)
         memset((void *)set_fhi_bd, 0, sizeof(struct fhi_bd));
 
     // Load module settings for fhi_fileid backing store
-    struct fhi_fileid *set_fhi_fileid = modlist_get_settings_by_func(&drv.mod, "FHI_FILEID");
+    struct fhi_fileid *set_fhi_fileid = module_get_settings(modlist_get_by_func(&drv.mod, "FHI_FILEID"));
     if (set_fhi_fileid != NULL)
         memset((void *)set_fhi_fileid, 0, sizeof(struct fhi_fileid));
 
     // Load module settings for cdvd emulator
-    struct cdvdman_settings_common *set_cdvdman = modlist_get_settings(&drv.mod, "cdvdman_emu.irx");
+    struct cdvdman_settings_common *set_cdvdman = module_get_settings(modlist_get_by_name(&drv.mod, "cdvdman_emu.irx"));
     if (set_cdvdman != NULL)
         memset((void *)set_cdvdman, 0, sizeof(struct cdvdman_settings_common));
 
     // Load module settings for module faker
-    struct fakemod_data *set_fakemod = modlist_get_settings(&drv.mod, "fakemod.irx");
+    struct fakemod_data *set_fakemod = module_get_settings(modlist_get_by_name(&drv.mod, "fakemod.irx"));
     if (set_fakemod != NULL)
         memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
 
     // Quickboot requires certain IOP modules to be loaded before starting Neutrino
     // Re-initialize EE-side libraries using those modules
-    if (sys.bQuickBoot == true) {
+    if (sys.bQuickBoot == 1) {
         // fileXioIoctl2 needed ?
         if ((set_fhi_bd_defrag != NULL) || (set_fhi_bd != NULL) || (set_fhi_fileid != NULL)) {
             if (fileXioInit() < 0) {
@@ -1857,6 +1836,30 @@ gsm_done:
     }
 
     //
+    // Set EE_CORE settings before loading into place
+    //
+    strncpy(set_ee_core->GameID, sGameID, 16);
+    set_ee_core->initUserMemory  = sbvpp_patch_user_mem_clear(irxptr);;
+    set_ee_core->ModStorageStart = irxtable;
+    set_ee_core->ModStorageEnd   = irxptr;
+    set_ee_core->ee_core_flags   = eecore_compat;
+    // Simple checksum
+    uint32_t *pms = (uint32_t *)irxtable;
+    printf("Module memory checksum:\n");
+    for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
+        uint32_t ssv = 0;
+        for (i=0; i<1024; i++) {
+            ssv += pms[i];
+            // Skip imgdrv patch area
+            if (pms[i] == 0xDEC1DEC1)
+                i += 2;
+        }
+        printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
+        set_ee_core->mod_checksum_4k[j] = ssv;
+        pms += 1024;
+    }
+
+    //
     // Load EECORE ELF sections
     //
     uint8_t *boot_elf = (uint8_t *)mod_ee_core.pData;
@@ -1873,51 +1876,51 @@ gsm_done:
             memset((uint8_t *)eph[i].vaddr + eph[i].filesz, 0, eph[i].memsz - eph[i].filesz);
     }
 
-    //
-    // Patch PS2 to:
-    // - use our "ee_core.elf" instead of EELOAD
-    // - not wipe our loaded data after reboot
-    //
-    eeloadCopy = sbvpp_replace_eeload((void *)eh->entry);
-    initUserMemory = sbvpp_patch_user_mem_clear(irxptr);
+    // Patch PS2 to use our "ee_core.elf" instead of EELOAD
+    sbvpp_replace_eeload((void *)eh->entry);
 
-#ifdef DEBUG
     //
-    // Simple checksum
+    // Create EE_CORE argument string
     //
-    uint32_t *pms = (uint32_t *)irxtable;
-    printf("Module memory checksum:\n");
-    while (pms < (uint32_t *)0x100000) {
-        uint32_t ssv = 0;
-        int i;
-        for (i=0; i<1024; i++) {
-            ssv += pms[i];
-            // Skip imgdrv patch area
-            if (pms[i] == 0xDEC1DEC1)
-                i += 2;
-        }
-        printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
-        pms += 1024;
+    char ee_core_arg_string[256];
+    char *ee_core_argv[32];
+    int ee_core_argc = 0;
+    char *psConfig = ee_core_arg_string;
+    size_t maxStrLen = sizeof(ee_core_arg_string);
+    // PS2 Logo (optional)
+    if (sys.bLogo) {
+        snprintf(psConfig, maxStrLen, "%s", "rom0:PS2LOGO");
+        ee_core_argv[ee_core_argc++] = psConfig;
+        maxStrLen -= strlen(psConfig) + 1;
+        psConfig += strlen(psConfig) + 1;
     }
-#endif
+    // ELF path
+    snprintf(psConfig, maxStrLen, "%s", sys.sELFFile);
+    ee_core_argv[ee_core_argc++] = psConfig;
+    maxStrLen -= strlen(psConfig) + 1;
+    psConfig += strlen(psConfig) + 1;
+    // ELF args
+    for (i = iELFArgcStart; i < argc; i++) {
+        snprintf(psConfig, maxStrLen, "%s", argv[i]);
+        ee_core_argv[ee_core_argc++] = psConfig;
+        maxStrLen -= strlen(psConfig) + 1;
+        psConfig += strlen(psConfig) + 1;
+    }
 
     //
-    // Set arguments, and start EECORE
+    // Start EE_CORE
     //
-    eecc_init(&eeconf);
-    //eecc_setGameMode(&eeconf, "-"); // FIXME: implement or remove
-    if (sGameID[0] != 0)
-        eecc_setGameID(&eeconf, sGameID);
-    eecc_setELFName(&eeconf, sys.sELFFile);
-    eecc_setELFArgs(&eeconf, argc-iELFArgcStart, (const char **)&argv[iELFArgcStart]);
-    eecc_setKernelConfig(&eeconf, eeloadCopy, initUserMemory);
-    eecc_setModStorageConfig(&eeconf, irxtable, irxptr);
-    eecc_setCompatFlags(&eeconf, eecore_compat);
-    eecc_setPS2Logo(&eeconf, sys.bLogo);
     printf("Starting ee_core with following arguments:\n");
-    eecc_print(&eeconf);
-
-    ExecPS2((void *)eh->entry, NULL, eecc_argc(&eeconf), (char **)eecc_argv(&eeconf));
+    printf("- GameID          = %s\n",   set_ee_core->GameID);
+    printf("- initUserMemory  = 0x%p\n", set_ee_core->initUserMemory);
+    printf("- ModStorageStart = 0x%p\n", set_ee_core->ModStorageStart);
+    printf("- ModStorageEnd   = 0x%p\n", set_ee_core->ModStorageEnd);
+    printf("- ee_core_flags   = 0x%lx\n", set_ee_core->ee_core_flags);
+    printf("- args:\n");
+    for (int i = 0; i < ee_core_argc; i++) {
+        printf("- [%d] %s\n", i, ee_core_argv[i]);
+    }
+    ExecPS2((void *)eh->entry, NULL, ee_core_argc, ee_core_argv);
 
     return 0;
 }

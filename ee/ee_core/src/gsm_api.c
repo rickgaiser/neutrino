@@ -6,6 +6,7 @@
 
 #include "ee_core.h"
 #include "ee_core_flag.h"
+#include "interface.h"
 
 #include "ee_asm.h"
 #include "ee_regs.h"
@@ -516,7 +517,7 @@ void EnableGSM(void)
 {
     vu32 *v_debug = (vu32 *)0x80000100;
 
-    state.flags = g_ee_core_flags;
+    state.flags = eec.ee_core_flags;
 
     // Hook SetGsCrt
     state.org_SetGsCrt = GetSyscallHandler(__NR_SetGsCrt);
@@ -543,7 +544,7 @@ void EnableGSM(void)
     //   0x1fffff5f = mask
     //   0x1fffef5f = mask + CSR
     _ee_mtdab(0x12000000);
-    if (g_ee_core_flags & (EECORE_FLAG_GSM_C_1 | EECORE_FLAG_GSM_C_2 | EECORE_FLAG_GSM_C_3)) {
+    if (eec.ee_core_flags & (EECORE_FLAG_GSM_C_1 | EECORE_FLAG_GSM_C_2 | EECORE_FLAG_GSM_C_3)) {
         // For FIELD flipping we need to also set a breakpoint for CSR register
         _ee_mtdabm(0x1fffef5f);
     } else {

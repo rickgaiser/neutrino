@@ -25,6 +25,7 @@
 #include <kernel.h>
 #include <syscallnr.h>
 #include "include/cheat_api.h"
+#include "interface.h"
 
 /*---------------------------------*/
 /* Setup PS2RD Cheat Engine params */
@@ -41,8 +42,8 @@ static void SetupCheats()
 
     while (i < MAX_CHEATLIST) {
 
-        code.addr = gCheatList[i];
-        code.val = gCheatList[i + 1];
+        code.addr = eec.CheatList[i];
+        code.val = eec.CheatList[i + 1];
         i += 2;
 
         if ((code.addr == 0) && (code.val == 0))

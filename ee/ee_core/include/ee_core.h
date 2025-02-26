@@ -36,17 +36,11 @@
 extern int set_reg_hook;
 extern int new_iop_reboot_count;
 
-extern u32 g_ee_core_flags;
-
-extern char GameID[16];
-extern int GameMode;
 #define BDM_ILK_MODE (1<<0)
 #define BDM_M4S_MODE (1<<1)
 #define BDM_USB_MODE (1<<2)
 #define BDM_UDP_MODE (1<<3)
 #define BDM_ATA_MODE (1<<4)
 #define BDM_NOP_MODE (1<<31)
-
-extern int *gCheatList; // Store hooks/codes addr+val pairs
 
 #endif

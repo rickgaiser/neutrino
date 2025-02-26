@@ -15,9 +15,9 @@
 #include "modules.h"
 #include "util.h"
 #include "syshook.h"
+#include "interface.h"
 
 extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
-extern void *ModStorageStart;
 
 int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
 
@@ -55,13 +55,13 @@ static void print_iop_args(int arg_len, const char *args)
 /*----------------------------------------------------------------*/
 void New_Reset_Iop(const char *arg, int arglen)
 {
-    int i;
+    int i, j;
     void *pIOP_buffer;
     const void *IOPRP_img, *imgdrv_irx, *udnl_irx;
     unsigned int length_rounded, udnl_cmdlen, size_IOPRP_img, size_imgdrv_irx, size_udnl_irx;
     char udnl_mod[10];
     char udnl_cmd[RESET_ARG_MAX + 1];
-    irxtab_t *irxtable = (irxtab_t *)ModStorageStart;
+    irxtab_t *irxtable = (irxtab_t *)eec.ModStorageStart;
     static int imgdrv_offset = 0;
     static const char *last_arg = (char*)1;
 
@@ -79,13 +79,12 @@ void New_Reset_Iop(const char *arg, int arglen)
     }
     last_arg = arg;
 
-#ifdef __EESIO_DEBUG
     //
-    // Simple checksum
+    // Simple module checksum
     //
-    u32 *pms = (u32 *)ModStorageStart;
+    u32 *pms = (u32 *)eec.ModStorageStart;
     DPRINTF("Module memory checksum:\n");
-    while (pms < (u32 *)0x100000) {
+    for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
         u32 ssv = 0;
         int i;
         for (i=0; i<1024; i++) {
@@ -94,10 +93,15 @@ void New_Reset_Iop(const char *arg, int arglen)
             if (pms[i] == 0xDEC1DEC1)
                 i += 2;
         }
-        DPRINTF("- 0x%08x = 0x%08x\n", (u32)pms, ssv);
+        if (ssv == eec.mod_checksum_4k[j]) {
+            DPRINTF("- 0x%08x = 0x%08x\n", (u32)pms, ssv);
+        } else {
+            DPRINTF("- 0x%08x = 0x%08x != 0x%08x\n", (u32)pms, ssv, eec.mod_checksum_4k[j]);
+            DPRINTF("- FREEZE!\n");
+            while (1) {}
+        }
         pms += 1024;
     }
-#endif
 
     new_iop_reboot_count++;
 

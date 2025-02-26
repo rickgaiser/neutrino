@@ -23,9 +23,6 @@ int set_reg_hook = 0;
 int get_reg_hook = 0;
 int new_iop_reboot_count = 0;
 
-extern void *ModStorageStart, *ModStorageEnd;
-extern void *eeloadCopy, *initUserMemory;
-
 // Global data
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
 int (*Old_SifSetReg)(u32 register_num, int register_value);

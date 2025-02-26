@@ -1,6 +1,6 @@
 GIT_TAG = $(shell git describe --tags)
 
-EE_OBJS = main.o compat.o xparam.o patch.o ee_core_config.o ioprp.o toml.o iso_cnf.o
+EE_OBJS = main.o compat.o xparam.o patch.o ioprp.o toml.o iso_cnf.o
 EE_INCS = -I../ee_core/include
 EE_LIBS = -lfileXio -lpatches
 EE_CFLAGS = -DGIT_TAG=\"$(GIT_TAG)\"

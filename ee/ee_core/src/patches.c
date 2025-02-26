@@ -11,6 +11,7 @@
 #include "ee_core.h"
 #include "util.h"
 #include "modules.h"
+#include "interface.h"
 
 #define ALL_MODE (0xffffffff)
 #define BDM_MODE (BDM_USB_MODE|BDM_M4S_MODE) // Only USB-like slow devices?
@@ -678,7 +679,7 @@ static void EutechnyxWakeupTIDPatch(u32 addr)
     MTV Pimp My Ride uses same serial for v1.00 and v2.00 of USA release.
     We need to tell which offsets to use.
     */
-    if (_strcmp(GameID, "SLUS_215.80") == 0) {
+    if (_strcmp(eec.GameID, "SLUS_215.80") == 0) {
         // Check version v1.00 by default.
         if (*(vu16 *)addr == 1) {
             *(vu16 *)addr = (u16)GetThreadId();
@@ -696,7 +697,7 @@ static void EutechnyxWakeupTIDPatch(u32 addr)
     Same problem with SRS: Street Racing Syndicate
     The patch already exists but it was for v1.03 of the game so if it was trying to boot v2.00 then it would be wrong patched. This handles both cases correctly.
     */
-    if (_strcmp(GameID, "SLUS_205.82") == 0) {
+    if (_strcmp(eec.GameID, "SLUS_205.82") == 0) {
         // Check version v1.03 by default.
         if (*(vu16 *)addr == 1) {
             *(vu16 *)addr = (u16)GetThreadId();
@@ -868,11 +869,11 @@ void apply_patches(const char *path)
     // Some patches hack into specific ELF files
     // make sure the filename and gameid match for those patches
     // This prevents games with multiple ELF's from being corrupted by the patch
-    int file_eq_gameid = !_strncmp(&path[8], GameID, 11); // starting after 'cdrom0:\'
+    int file_eq_gameid = !_strncmp(&path[8], eec.GameID, 11); // starting after 'cdrom0:\'
 
     // if there are patches matching game name/mode then fill the patch table
     for (p = patch_list; p->game; p++) {
-        if ((!_strcmp(GameID, p->game)) && (p->mode & GameMode)) {
+        if ((!_strcmp(eec.GameID, p->game)) && (p->mode & eec.GameMode)) {
             switch (p->patch.addr) {
                 case PATCH_GENERIC_NIS:
                     NIS_generic_patches();
