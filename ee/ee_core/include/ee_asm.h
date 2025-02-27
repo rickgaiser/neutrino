@@ -3,6 +3,7 @@
 
 
 #include <tamtypes.h>
+#include <ee_cop0_defs.h>
 
 
 // COP0 register getters and setters

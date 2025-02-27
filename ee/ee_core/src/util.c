@@ -7,7 +7,14 @@
   Some parts of the code are taken from HD Project by Polo
 */
 
-#include "ee_core.h"
+// libc/newlib
+#include <string.h>
+
+// PS2SDK
+#include <sifdma.h>
+#include <sifcmd.h>
+
+// Neutrino
 #include "iopmgr.h"
 #include "util.h"
 

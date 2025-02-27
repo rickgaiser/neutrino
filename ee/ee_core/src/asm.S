@@ -13,7 +13,7 @@
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
 
-#include "ee_core_flag.h"
+#define EECORE_FLAG_UNHOOK (1<< 0) // Unhook syscalls, keep value the same as used by C code
 
 .set push
 .set noreorder

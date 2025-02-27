@@ -3,8 +3,8 @@
 
 // Other
 #include "compat.h"
-#include "ee_core_flag.h" // EECORE flags
-#include "../../../iop/common/cdvd_config.h" // CDVDMAN compat flags
+#include "../../ee_core/include/interface.h" // EECORE compatibility flags
+#include "../../../iop/common/cdvd_config.h" // CDVDMAN compatibility flags
 
 
 typedef struct

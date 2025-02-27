@@ -5,9 +5,46 @@
 #include <stdint.h>
 
 
-#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
-#define EEC_MOD_CHECKSUM_COUNT 32
+// Pointer to IRX module in hidden EE RAM area
+typedef struct
+{
+    const void *ptr;
+    unsigned int size;
 
+    unsigned int arg_len;
+    const char *args;
+} irxptr_t;
+
+// Table pointing to all IRX modules
+typedef struct
+{
+    irxptr_t *modules;
+    int count;
+} irxtab_t;
+
+// Magic number to find the interface struct
+#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
+
+// Compatibility flags
+#define EECORE_FLAG_UNHOOK      (1<< 0) // Unhook syscalls, keep value the same as in asm.S!
+#define EECORE_FLAG_GSM_FLD_FP  (1<<10) // GSM: Field Mode: Force Progressive
+#define EECORE_FLAG_GSM_FRM_FP1 (1<<11) // GSM: Frame Mode: Force Progressive (240p)
+#define EECORE_FLAG_GSM_FRM_FP2 (1<<12) // GSM: Frame Mode: Force Progressive (line-double)
+#define EECORE_FLAG_GSM_NO_576P (1<<13) // GSM: Disable GSM 576p mode
+#define EECORE_FLAG_GSM_C_1     (1<<14) // GSM: Enable FIELD flip type 1
+#define EECORE_FLAG_GSM_C_2     (1<<15) // GSM: Enable FIELD flip type 2
+#define EECORE_FLAG_GSM_C_3     (1<<16) // GSM: Enable FIELD flip type 3
+
+// Backing stores, only used by patches!
+#define BDM_ILK_MODE (1<< 0)
+#define BDM_M4S_MODE (1<< 1)
+#define BDM_USB_MODE (1<< 2)
+#define BDM_UDP_MODE (1<< 3)
+#define BDM_ATA_MODE (1<< 4)
+#define BDM_NOP_MODE (1<<31)
+
+// Interface to loader
+#define EEC_MOD_CHECKSUM_COUNT 32
 struct ee_core_data
 {
     // Magic number to find

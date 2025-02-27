@@ -8,9 +8,15 @@
   Some parts of the code have been taken from Polo's HD Project and doctorxyz's GSM
 */
 
-#include "ee_core.h"
+// libc/newlib
+#include <string.h>
+
+// PS2SDK
+#include <smem.h>
+
+// Neutrino
+#include "ee_debug.h"
 #include "util.h"
-#include "modules.h"
 #include "interface.h"
 
 #define ALL_MODE (0xffffffff)

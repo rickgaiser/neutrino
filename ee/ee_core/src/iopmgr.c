@@ -7,17 +7,25 @@
   Some parts of the code are taken from HD Project by Polo
 */
 
+// libc/newlib
+#include <string.h>
+
+// PS2SDK
 #include <iopcontrol.h>
 #include <loadfile.h>
+#include <sifrpc.h>
+#include <iopheap.h>
+#include <sbv_patches.h>
 
-#include "ee_core.h"
+// Neutrino
+#include "ee_debug.h"
 #include "iopmgr.h"
-#include "modules.h"
 #include "util.h"
 #include "syshook.h"
 #include "interface.h"
 
 extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
+int new_iop_reboot_count = 0;
 
 int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
 
@@ -49,6 +57,20 @@ static void print_iop_args(int arg_len, const char *args)
     }
 }
 #endif
+
+#include <gs_privileged.h> // BGCOLOR
+static u64 debug_color[] = {
+    GS_SET_BGCOLOR(255,   0,   0), // 0 = Red
+    GS_SET_BGCOLOR(255, 128,   0), // 1 = Orange
+    GS_SET_BGCOLOR(255, 255,   0), // 2 = Yellow
+    GS_SET_BGCOLOR(  0, 255,   0), // 3 = Green
+    GS_SET_BGCOLOR(  0, 255, 255), // 4 = L-Blue
+    GS_SET_BGCOLOR(  0,   0, 255), // 5 = D-Blue
+    GS_SET_BGCOLOR(127,   0, 255), // 6 = Purple
+
+    GS_SET_BGCOLOR(127, 127, 127), // 7 = Grey
+    GS_SET_BGCOLOR(255, 255, 255), // 8 = White
+};
 
 /*----------------------------------------------------------------*/
 /* Reset IOP to include our modules.                              */
@@ -98,12 +120,15 @@ void New_Reset_Iop(const char *arg, int arglen)
         } else {
             DPRINTF("- 0x%08x = 0x%08x != 0x%08x\n", (u32)pms, ssv, eec.mod_checksum_4k[j]);
             DPRINTF("- FREEZE!\n");
+            *GS_REG_BGCOLOR = debug_color[0];
             while (1) {}
         }
         pms += 1024;
     }
 
     new_iop_reboot_count++;
+
+    *GS_REG_BGCOLOR = debug_color[0];
 
     udnl_cmdlen = 0;
     if (arglen >= 10) {
@@ -127,6 +152,8 @@ void New_Reset_Iop(const char *arg, int arglen)
     } else {
         strncpy(udnl_mod, "rom0:UDNL", 10);
     }
+
+    *GS_REG_BGCOLOR = debug_color[1];
 
     // Add our own IOPRP image
     strncpy(&udnl_cmd[udnl_cmdlen], "img0:", 6);
@@ -158,6 +185,8 @@ void New_Reset_Iop(const char *arg, int arglen)
     *(void **)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset+4])) = pIOP_buffer;
     *(u32   *)(UNCACHED_SEG(&((unsigned char *)imgdrv_irx)[imgdrv_offset+8])) = size_IOPRP_img;
 
+    *GS_REG_BGCOLOR = debug_color[2];
+
     // Load patched imgdrv.irx
     SifExecModuleBuffer((void *)imgdrv_irx, size_imgdrv_irx, 0, NULL, NULL);
 
@@ -177,6 +206,8 @@ void New_Reset_Iop(const char *arg, int arglen)
         _SifLoadModule(udnl_mod, udnl_cmdlen, udnl_cmd, NULL, LF_F_MOD_LOAD, 1);
     }
 
+    *GS_REG_BGCOLOR = debug_color[3];
+
     DIntr();
     ee_kmode_enter();
     Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_SIFINIT);
@@ -188,9 +219,12 @@ void New_Reset_Iop(const char *arg, int arglen)
 
     _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
 
+    *GS_REG_BGCOLOR = debug_color[4]; // L-blue
+
     while (!SifIopSync()) {
         ;
     }
+    *GS_REG_BGCOLOR = debug_color[5]; // D-blue
 
     services_start();
     // Patch the IOP to support LoadModuleBuffer

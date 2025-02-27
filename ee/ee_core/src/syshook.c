@@ -7,21 +7,24 @@
   Some parts of the code are taken from HD Project by Polo
 */
 
-#include "ee_core.h"
+// PS2SDK
+#include <syscallnr.h>
+#include <ee_regs.h>
+#include <ps2_reg_defs.h>
+#include <loadfile.h>
+#include <sifrpc.h>
+#include <iopheap.h>
+
+// Neutrino
+#include "ee_debug.h"
 #include "asm.h"
 #include "iopmgr.h"
 #include "util.h"
 #include "patches.h"
 #include "syshook.h"
 
-#include <syscallnr.h>
-#include <ee_regs.h>
-#include <ps2_reg_defs.h>
-#include <loadfile.h>
-
 int set_reg_hook = 0;
 int get_reg_hook = 0;
-int new_iop_reboot_count = 0;
 
 // Global data
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);

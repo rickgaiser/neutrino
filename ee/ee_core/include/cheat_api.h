@@ -1,9 +1,6 @@
 #ifndef _CHEATAPI_H_
 #define _CHEATAPI_H_
 
-#include "include/cheat_engine.h"
-#include "include/ee_core.h"
-
 void EnableCheats(void);
 void DisableCheats(void);
 

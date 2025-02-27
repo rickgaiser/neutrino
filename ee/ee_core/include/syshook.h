@@ -11,6 +11,7 @@
 #define SYSHOOK_H
 
 #include <tamtypes.h>
+#include <sifdma.h>
 
 void services_start(void);
 void services_exit(void);

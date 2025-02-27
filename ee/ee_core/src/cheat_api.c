@@ -21,10 +21,14 @@
  * $Id$
  */
 
+// PS2SDK
 #include <tamtypes.h>
 #include <kernel.h>
 #include <syscallnr.h>
-#include "include/cheat_api.h"
+
+// Neutrino
+#include "cheat_api.h"
+#include "cheat_engine.h"
 #include "interface.h"
 
 /*---------------------------------*/

@@ -14,17 +14,14 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include <loadfile.h>
 #include <iopcontrol.h>
 #include <libcdvd-common.h>
+#include <sifrpc.h>
+#include <iopheap.h>
+#include <sbv_patches.h>
 
-// Other
-#include "elf.h"
-#include "compat.h"
-#include "patch.h"
-#include "modules.h"
-#include "ee_core.h"
-#include "ee_core_flag.h"
-#include "ioprp.h"
-#include "iso_cnf.h"
-#include "xparam.h"
+// Neutrino EE_CORE
+#include "../../ee_core/include/interface.h"
+
+// Neutrino IOP modules
 #include "../../../iop/common/cdvd_config.h"
 #include "../../../iop/common/fakemod.h"
 #include "../../../iop/common/fhi_bd.h"
@@ -32,7 +29,14 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "../../../iop/common/fhi_file.h"
 #include "../../../iop/common/fhi_fileid.h"
 #include "../../../iop/common/fhi.h"
-#include "../../ee_core/include/interface.h"
+
+// Neutrino
+#include "elf.h"
+#include "compat.h"
+#include "patch.h"
+#include "ioprp.h"
+#include "iso_cnf.h"
+#include "xparam.h"
 #include "toml.h"
 
 #define NEWLIB_PORT_AWARE

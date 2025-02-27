@@ -4,8 +4,7 @@
 #include <ee_debug.h>
 #include <gs_privileged.h> // BGCOLOR
 
-#include "ee_core.h"
-#include "ee_core_flag.h"
+#include "ee_debug.h"
 #include "interface.h"
 
 #include "ee_asm.h"

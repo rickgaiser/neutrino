@@ -7,8 +7,13 @@
   Some parts of the code are taken from HD Project by Polo
 */
 
-#include "ee_core.h"
-#include "ee_core_flag.h"
+// PS2SDK
+#include <loadfile.h>
+#include <sifrpc.h>
+#include <iopheap.h>
+
+// Neutrino
+#include "ee_debug.h"
 #include "iopmgr.h"
 #include "patches.h"
 #include "util.h"
@@ -17,8 +22,6 @@
 #include "cheat_api.h"
 #include "gsm_api.h"
 #include "interface.h"
-
-#include <loadfile.h>
 
 extern void *_stack_end;
 
