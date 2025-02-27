@@ -956,14 +956,14 @@ int fhi_fileid_add_file_by_fd(struct fhi_fileid *ffid, int fhi_fid, int fd)
     return 0;
 }
 
-int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *name)
+int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *pathname, int flags)
 {
     int i, fd, rv;
 
     // Open file
-    printf("Loading %s...\n", name);
+    printf("Loading %s...\n", pathname);
     for (i = 0; i < 1000; i++) {
-        fd = open(name, O_RDONLY);
+        fd = open(pathname, flags);
         if (fd >= 0)
             break;
 
@@ -971,7 +971,7 @@ int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *name)
         nopdelay();
     }
     if (fd < 0) {
-        printf("Unable to open %s\n", name);
+        printf("Unable to open %s\n", pathname);
         return -1;
     }
 
@@ -1643,10 +1643,10 @@ gsm_done:
                     return -1;
             }
         } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0, sys.sATA0File) < 0)
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0, sys.sATA0File, O_RDWR) < 0)
                 return -1;
             if (sys.sATA0IDFile != NULL) {
-                if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
+                if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0ID, sys.sATA0IDFile, O_RDONLY) < 0)
                     return -1;
             }
         } else {
@@ -1663,7 +1663,7 @@ gsm_done:
             if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA1, sys.sATA1File) < 0)
                 return -1;
         } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA1, sys.sATA1File) < 0)
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA1, sys.sATA1File, O_RDWR) < 0)
                 return -1;
         } else {
             printf("ERROR: ATA emulator needs compatible FHI backing store!\n");
@@ -1679,7 +1679,7 @@ gsm_done:
             if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC0, sys.sMC0File) < 0)
                 return -1;
         } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC0, sys.sMC0File) < 0)
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC0, sys.sMC0File, O_RDWR) < 0)
                 return -1;
         } else {
             printf("ERROR: MC0 emulator needs compatible FHI backing store!\n");
@@ -1695,7 +1695,7 @@ gsm_done:
             if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC1, sys.sMC1File) < 0)
                 return -1;
         } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC1, sys.sMC1File) < 0)
+            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC1, sys.sMC1File, O_RDWR) < 0)
                 return -1;
         } else {
             printf("ERROR: MC1 emulator needs compatible FHI backing store!\n");
