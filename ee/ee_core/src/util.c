@@ -15,6 +15,7 @@
 #include <sifcmd.h>
 
 // Neutrino
+#include "ee_debug.h"
 #include "iopmgr.h"
 #include "util.h"
 
@@ -342,16 +343,26 @@ void WipeUserMemory(void *start, void *end)
     }
 }
 
-/*----------------------------------------------------------------------------------------*/
-/* NOP delay.                                                                             */
-/*----------------------------------------------------------------------------------------*/
+// About 1ms
 void delay(int count)
 {
-    int i, ret;
-
+    int i, j;
     for (i = 0; i < count; i++) {
-        ret = 0x01000000;
-        while (ret--)
+        j = 0x010000;
+        while (j--)
             asm("nop\nnop\nnop\nnop");
+    }
+}
+
+void BGERROR(int count) {
+    int i;
+    while (1) {
+        for (i=0; i<count; i++) {
+            *GS_REG_BGCOLOR = BGCOLOR_RED;
+            delay(150);
+            *GS_REG_BGCOLOR = BGCOLOR_BLACK;
+            delay(350);
+        }
+        delay(650);
     }
 }

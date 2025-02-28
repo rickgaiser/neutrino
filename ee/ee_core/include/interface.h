@@ -27,6 +27,7 @@ typedef struct
 
 // Compatibility flags
 #define EECORE_FLAG_UNHOOK      (1<< 0) // Unhook syscalls, keep value the same as in asm.S!
+#define EECORE_FLAG_DBC         (1<< 1) // Debug colors
 #define EECORE_FLAG_GSM_FLD_FP  (1<<10) // GSM: Field Mode: Force Progressive
 #define EECORE_FLAG_GSM_FRM_FP1 (1<<11) // GSM: Frame Mode: Force Progressive (240p)
 #define EECORE_FLAG_GSM_FRM_FP2 (1<<12) // GSM: Frame Mode: Force Progressive (line-double)

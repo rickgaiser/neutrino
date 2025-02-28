@@ -154,6 +154,7 @@ void print_usage()
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
     printf("\n");
+    printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
     printf("  -qb               Quick-Boot directly into load environment\n");
     printf("\n");
@@ -212,6 +213,7 @@ struct SSystemSettings {
     char *sGC;
     char *sGSM;
     char *sCFGFile;
+    int bDebug;
     int bLogo;
     int bQuickBoot;
 
@@ -800,6 +802,7 @@ int load_driver(const char * type, const char * subtype)
     toml_string_in_overwrite(tbl_root, "default_gc",     &sys.sGC);
     toml_string_in_overwrite(tbl_root, "default_gsm",    &sys.sGSM);
     toml_string_in_overwrite(tbl_root, "default_cfg",    &sys.sCFGFile);
+    toml_bool_in_overwrite  (tbl_root, "default_dbc",    &sys.bDebug);
     toml_bool_in_overwrite  (tbl_root, "default_logo",   &sys.bLogo);
 
     toml_string_in_overwrite(tbl_root, "eecore_elf",      &sys.eecore_elf);
@@ -1073,6 +1076,8 @@ int main(int argc, char *argv[])
             sys.sCFGFile = &argv[i][5];
         else if (!strncmp(argv[i], "-cwd=", 5))
             continue;
+        else if (!strncmp(argv[i], "-dbc", 4))
+            sys.bDebug = 1;
         else if (!strncmp(argv[i], "-logo", 5))
             sys.bLogo = 1;
         else if (!strncmp(argv[i], "-qb", 3))
@@ -1602,14 +1607,14 @@ gsm_done:
         fname_end[1] = '1';
         fname_end[2] = '\0';
     }
-    
+
     /*
      * Check if ELF file path contains Game ID
      */
     if ((strlen(sys.sELFFile) > 18) && (sys.sELFFile[12] == '_') && (sys.sELFFile[16] == '.')) {
         memcpy(sGameID, &sys.sELFFile[8], 11);
         sGameID[11] = '\0';
-    } else 
+    } else
         sGameID[0] = '\0';
 
     /*
@@ -1847,20 +1852,25 @@ gsm_done:
     set_ee_core->ModStorageStart = irxtable;
     set_ee_core->ModStorageEnd   = irxptr;
     set_ee_core->ee_core_flags   = eecore_compat;
-    // Simple checksum
-    uint32_t *pms = (uint32_t *)irxtable;
-    printf("Module memory checksum:\n");
-    for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
-        uint32_t ssv = 0;
-        for (i=0; i<1024; i++) {
-            ssv += pms[i];
-            // Skip imgdrv patch area
-            if (pms[i] == 0xDEC1DEC1)
-                i += 2;
+    if (sys.bDebug) {
+        // Add flag to ee_core
+        set_ee_core->ee_core_flags |= EECORE_FLAG_DBC;
+
+        // Add simple checksum
+        uint32_t *pms = (uint32_t *)irxtable;
+        printf("Module memory checksum:\n");
+        for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
+            uint32_t ssv = 0;
+            for (i=0; i<1024; i++) {
+                ssv += pms[i];
+                // Skip imgdrv patch area
+                if (pms[i] == 0xDEC1DEC1)
+                    i += 2;
+            }
+            printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
+            set_ee_core->mod_checksum_4k[j] = ssv;
+            pms += 1024;
         }
-        printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
-        set_ee_core->mod_checksum_4k[j] = ssv;
-        pms += 1024;
     }
 
     //
