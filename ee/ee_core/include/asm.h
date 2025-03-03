@@ -11,11 +11,9 @@
 #define ASM_H
 
 #include <tamtypes.h>
-#include <kernel.h>
 #include <sifdma.h>
 
 u32 Hook_SifSetDma(SifDmaTransfer_t *sdd, s32 len);
-int Hook_SifSetReg(u32 register_num, int register_value);
 void CleanExecPS2(void *epc, void *gp, int argc, char **argv);
 
 #endif /* ASM */

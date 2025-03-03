@@ -13,8 +13,6 @@
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
 
-#define EECORE_FLAG_UNHOOK (1<< 0) // Unhook syscalls, keep value the same as used by C code
-
 .set push
 .set noreorder
 .set noat
@@ -32,20 +30,10 @@
 /* libkernel */
 .extern ExecPS2
 
-/* iopmgr.c */
-.extern new_iop_reboot_count
-
 /* syshook.c */
 .extern New_SifSetDma
-.extern Old_SifSetDma
-.extern Old_SifSetReg
-.extern Old_SifGetReg
-
-/* main.c */
-.extern g_ee_core_flags
 
 .globl  Hook_SifSetDma
-.globl  Hook_SifSetReg
 .globl  CleanExecPS2
 
 /*
@@ -118,100 +106,6 @@ Hook_SifSetDma:
     nop
 
 .end    Hook_SifSetDma
-
-/*
- * _Apply_Mode3: unhook SifSetDma/SifSetReg
- */
-.ent    _Apply_Mode3
-_Apply_Mode3:
-
-    /* save original stack pointer */
-    daddu   $a0, $sp, $zero
-
-    /* change the stack pointer */
-    la      $sp, _stack_end
-
-    /* preserving ra and a0 registers values */
-    addiu   $sp, $sp, -0x10
-    sd      $ra, 0x0000($sp)
-    sd      $a0, 0x0008($sp)
-
-    /* unhook SifSetDma */
-    addiu   $a0, $zero, __NR_SifSetDma
-    lw      $a1, Old_SifSetDma
-    addiu   $v1, $zero, __NR_SetSyscall
-    syscall
-
-    /* unhook SifSetReg */
-    addiu   $a0, $zero, __NR_SifSetReg
-    lw      $a1, Old_SifSetReg
-    addiu   $v1, $zero, __NR_SetSyscall
-    syscall
-
-    /* unhook SifGetReg */
-    addiu   $a0, $zero, __NR_SifGetReg
-    lw      $a1, Old_SifGetReg
-    addiu   $v1, $zero, __NR_SetSyscall
-    syscall
-
-    /* FlushCache */
-    daddu   $a0, $zero, $zero
-    addiu   $v1, $zero, __NR_FlushCache
-    syscall
-    addiu   $a0, $zero, 2
-    addiu   $v1, $zero, __NR_FlushCache
-    syscall
-
-    /* restore sp and ra registers */
-    ld      $ra, 0x0000($sp)
-    ld      $sp, 0x0008($sp)
-
-    jr      $ra
-    addiu   $v0, $zero, 1
-
-.end    _Apply_Mode3
-
-/*
- * Hook_SifSetReg: disable SifSetReg and unhook SifSetDma/SifSetReg when needed
- */
-.ent    Hook_SifSetReg
-Hook_SifSetReg:
-
-    /* load set_reg_hook counter to a2 */
-    la      $a2, set_reg_hook
-    lw      $v0, 0x0000($a2)
-
-    /* check set_reg_hook is != 0, otherwise execute normal SifSetReg */
-    bne     $v0, $zero, 1f
-    addiu   $v0, $v0, -1
-    lw      $v0, Old_SifSetReg
-    jr      $v0
-    nop
-1:
-    /* decrement set_reg_hook counter by 1 */
-    sw      $v0, 0x0000($a2)
-    bne     $v0, $zero, 3f
-    nop
-
-    /* check compat mode 3 is enabled */
-    lw      $v0, g_ee_core_flags
-    andi    $v0, $v0, EECORE_FLAG_UNHOOK
-    beq     $v0, $zero, 3f
-
-    /* check new_iop_reboot_count is == 2 */
-    addiu   $v1, $zero, 2
-    lw      $v0, new_iop_reboot_count
-    bne     $v0, $v1, 3f
-    nop
-
-    /* exit syscall to _Apply_Mode3 */
-    la      $v1, _Apply_Mode3
-    sw      $v1, 0x0008($sp)
-3:
-    jr      $ra
-    addiu   $v0, $zero, 1
-
-.end    Hook_SifSetReg
 
 .ent CleanExecPS2
 CleanExecPS2:

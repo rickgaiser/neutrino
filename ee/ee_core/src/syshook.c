@@ -67,9 +67,40 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
     return 1;
 }
 
+// Function running in kernel mode!
+// No printf and keep as simple as possible!
+static int Hook_SifSetReg(u32 register_num, int register_value)
+{
+    if (set_reg_hook == 4 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_SIFINIT) {
+        set_reg_hook--;
+        return 0;
+    } else if (set_reg_hook == 3 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_CMDINIT) {
+        set_reg_hook--;
+        return 0;
+    } else if (set_reg_hook == 2 && register_num == SIF_SYSREG_RPCINIT && register_value == 0) {
+        set_reg_hook--;
+        return 0;
+    } else if (set_reg_hook == 1 && register_num == SIF_SYSREG_SUBADDR && register_value == (int)NULL) {
+        set_reg_hook--;
+        if (eec.ee_core_flags & EECORE_FLAG_UNHOOK) {
+            SetSyscall(__NR_SifSetDma, Old_SifSetDma);
+            SetSyscall(__NR_SifSetReg, Old_SifSetReg);
+            SetSyscall(__NR_SifGetReg, Old_SifGetReg);
+        }
+        return 0;
+    } else if (set_reg_hook == 0 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_BOOTEND) {
+        // Start of a new reboot sequence
+        return 0;
+    }
+
+    return Old_SifSetReg(register_num, register_value);
+}
+
+// Function running in kernel mode!
+// No printf and keep as simple as possible!
 static int Hook_SifGetReg(u32 register_num)
 {
-    if (register_num == SIF_REG_SMFLAG && get_reg_hook > 0) {
+    if (get_reg_hook == 1 && register_num == SIF_REG_SMFLAG) {
         get_reg_hook--;
         return 0;
     }
