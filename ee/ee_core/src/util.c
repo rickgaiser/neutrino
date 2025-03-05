@@ -354,15 +354,19 @@ void delay(int count)
     }
 }
 
-void BGERROR(int count) {
+void BGERROR(u32 func_color, int count) {
     int i;
     while (1) {
+        *GS_REG_BGCOLOR = func_color;
+        delay(500);
+        *GS_REG_BGCOLOR = COLOR_BLACK;
+        delay(500);
         for (i=0; i<count; i++) {
-            *GS_REG_BGCOLOR = BGCOLOR_RED;
+            *GS_REG_BGCOLOR = COLOR_RED;
             delay(150);
-            *GS_REG_BGCOLOR = BGCOLOR_BLACK;
+            *GS_REG_BGCOLOR = COLOR_BLACK;
             delay(350);
         }
-        delay(650);
+        delay(150);
     }
 }

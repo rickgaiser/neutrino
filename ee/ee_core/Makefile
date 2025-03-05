@@ -16,7 +16,7 @@ EE_OBJS_DIR = obj/
 GSMCORE_EE_OBJS = gsm_api.o ee_exception_l2.o
 CHEATCORE_EE_OBJS = cheat_engine.o cheat_api.o
 
-EE_OBJS = main.o syshook.o iopmgr.o loadfile.o util.o patches.o patches_asm.o \
+EE_OBJS = main.o iopmgr.o loadfile.o util.o patches.o patches_asm.o \
 	  asm.o crt0.o $(GSMCORE_EE_OBJS) $(CHEATCORE_EE_OBJS)
 MAPFILE = ee_core.map
 

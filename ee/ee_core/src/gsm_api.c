@@ -1,14 +1,17 @@
+// PS2SDK
 #include <tamtypes.h>
 #include <kernel.h>
 #include <syscallnr.h>
 #include <ee_debug.h>
-#include <gs_privileged.h> // BGCOLOR
+#include <gs_privileged.h>
 
+// Neutrino
+#include "util.h"
 #include "ee_debug.h"
 #include "interface.h"
-
 #include "ee_asm.h"
 #include "ee_regs.h"
+#include "ee_debug.h"
 #include "ee_exception_l2.h"
 
 #define MAKE_J(func) (u32)((0x02 << 26) | (((u32)func) / 4)) // Jump (MIPS instruction)
@@ -138,20 +141,6 @@ static u64 mod_DISPLAY(struct gsm_state *pstate, u64 r)
     return GS_SET_DISPLAY(dx, dy, magh_new, magv_new, dw_new, dh);
 }
 
-// Rainbow color scheme
-static u64 debug_color[] = {
-    GS_SET_BGCOLOR(255,   0,   0), // 0 = Red
-    GS_SET_BGCOLOR(255, 128,   0), // 1 = Orange
-    GS_SET_BGCOLOR(255, 255,   0), // 2 = Yellow
-    GS_SET_BGCOLOR(  0, 255,   0), // 3 = Green
-    GS_SET_BGCOLOR(  0, 255, 255), // 4 = L-Blue
-    GS_SET_BGCOLOR(  0,   0, 255), // 5 = D-Blue
-    GS_SET_BGCOLOR(127,   0, 255), // 6 = Purple
-
-    GS_SET_BGCOLOR(127, 127, 127), // 7 = Grey
-    GS_SET_BGCOLOR(255, 255, 255), // 8 = White
-};
-
 /*
  * Exception Level 2 handler
  *   Status.ERL = 1
@@ -172,9 +161,8 @@ void el2_c_handler(ee_registers_t *regs)
 
     // Check for debug exception
     if (M_EE_GET_CAUSE_EXC2(cop0_Cause) != EE_EXC2_DBG) {
-        *GS_REG_BGCOLOR = debug_color[0]; // Red
         _ee_disable_bpc();
-        while(1){}
+        BGERROR(COLOR_FUNC_GSM, 1);
         return;
     }
 
@@ -199,9 +187,8 @@ void el2_c_handler(ee_registers_t *regs)
     } else if (op == MOP_LD) {
         source = (u64*)((u32)regs->gpr[rs] + imm);
     } else {
-        *GS_REG_BGCOLOR = debug_color[1]; // Orange
         _ee_disable_bpc();
-        while(1){}
+        BGERROR(COLOR_FUNC_GSM, 2);
         return;
     }
 
@@ -258,9 +245,7 @@ void el2_c_handler(ee_registers_t *regs)
             regs->gpr[rt] = *source;
             break;
         default:
-            // Just freeze!
-            *GS_REG_BGCOLOR = debug_color[4]; // L-Blue
-            while(1){}
+            BGERROR(COLOR_FUNC_GSM, 3);
     }
 
     // Process SD instruction (write to register)
@@ -297,9 +282,7 @@ void el2_c_handler(ee_registers_t *regs)
             *dest = value;
             break;
         default:
-            // Just freeze!
-            *GS_REG_BGCOLOR = debug_color[5]; // D-Blue
-            while(1){}
+            BGERROR(COLOR_FUNC_GSM, 4);
     }
 
     // Make sure data is written to RAM
@@ -337,9 +320,8 @@ void el2_c_handler(ee_registers_t *regs)
                         new_pc = regs->gpr[rs];
                         break;
                     default:
-                        // Just freeze!
-                        *GS_REG_BGCOLOR = debug_color[3]; // Green
-                        while(1){}
+                        _ee_disable_bpc();
+                        BGERROR(COLOR_FUNC_GSM, 5);
                 }
                 break;
             case MOP_REGIMM:
@@ -363,9 +345,8 @@ void el2_c_handler(ee_registers_t *regs)
                         rlo = regs->gpr[rs] >= 0;
                         goto handle_rlo;
                     default:
-                        // Just freeze!
-                        *GS_REG_BGCOLOR = debug_color[4]; // L-Blue
-                        while(1){}
+                        _ee_disable_bpc();
+                        BGERROR(COLOR_FUNC_GSM, 6);
                 }
                 break;
             case MOP_COP1:
@@ -408,9 +389,8 @@ void el2_c_handler(ee_registers_t *regs)
                 rlo = regs->gpr[rs] > 0;
                 goto handle_rlo;
             default:
-                // Just freeze!
-                *GS_REG_BGCOLOR = debug_color[5]; // D-Blue
-                while(1){}
+                _ee_disable_bpc();
+                BGERROR(COLOR_FUNC_GSM, 7);
         }
 
         goto handle_rlo_done;

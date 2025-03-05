@@ -30,7 +30,7 @@
 /* libkernel */
 .extern ExecPS2
 
-/* syshook.c */
+/* iopmgr.c */
 .extern New_SifSetDma
 
 .globl  Hook_SifSetDma

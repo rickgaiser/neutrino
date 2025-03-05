@@ -30,6 +30,6 @@ u32 *find_pattern_with_mask(u32 *buf, unsigned int bufsize, const u32 *pattern, 
 void CopyToIop(const void *eedata, unsigned int size, void *iopptr);
 void WipeUserMemory(void *start, void *end);
 void delay(int count);
-void BGERROR(int count);
+void BGERROR(u32 func_color, int count) __attribute__((noreturn));
 
 #endif /* UTIL */

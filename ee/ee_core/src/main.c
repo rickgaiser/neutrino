@@ -18,7 +18,6 @@
 #include "patches.h"
 #include "util.h"
 #include "asm.h"
-#include "syshook.h"
 #include "cheat_api.h"
 #include "gsm_api.h"
 #include "interface.h"

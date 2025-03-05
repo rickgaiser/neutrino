@@ -1369,7 +1369,7 @@ gsm_done:
         SifLoadFileExit();
         SifExitRpc();
         SifInitRpc(0);
-        while(!SifIopReset(NULL, 0)){};
+        while(!SifIopReset("", 0)){};
         while(!SifIopSync()) {};
         SifInitRpc(0);
         SifInitIopHeap();
@@ -1858,7 +1858,9 @@ gsm_done:
 
         // Add simple checksum
         uint32_t *pms = (uint32_t *)irxtable;
+#ifdef DEBUG
         printf("Module memory checksum:\n");
+#endif
         for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
             uint32_t ssv = 0;
             for (i=0; i<1024; i++) {
@@ -1867,7 +1869,9 @@ gsm_done:
                 if (pms[i] == 0xDEC1DEC1)
                     i += 2;
             }
+#ifdef DEBUG
             printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
+#endif
             set_ee_core->mod_checksum_4k[j] = ssv;
             pms += 1024;
         }

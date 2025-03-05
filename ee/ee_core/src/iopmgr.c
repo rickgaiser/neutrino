@@ -1,12 +1,3 @@
-/*
-  Copyright 2009-2010, Ifcaro, jimmikaelkael & Polo
-  Copyright 2006-2008 Polo
-  Licenced under Academic Free License version 3.0
-  Review OpenUsbLd README & LICENSE files for further details.
-
-  Some parts of the code are taken from HD Project by Polo
-*/
-
 // libc/newlib
 #include <string.h>
 
@@ -16,20 +7,75 @@
 #include <sifrpc.h>
 #include <iopheap.h>
 #include <sbv_patches.h>
+#include <syscallnr.h>
 
 // Neutrino
 #include "ee_debug.h"
 #include "iopmgr.h"
+#include "asm.h"
 #include "util.h"
-#include "syshook.h"
 #include "interface.h"
 
 extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
-int new_iop_reboot_count = 0;
+
+static int set_reg_hook = 0;
+static int get_reg_hook = 0;
+static int imgdrv_offset = 0;
+static int (*Old_SifSetReg)(u32 register_num, int register_value);
+static int (*Old_SifGetReg)(u32 register_num);
+
+// Used by Hook_SifSetDma in asm.S
+u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
 
 int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
 
+//---------------------------------------------------------------------------
+void services_start()
+{
+    DPRINTF("Starting services...\n");
+    SifInitRpc(0);
+    SifInitIopHeap();
+    SifLoadFileInit();
+}
+
+//---------------------------------------------------------------------------
+void services_exit()
+{
+    DPRINTF("Exiting services...\n");
+    SifExitIopHeap();
+    SifLoadFileExit();
+    SifExitRpc();
+}
+
+//---------------------------------------------------------------------------
+// Simple module storage checksum
+void module_checksum()
+{
+    int i, j;
+    u32 *pms = (u32 *)eec.ModStorageStart;
+
+    DPRINTF("Module memory checksum:\n");
+
+    for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
+        u32 ssv = 0;
+        for (i=0; i<1024; i++) {
+            ssv += pms[i];
+            // Skip imgdrv patch area
+            if (pms[i] == 0xDEC1DEC1)
+                i += 2;
+        }
+        if (ssv == eec.mod_checksum_4k[j]) {
+            DPRINTF("- 0x%08x = 0x%08x\n", (u32)pms, ssv);
+        } else {
+            DPRINTF("- 0x%08x = 0x%08x != 0x%08x\n", (u32)pms, ssv, eec.mod_checksum_4k[j]);
+            BGERROR(COLOR_FUNC_IOPREBOOT, 2);
+        }
+        pms += 1024;
+    }
+}
+
 #ifdef __EESIO_DEBUG
+//---------------------------------------------------------------------------
 static void print_iop_args(int arg_len, const char *args)
 {
     // Multiple null terminated strings together
@@ -58,72 +104,68 @@ static void print_iop_args(int arg_len, const char *args)
 }
 #endif
 
-/*----------------------------------------------------------------*/
-/* Reset IOP to include our modules.                              */
-/*----------------------------------------------------------------*/
+//---------------------------------------------------------------------------
+// Reset IOP. This function replaces SifIopReset from the PS2SDK
+static int Reset_Iop(const char *arg, int mode)
+{
+    static SifCmdResetData_t reset_pkt __attribute__((aligned(64)));
+    struct t_SifDmaTransfer dmat;
+    int arglen;
+
+    _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
+
+    SifStopDma();
+
+    for (arglen = 0; arg[arglen] != '\0'; arglen++)
+        reset_pkt.arg[arglen] = arg[arglen];
+
+    reset_pkt.header.psize = sizeof reset_pkt; // dsize is not initialized (and not processed, even on the IOP).
+    reset_pkt.header.cid = SIF_CMD_RESET_CMD;
+    reset_pkt.arglen = arglen;
+    reset_pkt.mode = mode;
+
+    dmat.src = &reset_pkt;
+    dmat.dest = (void *)SifGetReg(SIF_SYSREG_SUBADDR);
+    dmat.size = sizeof(reset_pkt);
+    dmat.attr = SIF_DMA_ERT | SIF_DMA_INT_O;
+    SifWriteBackDCache(&reset_pkt, sizeof(reset_pkt));
+
+    DIntr();
+    ee_kmode_enter();
+    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
+
+    if (!Old_SifSetDma(&dmat, 1)) {
+        ee_kmode_exit();
+        EIntr();
+        return 0;
+    }
+
+    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_SIFINIT);
+    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_CMDINIT);
+    Old_SifSetReg(SIF_SYSREG_RPCINIT, 0);
+    Old_SifSetReg(SIF_SYSREG_SUBADDR, (int)NULL);
+    ee_kmode_exit();
+    EIntr();
+
+    return 1;
+}
+
+//---------------------------------------------------------------------------
+// Reset IOP to include our modules
 void New_Reset_Iop(const char *arg, int arglen)
 {
-    int i, j;
+    int i;
     void *pIOP_buffer;
     const void *IOPRP_img, *imgdrv_irx, *udnl_irx;
     unsigned int length_rounded, udnl_cmdlen, size_IOPRP_img, size_imgdrv_irx, size_udnl_irx;
     char udnl_mod[10];
     char udnl_cmd[RESET_ARG_MAX + 1];
     irxtab_t *irxtable = (irxtab_t *)eec.ModStorageStart;
-    static int imgdrv_offset = 0;
-    static const char *last_arg = (char*)1;
 
     DPRINTF("%s()\n", __FUNCTION__);
 #ifdef __EESIO_DEBUG
     print_iop_args(arglen, arg);
 #endif
-
-    // 2x IOP reboot to default state is not needed
-    // - 1x from loading into the Emulation Environment
-    // - 1x from the game IOP reboot request
-    if ((arg == NULL) && (last_arg == NULL)) {
-        DPRINTF("%s() - request ignored\n", __FUNCTION__);
-        return;
-    }
-    last_arg = arg;
-
-    if (eec.ee_core_flags & EECORE_FLAG_DBC) {
-        if (arg == NULL) {
-            // BG color during IOP reboot
-            // Light to dark blue
-            *GS_REG_BGCOLOR = BGCOLOR_CYAN;
-        } else {
-            // BG color during IOP reboot with update
-            // Light to dark purple
-            *GS_REG_BGCOLOR = BGCOLOR_MAGENTA;
-        }
-
-        //
-        // Simple module checksum
-        //
-        u32 *pms = (u32 *)eec.ModStorageStart;
-        DPRINTF("Module memory checksum:\n");
-        for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
-            u32 ssv = 0;
-            int i;
-            for (i=0; i<1024; i++) {
-                ssv += pms[i];
-                // Skip imgdrv patch area
-                if (pms[i] == 0xDEC1DEC1)
-                    i += 2;
-            }
-            if (ssv == eec.mod_checksum_4k[j]) {
-                DPRINTF("- 0x%08x = 0x%08x\n", (u32)pms, ssv);
-            } else {
-                DPRINTF("- 0x%08x = 0x%08x != 0x%08x\n", (u32)pms, ssv, eec.mod_checksum_4k[j]);
-                DPRINTF("- FREEZE!\n");
-                BGERROR(3);
-            }
-            pms += 1024;
-        }
-    }
-
-    new_iop_reboot_count++;
 
     udnl_cmdlen = 0;
     if (arglen >= 10) {
@@ -212,13 +254,6 @@ void New_Reset_Iop(const char *arg, int arglen)
         ;
     }
 
-    if (eec.ee_core_flags & EECORE_FLAG_DBC) {
-        if (arg == NULL)
-            *GS_REG_BGCOLOR = BGCOLOR_BLUE;
-        else
-            *GS_REG_BGCOLOR = BGCOLOR_PURPLE;
-    }
-
     services_start();
     // Patch the IOP to support LoadModuleBuffer
     sbv_patch_enable_lmb();
@@ -234,8 +269,110 @@ void New_Reset_Iop(const char *arg, int arglen)
     }
 
     DPRINTF("New_Reset_Iop complete!\n");
-    if (eec.ee_core_flags & EECORE_FLAG_DBC)
-        *GS_REG_BGCOLOR = BGCOLOR_BLACK;
 
     return;
+}
+
+//---------------------------------------------------------------------------
+// This function is called when SifSetDma catches a reboot request
+u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
+{
+    struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
+
+    // Validate module storage
+    module_checksum();
+
+    // Start services, some games hang here becouse the IOP is not responding
+    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_LBLUE;
+
+    // Reboot the IOP
+    SifInitRpc(0);
+    while (!Reset_Iop("", 0)) {}
+    while (!SifIopSync()) {}
+    services_start();
+    sbv_patch_enable_lmb();
+
+    // Reboot the IOP with neutrino modules
+    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_MAGENTA;
+    New_Reset_Iop(NULL, 0);
+
+    // Reboot the IOP with neutrino modules and IOPRP
+    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_YELLOW;
+    New_Reset_Iop(reset_pkt->arg, reset_pkt->arglen);
+
+    // Exit services
+    services_exit();
+
+    // Ignore EE still trying to complete the IOP reset
+    set_reg_hook = 4;
+    get_reg_hook = 1;
+
+    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_BLACK;
+
+    return 1;
+}
+
+//---------------------------------------------------------------------------
+// Function running in kernel mode!
+// No printf and keep as simple as possible!
+static int Hook_SifSetReg(u32 register_num, int register_value)
+{
+    if (set_reg_hook == 4 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_SIFINIT) {
+        set_reg_hook--;
+        return 0;
+    } else if (set_reg_hook == 3 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_CMDINIT) {
+        set_reg_hook--;
+        return 0;
+    } else if (set_reg_hook == 2 && register_num == SIF_SYSREG_RPCINIT && register_value == 0) {
+        set_reg_hook--;
+        return 0;
+    } else if (set_reg_hook == 1 && register_num == SIF_SYSREG_SUBADDR && register_value == (int)NULL) {
+        set_reg_hook--;
+        if (eec.ee_core_flags & EECORE_FLAG_UNHOOK) {
+            SetSyscall(__NR_SifSetDma, Old_SifSetDma);
+            SetSyscall(__NR_SifSetReg, Old_SifSetReg);
+            SetSyscall(__NR_SifGetReg, Old_SifGetReg);
+        }
+        return 0;
+    } else if (set_reg_hook == 0 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_BOOTEND) {
+        // Start of a new reboot sequence
+        return 0;
+    } else if (set_reg_hook != 0) {
+        BGERROR(COLOR_FUNC_IOPREBOOT, 3);
+    }
+
+    return Old_SifSetReg(register_num, register_value);
+}
+
+//---------------------------------------------------------------------------
+// Function running in kernel mode!
+// No printf and keep as simple as possible!
+static int Hook_SifGetReg(u32 register_num)
+{
+    if (get_reg_hook == 1 && register_num == SIF_REG_SMFLAG) {
+        get_reg_hook--;
+        return 0;
+    } else if (get_reg_hook != 0) {
+        BGERROR(COLOR_FUNC_IOPREBOOT, 4);
+    }
+
+    return Old_SifGetReg(register_num);
+}
+
+//---------------------------------------------------------------------------
+// Replace SifSetDma, SifSetReg and SifGetReg syscalls in kernel
+void Install_Kernel_Hooks(void)
+{
+    Old_SifSetDma = GetSyscallHandler(__NR_SifSetDma);
+    SetSyscall(__NR_SifSetDma, &Hook_SifSetDma);
+
+    Old_SifSetReg = GetSyscallHandler(__NR_SifSetReg);
+    SetSyscall(__NR_SifSetReg, &Hook_SifSetReg);
+
+    Old_SifGetReg = GetSyscallHandler(__NR_SifGetReg);
+    SetSyscall(__NR_SifGetReg, &Hook_SifGetReg);
 }
