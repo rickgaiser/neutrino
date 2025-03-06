@@ -116,7 +116,7 @@ int module_stop(int argc, char *argv[])
     DeleteThread(rpc1_thread_id);
     ReleaseLibraryEntries(&_exp_cdvdfsv);
 
-    return MODULE_NO_RESIDENT_END;
+    return 0;
 }
 
 //-------------------------------------------------------------------------
