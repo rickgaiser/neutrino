@@ -176,7 +176,7 @@ static void cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
         }
     }
 
-    if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) == 0) {
+    if ((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READ) == 0) {
         // Get the number of clocks delay per sector
         clocks_delay = accurate_read_clocks(lsn, sectors) / sectors;
     }

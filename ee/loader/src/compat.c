@@ -16,11 +16,11 @@ typedef struct
 } flagcompat_t;
 
 static const flagcompat_t flag_compat[] = {
-    {1<<0, 0,                  CDVDMAN_COMPAT_FAST_READS, NULL              }, // MODE 0
-    {1<<2, 0,                  CDVDMAN_COMPAT_ALT_READ,   NULL              }, // MODE 2
-    {1<<3, EECORE_FLAG_UNHOOK, 0,                         NULL              }, // MODE 3
-    {1<<5, 0,                  CDVDMAN_COMPAT_EMU_DVDDL,  NULL              }, // MODE 5
-    {1<<7, 0,                  0,                         "patch_membo.irx" }, // MODE 7
+    {1<<0, 0,                  CDVDMAN_COMPAT_FAST_READ, NULL              }, // MODE 0
+    {1<<2, 0,                  CDVDMAN_COMPAT_SYNC_READ, NULL              }, // MODE 2
+    {1<<3, EECORE_FLAG_UNHOOK, 0,                        NULL              }, // MODE 3
+    {1<<5, 0,                  CDVDMAN_COMPAT_EMU_DVDDL, NULL              }, // MODE 5
+    {1<<7, 0,                  0,                        "patch_membo.irx" }, // MODE 7
     {0<<0, 0, 0, NULL},
 };
 
@@ -47,7 +47,7 @@ typedef struct
 } gamecompat_t;
 
 static const gamecompat_t game_compat[] = {
-    {"SCES_524.12", 0,                    CDVDMAN_COMPAT_ALT_READ, NULL },              // Jackie Chan Adventures # only needed for USB ?
+    {"SCES_524.12", 0,                    CDVDMAN_COMPAT_SYNC_READ, NULL },              // Jackie Chan Adventures # only needed for USB ?
 
     // These games write to the EE 0x84000 to 1MiB region, where our EECORE is loaded
     // To figure out if another game needs this mode: start the game in PCSX2 and see if this address is written by the game

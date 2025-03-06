@@ -41,7 +41,7 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 
     result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
 
-    if ((result == 1) && (cdvdman_settings.flags & CDVDMAN_COMPAT_ALT_READ) && !QueryIntrContext())
+    if ((result == 1) && (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_READ) && !QueryIntrContext())
         WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
 
     return result;

@@ -261,9 +261,13 @@ void cdvdman_cb_event(int reason)
     if (cb_data.user_cb != NULL) {
         cb_data.reason = reason;
 
-        ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_CB_DONE);
+        if (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_CALLBACK)
+            ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_CB_DONE);
+
         SetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
-        WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
+
+        if (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_CALLBACK)
+            WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
     }
 
     M_DEBUG("    %s(%d) done\n", __FUNCTION__, reason);
@@ -279,7 +283,8 @@ static unsigned int event_alarm_cb(void *args)
     if (cb_data->user_cb != NULL) // This interrupt does not occur immediately, hence check for the callback again here.
         cb_data->user_cb(cb_data->reason);
 
-    iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE);
+    if (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_CALLBACK)
+        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE);
 
     M_DEBUG("      %s done\n", __FUNCTION__);
 
@@ -334,7 +339,7 @@ int _start(int argc, char **argv)
     RegisterLibraryEntries(&_exp_cdvdstm);
 
     // Setup the callback timer.
-    USec2SysClock((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READS) ? 0 : 5000, &gCallbackSysClock);
+    USec2SysClock((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READ) ? 0 : 5000, &gCallbackSysClock);
 
     // Limit min/max sectors
     if (cdvdman_settings.fs_sectors < 2)
