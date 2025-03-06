@@ -38,12 +38,10 @@ all: $(EE_BIN_PACKED) version.txt
 #GAME = 'DVD/Scooby-Doo! Mystery Mayhem (U).iso'        # neutrino github issue 19: When starting a new game, the cutscene freezes
 #GAME = 'DVD/Silent Hill 3 (U).iso'                     # neutrino github issue 30: USB:   freezes on startup logo, only on real ps2, works in pcsx2
 #GAME = 'DVD/The Incredibles - Rise of the Underminer (E).iso' -gsm=fp # sound issues, starting at second level
-#GAME = "CD/Donald Duck - Goin' Quackers (U).iso"       # timing issue during boot, hangs at black screen
-#GAME = 'DVD/Donald Duck - Quack Attack (E).iso'        # timing issue during boot, hangs at black screen
 #GAME = 'DVD/Driv3r (U).iso'                            # neutrino github issue 56: USB: freezes and unfreezes during gameplay
-#GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 1).iso' # neutrino github issue 76: black screen on boot
-#GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 2).iso' # neutrino github issue 76: black screen on boot
 #GAME = 'DVD/Syberia II (E).iso' # -gsm=fp # with GSM some things run at 2x speed?
+#GAME = 'CD/Simple 2000 Series Ultimate Vol. 15 - Love - Ping Pong! (J).iso' -gc=2 # neutrino github issue 88: black screen on boot - fixed with mode0+2 ?
+#GAME = 'CD/Simple 2000 Series Ultimate Vol. 5 - Love - Mahjong! (J).iso' -gc=2 # neutrino github issue 89: randomly hangs
 
 # This game gets stuck trying to start the first battle
 #GAME = 'DVD/World Destruction League - Thunder Tanks (E).iso' -gsm=fp:fp2
@@ -97,7 +95,7 @@ all: $(EE_BIN_PACKED) version.txt
 
 # Tested, working
 #GAME = 'CD/ICO (U).iso' # 240p game
-GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' # -gsm=fp
+GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp -gc=0
 #GAME = 'DVD/PES 2023 (E).iso'
 #GAME = 'DVD/Sonic Unleashed (E).iso'
 #GAME = 'DVD/007 - Agent Under Fire (E).iso'
@@ -129,7 +127,7 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' # -gsm=fp
 #GAME = "DVD/007 - Nightfire (E).iso"
 #GAME = "DVD/Splinter Cell (E).iso" -gc=7 -gsm=fp:fp2 # Skips FMV (IOP memory overrun issue? fixed!)
 #GAME = "DVD/Splashdown (E).iso" -gc=7 -gsm=fp # IOP memory allocation issue: allocates too little for the DVD reads that follow (fixed!)
-#GAME = 'DVD/God of War II (U).iso'
+#GAME = 'DVD/God of War II (U).iso' # use game settings for progressive
 #GAME = 'DVD/Gran Turismo 4 (U).iso' # interlaced frame mode, use game settings for progressive
 #GAME = 'CD/OPL_Accurate_Read_v1.0.iso'
 #GAME = 'DVD/Kidou Senshi Gundam - Ichinen Sensou (J).iso'
@@ -146,19 +144,27 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' # -gsm=fp
 #GAME = 'DVD/Silent Hill 2 (U).iso' -gsm=fp::1
 #GAME = 'DVD/Silent Hill 4 - The Room (E).iso' -gsm=fp::1
 #GAME = 'DVD/SOCOM 3 - U.S. Navy SEALs (E).iso' # -gsm=fp # with GSM some things run at 2x speed?!
+#GAME = 'CD/Ridge Racer V (U).iso' # interlaced frame mode
+#GAME = 'DVD/Crash Twinsanity (U).iso'
+#GAME = 'DVD/Fatal Frame (U).iso' # interlaced frame mode
+#GAME = "CD/Donald Duck - Goin' Quackers (U).iso"
+#GAME = 'DVD/Donald Duck - Quack Attack (E).iso'
+#GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 1).iso'
+#GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 2).iso'
+#GAME = 'DVD/Ibara (J).iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
 #-bsd=udpbd -dvd=mass:$(GAME) -mc0=mass:VMC/mymc.bin
-#-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0)
-#-bsd=udpbd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -mc0=mass:VMC/mymc.bin
+#-bsd=udpbd-hdd -dvd=mass:$(GAME) -ata0=mass:$(ATA0)
+#-bsd=udpbd-hdd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -mc0=mass:VMC/mymc.bin
 #-bsd=udpbd -dvd=mass:"DVD/Splinter Cell (E).iso" -elf="cdrom0:\\LOADER.PS2;1" --b 0_0_2 -wantload -ll -diskimage -restart -l=1 -v=13117
 #-bsd=ata -bsdfs=hdl -dvd=hdl:$(GAME)
 
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
-ARGS = -bsd=udpbd -dvd=mass:$(GAME)
+ARGS = -bsd=udpbd -dvd=mass:$(GAME) -dbc
 #ARGS = -bsd=mmce -dvd=mmce1:$(GAME)
 #ARGS = -bsd=udpbd -dvd=bdfs:udp0p0 -bsdfs=bd
 
