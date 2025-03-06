@@ -84,7 +84,7 @@ int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned 
 
     ff = &fhi.file[file_handle];
     WaitSema(bdm_io_sema);
-    rv = bd_defrag_read(g_bd, ff->frag_count, &fhi.frags[ff->frag_start],sector_start, buffer, sector_count);
+    rv = bd_defrag_read(g_bd, ff->frag_count, &fhi.frags[ff->frag_start], sector_start, buffer, sector_count);
     SignalSema(bdm_io_sema);
 
     return rv;
@@ -105,7 +105,7 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
 
     ff = &fhi.file[file_handle];
     WaitSema(bdm_io_sema);
-    rv = bd_defrag_write(g_bd, ff->frag_count, &fhi.frags[ff->frag_start],sector_start, buffer, sector_count);
+    rv = bd_defrag_write(g_bd, ff->frag_count, &fhi.frags[ff->frag_start], sector_start, buffer, sector_count);
     SignalSema(bdm_io_sema);
 
     return rv;

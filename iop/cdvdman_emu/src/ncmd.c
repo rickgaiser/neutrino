@@ -192,7 +192,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
 //-------------------------------------------------------------------------
 int sceCdGetToc_internal(u8 *toc, enum ECallSource source)
 {
-    M_DEBUG("%s(-)\n", __FUNCTION__);
+    M_DEBUG("%s(-, %d)\n", __FUNCTION__, source);
 
     if (sync_flag_locked)
         return 0;
@@ -218,7 +218,7 @@ int sceCdGetToc(u8 *toc)
 //-------------------------------------------------------------------------
 int sceCdSeek_internal(u32 lsn, enum ECallSource source)
 {
-    M_DEBUG("%s(%d)\n", __FUNCTION__, (int)lsn);
+    M_DEBUG("%s(%d, %d)\n", __FUNCTION__, (int)lsn, source);
 
     if (sync_flag_locked)
         return 0;
@@ -249,7 +249,7 @@ int sceCdSeek(u32 lsn)
 //-------------------------------------------------------------------------
 int sceCdStandby_internal(enum ECallSource source)
 {
-    M_DEBUG("%s()\n", __FUNCTION__);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, source);
 
     cdvdman_stat.err = SCECdErNO;
     cdvdman_stat.status = SCECdStatPause;
@@ -268,7 +268,7 @@ int sceCdStandby(void)
 //-------------------------------------------------------------------------
 int sceCdStop_internal(enum ECallSource source)
 {
-    M_DEBUG("%s()\n", __FUNCTION__);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, source);
 
     if (sync_flag_locked)
         return 0;
@@ -291,7 +291,7 @@ int sceCdStop(void)
 //-------------------------------------------------------------------------
 int sceCdPause_internal(enum ECallSource source)
 {
-    M_DEBUG("%s()\n", __FUNCTION__);
+    M_DEBUG("%s(%d)\n", __FUNCTION__, source);
 
     if (sync_flag_locked)
         return 0;

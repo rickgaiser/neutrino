@@ -270,7 +270,7 @@ static int cdrom_read(iop_file_t *f, void *buf, int size)
 
     WaitSema(cdrom_io_sema);
 
-    M_DEBUG("%s size=%db (%ds) file_position=%d\n", __FUNCTION__, size, size / 2048, fh->position);
+    M_DEBUG("%s(..., 0x%x, %ds + %db) file_position=%d\n", __FUNCTION__, buf, size / 2048, size % 2048, fh->position);
 
     if ((fh->position + size) > fh->filesize)
         size = fh->filesize - fh->position;

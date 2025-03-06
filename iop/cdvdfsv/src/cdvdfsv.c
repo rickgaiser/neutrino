@@ -245,10 +245,11 @@ static void *cbrpc_cdinit(int fno, void *buf, int size)
 //-------------------------------------------------------------------------
 static void *cbrpc_cddiskready(int fno, void *buf, int size)
 { // CD Disk Ready RPC callback
+    int rv = sceCdDiskReady((*(int *)buf == 0) ? 0 : 1);
 
-    M_DEBUG("%s\n", __FUNCTION__);
+    M_DEBUG("%s(%d, 0x%x, %d) = %d\n", __FUNCTION__, fno, buf, size, rv);
 
-    *(int *)buf = sceCdDiskReady((*(int *)buf == 0) ? 0 : 1);
+    *(int *)buf = rv;
 
     return buf;
 }
@@ -256,10 +257,11 @@ static void *cbrpc_cddiskready(int fno, void *buf, int size)
 //-------------------------------------------------------------------------
 static void *cbrpc_cddiskready2(int fno, void *buf, int size)
 { // CD Disk Ready2 RPC callback
+    int rv = sceCdDiskReady(0);
 
-    M_DEBUG("%s\n", __FUNCTION__);
+    M_DEBUG("%s(%d, 0x%x, %d) = %d\n", __FUNCTION__, fno, buf, size, rv);
 
-    *(int *)buf = sceCdDiskReady(0);
+    *(int *)buf = rv;
 
     return buf;
 }
