@@ -1852,29 +1852,27 @@ gsm_done:
     set_ee_core->ModStorageStart = irxtable;
     set_ee_core->ModStorageEnd   = irxptr;
     set_ee_core->ee_core_flags   = eecore_compat;
-    if (sys.bDebug) {
-        // Add flag to ee_core
-        set_ee_core->ee_core_flags |= EECORE_FLAG_DBC;
+    // Add flag to ee_core
+    set_ee_core->ee_core_flags |= EECORE_FLAG_DBC;
 
-        // Add simple checksum
-        uint32_t *pms = (uint32_t *)irxtable;
+    // Add simple checksum
+    uint32_t *pms = (uint32_t *)irxtable;
 #ifdef DEBUG
-        printf("Module memory checksum:\n");
+    printf("Module memory checksum:\n");
 #endif
-        for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
-            uint32_t ssv = 0;
-            for (i=0; i<1024; i++) {
-                ssv += pms[i];
-                // Skip imgdrv patch area
-                if (pms[i] == 0xDEC1DEC1)
-                    i += 2;
-            }
-#ifdef DEBUG
-            printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
-#endif
-            set_ee_core->mod_checksum_4k[j] = ssv;
-            pms += 1024;
+    for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
+        uint32_t ssv = 0;
+        for (i=0; i<1024; i++) {
+            ssv += pms[i];
+            // Skip imgdrv patch area
+            if (pms[i] == 0xDEC1DEC1)
+                i += 2;
         }
+#ifdef DEBUG
+        printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
+#endif
+        set_ee_core->mod_checksum_4k[j] = ssv;
+        pms += 1024;
     }
 
     //
