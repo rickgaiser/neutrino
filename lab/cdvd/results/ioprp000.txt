@@ -1,32 +1,32 @@
 IOPRP test, path = rom0:UDNL
 txtst   | txtsz   | dtasz   | bsssz   | versi. | name
 ------------------------------------------------------------
-0x  830 | 0x  c40 | 0x   40 | 0x   10 | 0x 101 | System_Memory_Manage
-0x 1630 | 0x 1c30 | 0x   40 | 0x   64 | 0x 101 | Module_Manager
-0x 3430 | 0x  6d0 | 0x   30 | 0x   50 | 0x 101 | Exception_Manager
-0x 3d30 | 0x 1570 | 0x   80 | 0x  810 | 0x 101 | Interrupt_Manager
-0x 5c30 | 0x  320 | 0x   80 | 0x    0 | 0x 101 | ssbus_service
-0x 6030 | 0x 15d0 | 0x  670 | 0x    0 | 0x 101 | dmacman
-0x 7d30 | 0x  690 | 0x   60 | 0x    0 | 0x 101 | Timer_Manager
-0x 8530 | 0x 18b0 | 0x  2e0 | 0x    0 | 0x 101 | System_C_lib
-0x a130 | 0x  880 | 0x   20 | 0x    0 | 0x 101 | Heap_lib
-0x aa30 | 0x 6440 | 0x  390 | 0x  4c4 | 0x 101 | Multi_Thread_Manager
-0x11f30 | 0x  7d0 | 0x   20 | 0x  160 | 0x 101 | Vblank_service
-0x12930 | 0x 1240 | 0x  140 | 0x  150 | 0x 102 | IO/File_Manager
-0x13e30 | 0x 18f0 | 0x   e0 | 0x   1c | 0x 101 | Moldule_File_loader
-0x15930 | 0x  850 | 0x   80 | 0x   d0 | 0x 103 | ROM_file_driver
-0x16330 | 0x  660 | 0x   40 | 0x   10 | 0x 101 | Stdio
-0x16a30 | 0x  ed0 | 0x   b0 | 0x  430 | 0x 101 | IOP_SIF_manager
-0x17e30 | 0x 1760 | 0x   70 | 0x 12a0 | 0x 101 | IOP_SIF_rpc_interfac
-0x1a930 | 0x  350 | 0x   a0 | 0x   60 | 0x 101 | RebootByEE
-0x1ae30 | 0x 1960 | 0x  2b0 | 0x  29c | 0x 101 | LoadModuleByEE
-0x1ce30 | 0x 4d30 | 0x  ae0 | 0x16430 | 0x 104 | cdvd_driver
-0x39330 | 0x 4980 | 0x  810 | 0x 17a0 | 0x 104 | cdvd_ee_driver
-0x3fd30 | 0x 1220 | 0x  250 | 0x  790 | 0x 101 | FILEIO_service
-0x41a30 | 0x 2d60 | 0x  590 | 0x   2c | 0x 103 | secrman_for_cex
-0x44e30 | 0x  140 | 0x   20 | 0x    0 | 0x 101 | SyncEE
+0x00830 |   3136b |     64b |     16b | 0x 101 | System_Memory_Manage
+0x01630 |   7216b |     64b |    100b | 0x 101 | Module_Manager
+0x03430 |   1744b |     48b |     80b | 0x 101 | Exception_Manager
+0x03d30 |   5488b |    128b |   2064b | 0x 101 | Interrupt_Manager
+0x05c30 |    800b |    128b |      0b | 0x 101 | ssbus_service
+0x06030 |   5584b |   1648b |      0b | 0x 101 | dmacman
+0x07d30 |   1680b |     96b |      0b | 0x 101 | Timer_Manager
+0x08530 |   6320b |    736b |      0b | 0x 101 | System_C_lib
+0x0a130 |   2176b |     32b |      0b | 0x 101 | Heap_lib
+0x0aa30 |  25664b |    912b |   1220b | 0x 101 | Multi_Thread_Manager
+0x11f30 |   2000b |     32b |    352b | 0x 101 | Vblank_service
+0x12930 |   4672b |    320b |    336b | 0x 102 | IO/File_Manager
+0x13e30 |   6384b |    224b |     28b | 0x 101 | Moldule_File_loader
+0x15930 |   2128b |    128b |    208b | 0x 103 | ROM_file_driver
+0x16330 |   1632b |     64b |     16b | 0x 101 | Stdio
+0x16a30 |   3792b |    176b |   1072b | 0x 101 | IOP_SIF_manager
+0x17e30 |   5984b |    112b |   4768b | 0x 101 | IOP_SIF_rpc_interfac
+0x1a930 |    848b |    160b |     96b | 0x 101 | RebootByEE
+0x1af30 |   6496b |    688b |    668b | 0x 101 | LoadModuleByEE
+0x1ce30 |  19760b |   2784b |  91184b | 0x 104 | cdvd_driver
+0x39330 |  18816b |   2064b |   6048b | 0x 104 | cdvd_ee_driver
+0x3fd30 |   4640b |    592b |   1936b | 0x 101 | FILEIO_service
+0x41a30 |  11616b |   1424b |     44b | 0x 103 | secrman_for_cex
+0x44e30 |    320b |     32b |      0b | 0x 101 | SyncEE
 ------------------------------------------------------------
-        | 0x245a0 | 0x 3170 | 0x1ae9c | total
+        | 148896b |  12656b | 110236b | total
 ------------------------------------------------------------
-Total: 0x425ac (265KiB)
+Total: 271788b (265KiB)
 ------------------------------------------------------------
