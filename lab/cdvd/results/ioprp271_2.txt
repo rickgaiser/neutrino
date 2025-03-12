@@ -1,0 +1,32 @@
+IOPRP test, path = rom0:UDNL host:ioprp\ioprp271_2.img
+txtst   | txtsz   | dtasz   | bsssz   | versi. | name
+------------------------------------------------------------
+0x00830 |   3632b |     80b |     16b | 0x 201 | System_Memory_Manage
+0x01830 |   7968b |     48b |    116b | 0x 205 | Module_Manager
+0x03830 |   1744b |     48b |     80b | 0x 101 | Exception_Manager
+0x04130 |   5488b |    128b |   2064b | 0x 101 | Interrupt_Manager
+0x06030 |    800b |    128b |      0b | 0x 101 | ssbus_service
+0x06430 |   5584b |   1648b |      0b | 0x 101 | dmacman
+0x08130 |   3776b |    384b |      0b | 0x 202 | Timer_Manager
+0x09230 |   6208b |    752b |      0b | 0x 202 | System_C_lib
+0x0ae30 |   2176b |     32b |      0b | 0x 101 | Heap_lib
+0x0b730 |  27840b |   1008b |   1236b | 0x 203 | Multi_Thread_Manager
+0x13530 |   2000b |     32b |    352b | 0x 101 | Vblank_service
+0x13f30 |   7776b |    496b |    656b | 0x 203 | IO/File_Manager
+0x16330 |  13184b |    960b |     36b | 0x 208 | Moldule_File_loader
+0x19b30 |   2128b |    192b |    208b | 0x 201 | ROM_file_driver
+0x1a630 |   1856b |     80b |     16b | 0x 203 | Stdio
+0x1ae30 |   4160b |    192b |   1600b | 0x 202 | IOP_SIF_manager
+0x1c630 |   7184b |    128b |   6832b | 0x 207 | IOP_SIF_rpc_interfac
+0x1fe30 |    848b |    160b |     96b | 0x 101 | RebootByEE
+0x20430 |   7168b |   1072b |    668b | 0x 202 | LoadModuleByEE
+0x22730 |  47248b |   5680b |  54304b | 0x 222 | cdvd_driver
+0x3d330 |  17072b |   1840b |   4672b | 0x 222 | cdvd_ee_driver
+0x43030 |  10752b |   1040b |   3984b | 0x 210 | FILEIO_service
+0x46e30 |  11616b |   1424b |     44b | 0x 103 | secrman_for_cex
+0x4a230 |    640b |     48b |      0b | 0x 201 | SyncEE
+------------------------------------------------------------
+        | 198848b |  17600b |  76980b | total
+------------------------------------------------------------
+Total: 293428b (286KiB)
+------------------------------------------------------------
