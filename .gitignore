@@ -3,6 +3,7 @@
 *.irx
 *.IRX
 *.map
+*_irx.c
 
 obj/
 obj.*/
@@ -11,7 +12,7 @@ ee/loader/irx/
 ee/loader/version.txt
 iop/patches/
 iop/fileio/
-lab/cdvd/ioprp/
+lab/cdvd/ee/ioprp/
 releases/
 
 .*
