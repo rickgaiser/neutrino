@@ -21,6 +21,7 @@ extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
 static int set_reg_hook = 0;
 static int get_reg_hook = 0;
 static int imgdrv_offset = 0;
+static void (*Direct_SetSyscall)(s32 syscall_num, void *handler);
 static int (*Old_SifSetReg)(u32 register_num, int register_value);
 static int (*Old_SifGetReg)(u32 register_num);
 
@@ -333,9 +334,12 @@ static int Hook_SifSetReg(u32 register_num, int register_value)
     } else if (set_reg_hook == 1 && register_num == SIF_SYSREG_SUBADDR && register_value == (int)NULL) {
         set_reg_hook--;
         if (eec.ee_core_flags & EECORE_FLAG_UNHOOK) {
-            SetSyscall(__NR_SifSetDma, Old_SifSetDma);
-            SetSyscall(__NR_SifSetReg, Old_SifSetReg);
-            SetSyscall(__NR_SifGetReg, Old_SifGetReg);
+            //
+            // Call kernel functions directly, becouse we are already in kernel mode
+            //
+            Direct_SetSyscall(__NR_SifSetDma, Old_SifSetDma);
+            Direct_SetSyscall(__NR_SifSetReg, Old_SifSetReg);
+            Direct_SetSyscall(__NR_SifGetReg, Old_SifGetReg);
         }
         return 0;
     } else if (set_reg_hook == 0 && register_num == SIF_REG_SMFLAG && register_value == SIF_STAT_BOOTEND) {
@@ -367,6 +371,8 @@ static int Hook_SifGetReg(u32 register_num)
 // Replace SifSetDma, SifSetReg and SifGetReg syscalls in kernel
 void Install_Kernel_Hooks(void)
 {
+    Direct_SetSyscall = GetSyscallHandler(__NR_SetSyscall);
+
     Old_SifSetDma = GetSyscallHandler(__NR_SifSetDma);
     SetSyscall(__NR_SifSetDma, &Hook_SifSetDma);
 
