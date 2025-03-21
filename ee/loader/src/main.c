@@ -1169,6 +1169,12 @@ int main(int argc, char *argv[])
     get_compat_flag(iCompat, &eecore_compat, &cdvdman_compat, &patch_compat);
 
     /*
+     * Background debug colors
+     */
+    if (sys.bDebug)
+        eecore_compat |= EECORE_FLAG_DBC;
+
+    /*
      * GSM: process user flags
      */
     if (sys.sGSM == NULL)
@@ -1852,8 +1858,6 @@ gsm_done:
     set_ee_core->ModStorageStart = irxtable;
     set_ee_core->ModStorageEnd   = irxptr;
     set_ee_core->ee_core_flags   = eecore_compat;
-    // Add flag to ee_core
-    set_ee_core->ee_core_flags |= EECORE_FLAG_DBC;
 
     // Add simple checksum
     uint32_t *pms = (uint32_t *)irxtable;
