@@ -12,12 +12,12 @@ struct SPatchData {
     int ioprpsiz;
 } __attribute__((packed)) p = {0xDEC1DEC1, 0, 0};
 
-int dummy_fs()
+static int dummy_fs()
 {
     return 0;
 }
 
-int lseek_fs(iop_file_t *fd, int offset, int whence)
+static int lseek_fs(iop_file_t *fd, int offset, int whence)
 {
     if (whence == SEEK_END) {
         return p.ioprpsiz;
@@ -26,35 +26,37 @@ int lseek_fs(iop_file_t *fd, int offset, int whence)
     }
 }
 
-int read_fs(iop_file_t *fd, void *buffer, int size)
+static int read_fs(iop_file_t *fd, void *buffer, int size)
 {
     memcpy(buffer, (void *)p.ioprpimg, size);
     return size;
 }
 
-iop_device_ops_t my_device_ops =
-    {
-        dummy_fs, // init
-        dummy_fs, // deinit
-        NULL,     // dummy_fs,//format
-        dummy_fs, // open_fs,//open
-        dummy_fs, // close_fs,//close
-        read_fs,  // read
-        NULL,     // dummy_fs,//write
-        lseek_fs, // lseek
-                  /*dummy_fs,//ioctl
-    dummy_fs,//remove
-    dummy_fs,//mkdir
-    dummy_fs,//rmdir
-    dummy_fs,//dopen
-    dummy_fs,//dclose
-    dummy_fs,//dread
-    dummy_fs,//getstat
-    dummy_fs,//chstat*/
+static iop_device_ops_t my_device_ops =
+{
+    (void*)dummy_fs, // init
+    (void*)dummy_fs, // deinit
+    NULL,            // format
+    (void*)dummy_fs, // open
+    (void*)dummy_fs, // close
+    read_fs,         // read
+    NULL,            // write
+    lseek_fs,        // lseek
+    /*
+    (void*)dummy_fs, // ioctl
+    (void*)dummy_fs, // remove
+    (void*)dummy_fs, // mkdir
+    (void*)dummy_fs, // rmdir
+    (void*)dummy_fs, // dopen
+    (void*)dummy_fs, // dclose
+    (void*)dummy_fs, // dread
+    (void*)dummy_fs, // getstat
+    (void*)dummy_fs, // chstat
+    */
 };
 
-const char name[] = "img";
-iop_device_t my_device = {
+static const char name[] = "img";
+static iop_device_t my_device = {
     name,
     IOP_DT_FS,
     1,
