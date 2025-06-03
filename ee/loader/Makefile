@@ -168,16 +168,16 @@ ARGS = -bsd=udpbd -dvd=mass:$(GAME) -dbc
 #ARGS = -bsd=mmce -dvd=mmce1:$(GAME)
 #ARGS = -bsd=udpbd -dvd=bdfs:udp0p0 -bsdfs=bd
 
-run: all copy
+run: all copy copy_extra
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS)
 
-run_mmce_qb: all copy
+run_mmce_qb: all copy copy_extra
 	ps2client -h 192.168.1.10 -t 1 execiop host:modules/iomanX.irx
 	ps2client -h 192.168.1.10 -t 1 execiop host:modules/fileXio.irx
 	ps2client -h 192.168.1.10 -t 1 execiop host:modules/mmceman.irx
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS) -qb
 
-sim: all copy
+sim: all copy copy_extra
 	flatpak --filesystem=host run net.pcsx2.PCSX2 $(PWD)/ee/loader/$(EE_BIN_PACKED)
 
 # PCSX should be able to start with these, but the filename cannot contain spaces :(
@@ -202,17 +202,13 @@ copy:
 	cp ../../iop/fakemod/irx/fakemod.irx           modules
 	cp ../../iop/fhi_bd/irx/fhi_bd.irx             modules
 	cp ../../iop/fhi_bd_defrag/irx/fhi_bd_defrag.irx modules
-	cp ../../iop/gapfill/irx/gapfill.irx           modules
 	cp ../../iop/hdlfs/irx/hdlfs.irx               modules
 	cp ../../iop/imgdrv/irx/imgdrv.irx             modules
 	cp ../../iop/mc_emu/irx/mc_emu.irx             modules
-	cp ../../iop/memcheck/irx/memcheck.irx         modules
-	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules
 	cp ../../iop/patch_membo/irx/patch_membo.irx   modules
 	cp ../../iop/patch_rc_uya/irx/patch_rc_uya.irx modules
 	cp ../../iop/smap_udpbd/irx/smap_udpbd.irx     modules
 	cp ../../iop/smap_udptty/irx/smap_udptty.irx   modules
-	cp ../../iop/usbd_null/irx/usbd_null.irx       modules
 	cp ../ee_core/ee_core.elf                      modules
 	cp $(PS2SDK)/iop/irx/udnl.irx                  modules
 	cp $(PS2SDK)/iop/irx/udnl-t300.irx             modules
@@ -228,10 +224,14 @@ copy:
 	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx        modules
 	cp $(PS2SDK)/iop/irx/iLinkman.irx              modules
 	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx      modules
+	cp $(PS2SDK)/iop/irx/mmceman.irx               modules
+	cp $(PS2SDK)/iop/irx/mmcefhi.irx               modules
 
-# Add later when modules are part of ps2sdk
-#	cp $(PS2SDK)/iop/irx/mmceman.irx               modules
-#	cp $(PS2SDK)/iop/irx/mmcefhi.irx               modules
+copy_extra:
+	cp ../../iop/gapfill/irx/gapfill.irx           modules
+	cp ../../iop/memcheck/irx/memcheck.irx         modules
+	cp ../../iop/patch_freemem/irx/patch_freemem.irx modules
+	cp ../../iop/usbd_null/irx/usbd_null.irx       modules
 
 include $(PS2SDK)/Defs.make
 include ../Rules.make
