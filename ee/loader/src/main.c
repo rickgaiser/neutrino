@@ -1627,6 +1627,7 @@ gsm_done:
      * Get ELF/game compatibility flags
      */
     get_compat_game(sGameID, &eecore_compat, &cdvdman_compat, &patch_compat);
+    //cdvdman_compat |= CDVDMAN_COMPAT_SYNC_CALLBACK;
     printf("EECORE  compat flags: 0x%lX\n", eecore_compat);
     printf("CDVDMAN compat flags: 0x%lX\n", cdvdman_compat);
 
@@ -1854,10 +1855,10 @@ gsm_done:
     // Set EE_CORE settings before loading into place
     //
     strncpy(set_ee_core->GameID, sGameID, 16);
-    set_ee_core->initUserMemory  = sbvpp_patch_user_mem_clear(irxptr);;
+    set_ee_core->CheatList       = NULL;
     set_ee_core->ModStorageStart = irxtable;
     set_ee_core->ModStorageEnd   = irxptr;
-    set_ee_core->ee_core_flags   = eecore_compat;
+    set_ee_core->flags           = eecore_compat;
 
     // Add simple checksum
     uint32_t *pms = (uint32_t *)irxtable;
@@ -1898,6 +1899,8 @@ gsm_done:
 
     // Patch PS2 to use our "ee_core.elf" instead of EELOAD
     sbvpp_replace_eeload((void *)eh->entry);
+    // Patch PS2 to not wipe our module buffer
+    sbvpp_patch_user_mem_clear(irxptr);
 
     //
     // Create EE_CORE argument string
@@ -1932,10 +1935,9 @@ gsm_done:
     //
     printf("Starting ee_core with following arguments:\n");
     printf("- GameID          = %s\n",   set_ee_core->GameID);
-    printf("- initUserMemory  = 0x%p\n", set_ee_core->initUserMemory);
     printf("- ModStorageStart = 0x%p\n", set_ee_core->ModStorageStart);
     printf("- ModStorageEnd   = 0x%p\n", set_ee_core->ModStorageEnd);
-    printf("- ee_core_flags   = 0x%lx\n", set_ee_core->ee_core_flags);
+    printf("- flags           = 0x%lx\n", set_ee_core->flags);
     printf("- args:\n");
     for (int i = 0; i < ee_core_argc; i++) {
         printf("- [%d] %s\n", i, ee_core_argv[i]);

@@ -36,14 +36,6 @@ typedef struct
 #define EECORE_FLAG_GSM_C_2     (1<<15) // GSM: Enable FIELD flip type 2
 #define EECORE_FLAG_GSM_C_3     (1<<16) // GSM: Enable FIELD flip type 3
 
-// Backing stores, only used by patches!
-#define BDM_ILK_MODE (1<< 0)
-#define BDM_M4S_MODE (1<< 1)
-#define BDM_USB_MODE (1<< 2)
-#define BDM_UDP_MODE (1<< 3)
-#define BDM_ATA_MODE (1<< 4)
-#define BDM_NOP_MODE (1<<31)
-
 // Interface to loader
 #define EEC_MOD_CHECKSUM_COUNT 32
 struct ee_core_data
@@ -51,11 +43,8 @@ struct ee_core_data
     // Magic number to find
     uint32_t magic;
 
-    uint32_t ee_core_flags;
+    uint32_t flags;
     char GameID[16];
-    int GameMode;
-
-    void *initUserMemory;
 
     int *CheatList;
 

@@ -54,14 +54,14 @@ int main(int argc, char **argv)
 
         // DINIT(); // In PCSX2 I see double messages after this call, why?
         DPRINTF("EE core start!\n");
-        g_ee_core_flags = eec.ee_core_flags;
+        g_ee_core_flags = eec.flags;
 
         // Enable cheat engine
         if (eec.CheatList != NULL)
             EnableCheats();
 
         // Enable GSM, only possible when kernel hooks are allowed
-        if (((eec.ee_core_flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) != 0) && ((eec.ee_core_flags & EECORE_FLAG_UNHOOK) == 0))
+        if (((eec.flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) != 0) && ((eec.flags & EECORE_FLAG_UNHOOK) == 0))
             EnableGSM();
 
         /* installing kernel hooks */

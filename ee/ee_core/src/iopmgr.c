@@ -50,7 +50,7 @@ void services_exit()
 
 //---------------------------------------------------------------------------
 // Simple module storage checksum
-void module_checksum()
+static void module_checksum()
 {
     int i, j;
     u32 *pms = (u32 *)eec.ModStorageStart;
@@ -284,7 +284,7 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
     module_checksum();
 
     // Start services, some games hang here becouse the IOP is not responding
-    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+    if (eec.flags & EECORE_FLAG_DBC)
         *GS_REG_BGCOLOR = COLOR_LBLUE;
 
     // Reboot the IOP
@@ -295,12 +295,12 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
     sbv_patch_enable_lmb();
 
     // Reboot the IOP with neutrino modules
-    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+    if (eec.flags & EECORE_FLAG_DBC)
         *GS_REG_BGCOLOR = COLOR_MAGENTA;
     New_Reset_Iop(NULL, 0);
 
     // Reboot the IOP with neutrino modules and IOPRP
-    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+    if (eec.flags & EECORE_FLAG_DBC)
         *GS_REG_BGCOLOR = COLOR_YELLOW;
     New_Reset_Iop(reset_pkt->arg, reset_pkt->arglen);
 
@@ -311,7 +311,7 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
     set_reg_hook = 4;
     get_reg_hook = 1;
 
-    if (eec.ee_core_flags & EECORE_FLAG_DBC)
+    if (eec.flags & EECORE_FLAG_DBC)
         *GS_REG_BGCOLOR = COLOR_BLACK;
 
     return 1;
@@ -333,7 +333,7 @@ static int Hook_SifSetReg(u32 register_num, int register_value)
         return 0;
     } else if (set_reg_hook == 1 && register_num == SIF_SYSREG_SUBADDR && register_value == (int)NULL) {
         set_reg_hook--;
-        if (eec.ee_core_flags & EECORE_FLAG_UNHOOK) {
+        if (eec.flags & EECORE_FLAG_UNHOOK) {
             //
             // Call kernel functions directly, becouse we are already in kernel mode
             //

@@ -19,11 +19,6 @@
 #include "util.h"
 #include "interface.h"
 
-#define ALL_MODE (0xffffffff)
-#define BDM_MODE (BDM_USB_MODE|BDM_M4S_MODE) // Only USB-like slow devices?
-#define ETH_MODE (BDM_UDP_MODE)
-#define HDD_MODE (BDM_ATA_MODE)
-
 // This patch needs apemodpatch.irx loaded
 // Currently not supported by neutrino, fix later
 //#define APEMOD_PATCH
@@ -46,17 +41,12 @@ typedef struct
 typedef struct
 {
     char *game;
-    u32 mode;
     game_patch_t patch;
 } patchlist_t;
 
 // Keep patch codes unique!
-#define PATCH_GENERIC_NIS        0xDEADBEE0
 #define PATCH_GENERIC_CAPCOM     0xBABECAFE
-#define PATCH_GENERIC_AC9B       0xDEADBEE1
-#define PATCH_GENERIC_SLOW_READS 0xDEADBEE2
 #define PATCH_VIRTUA_QUEST       0xDEADBEE3
-#define PATCH_SDF_MACROSS        0x00065405
 #define PATCH_SRW_IMPACT         0x0021E808
 #define PATCH_RNC_UYA            0x00398498
 #define PATCH_ZOMBIE_ZONE        0xEEE62525
@@ -71,206 +61,84 @@ typedef struct
 #define PATCH_SRS_V200_ADDR      0x0033B744 // SRS Stree Racing Syndicate v2.00 patch address
 
 static const patchlist_t patch_list[] = {
-    {"SLES_524.58", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Disgaea Hour of Darkness PAL - disable cdvd timeout stuff
-    {"SLUS_206.66", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Disgaea Hour of Darkness NTSC U - disable cdvd timeout stuff
-    {"SLPS_202.51", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Makai Senki Disgaea NTSC J - disable cdvd timeout stuff
-    {"SLPS_202.50", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Makai Senki Disgaea (limited edition) NTSC J - disable cdvd timeout stuff
-    {"SLPS_731.03", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Makai Senki Disgaea (PlayStation2 the Best) NTSC J - disable cdvd timeout stuff
-    {"SLES_529.51", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Phantom Brave PAL - disable cdvd timeout stuff
-    {"SLUS_209.55", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Phantom Brave NTSC U - disable cdvd timeout stuff
-    {"SLPS_203.45", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Phantom Brave NTSC J - disable cdvd timeout stuff
-    {"SLPS_203.44", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Phantom Brave (limited edition) NTSC J - disable cdvd timeout stuff
-    {"SLPS_731.08", BDM_MODE, {PATCH_GENERIC_NIS, 0x00000000, 0x00000000}},        // Phantom Brave: 2-shuume Hajime Mashita (PlayStation 2 the Best) NTSC J - disable cdvd timeout stuff
-    {"SLUS_213.17", ALL_MODE, {PATCH_GENERIC_CAPCOM, 0x00149210, 0x00000000}},     // SFA anthology US
-    {"SLES_540.85", ALL_MODE, {PATCH_GENERIC_CAPCOM, 0x00148db0, 0x00000000}},     // SFA anthology EUR
-    {"SLPM_664.09", ALL_MODE, {PATCH_GENERIC_CAPCOM, 0x00149210, 0x00000000}},     // SFZ Generation JP
-    {"SLPM_659.98", ALL_MODE, {PATCH_GENERIC_CAPCOM, 0x00146fd0, 0x00000000}},     // Vampire: Darkstakers collection JP
-    {"SLUS_212.00", BDM_MODE, {PATCH_GENERIC_AC9B, 0x00000000, 0x00000000}},       // Armored Core Nine Breaker NTSC U - skip failing case on binding a RPC server
-    {"SLES_538.19", BDM_MODE, {PATCH_GENERIC_AC9B, 0x00000000, 0x00000000}},       // Armored Core Nine Breaker PAL - skip failing case on binding a RPC server
-    {"SLPS_254.08", BDM_MODE, {PATCH_GENERIC_AC9B, 0x00000000, 0x00000000}},       // Armored Core Nine Breaker NTSC J - skip failing case on binding a RPC server
-    {"SLUS_210.05", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac514}}, // Kingdom Hearts 2 US - [Gummi mission freezing fix (check addr is where to patch,
-    {"SLES_541.14", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac60c}}, // Kingdom Hearts 2 UK - val is the amount of delay cycles)]
-    {"SLES_542.32", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac60c}}, // Kingdom Hearts 2 FR
-    {"SLES_542.33", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac60c}}, // Kingdom Hearts 2 DE
-    {"SLES_542.34", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac60c}}, // Kingdom Hearts 2 IT
-    {"SLES_542.35", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac60c}}, // Kingdom Hearts 2 ES
-    {"SLPM_662.33", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00110000, 0x001ac44c}}, // Kingdom Hearts 2 JPN
-    {"SLPM_666.75", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00149210, 0x001adf64}}, // Kingdom Hearts 2 Final Mix JPN
-    {"SLUS_212.87", ETH_MODE, {PATCH_GENERIC_SLOW_READS, 0x000c0000, 0x006cd15c}}, // Prince of Persia: The Two Thrones NTSC U - slow down cdvd reads
-    {"SLUS_212.87", HDD_MODE, {PATCH_GENERIC_SLOW_READS, 0x00040000, 0x006cd15c}}, // Prince of Persia: The Two Thrones NTSC U - slow down cdvd reads
-    {"SLES_537.77", ETH_MODE, {PATCH_GENERIC_SLOW_READS, 0x000c0000, 0x006cd6dc}}, // Prince of Persia: The Two Thrones PAL - slow down cdvd reads
-    {"SLES_537.77", HDD_MODE, {PATCH_GENERIC_SLOW_READS, 0x00040000, 0x006cd6dc}}, // Prince of Persia: The Two Thrones PAL - slow down cdvd reads
-    {"SLUS_210.22", ETH_MODE, {PATCH_GENERIC_SLOW_READS, 0x000c0000, 0x0060f42c}}, // Prince of Persia: Warrior Within NTSC U - slow down cdvd reads
-    {"SLUS_210.22", HDD_MODE, {PATCH_GENERIC_SLOW_READS, 0x00040000, 0x0060f42c}}, // Prince of Persia: Warrior Within NTSC U - slow down cdvd reads
-    {"SLES_528.22", ETH_MODE, {PATCH_GENERIC_SLOW_READS, 0x000c0000, 0x0060f4dc}}, // Prince of Persia: Warrior Within PAL - slow down cdvd reads
-    {"SLES_528.22", HDD_MODE, {PATCH_GENERIC_SLOW_READS, 0x00040000, 0x0060f4dc}}, // Prince of Persia: Warrior Within PAL - slow down cdvd reads
-    {"SLUS_214.32", ALL_MODE, {PATCH_GENERIC_SLOW_READS, 0x00080000, 0x002baf34}}, // NRA Gun Club NTSC U
-    {"SLUS_209.77", ALL_MODE, {PATCH_VIRTUA_QUEST, 0x00000000, 0x00000000}},       // Virtua Quest
-    {"SLPM_656.32", ALL_MODE, {PATCH_VIRTUA_QUEST, 0x00000000, 0x00000000}},       // Virtua Fighter Cyber Generation: Judgment Six No Yabou
-    {"SLPM_654.05", HDD_MODE, {PATCH_SDF_MACROSS, 0x00200000, 0x00249b84}},        // Super Dimensional Fortress Macross JPN
-    {"SLUS_202.30", ALL_MODE, {0x00132d14, 0x10000018, 0x0c046744}},               // Max Payne NTSC U - skip IOP reset before to exec demo elfs
-    {"SLES_503.25", ALL_MODE, {0x00132ce4, 0x10000018, 0x0c046744}},               // Max Payne PAL - skip IOP reset before to exec demo elfs
-    {"SLUS_204.40", ALL_MODE, {0x0021bb00, 0x03e00008, 0x27bdff90}},               // Kya: Dark Lineage NTSC U - disable game debug prints
-    {"SLES_514.73", ALL_MODE, {0x0021bd10, 0x03e00008, 0x27bdff90}},               // Kya: Dark Lineage PAL - disable game debug prints
-    {"SLUS_204.96", ALL_MODE, {0x00104900, 0x03e00008, 0x27bdff90}},               // V-Rally 3 NTSC U - disable game debug prints
-    {"SLES_507.25", ALL_MODE, {0x00104518, 0x03e00008, 0x27bdff70}},               // V-Rally 3 PAL - disable game debug prints
-    {"SLUS_201.99", ALL_MODE, {0x0012a6d0, 0x24020001, 0x0c045e0a}},               // Shaun Palmer's Pro Snowboarder NTSC U
-    {"SLUS_201.99", ALL_MODE, {0x0013c55c, 0x10000012, 0x04400012}},               // Shaun Palmer's Pro Snowboarder NTSC U
-    {"SLES_553.46", ALL_MODE, {0x0035414C, 0x2402FFFF, 0x0C0EE74E}},               // Rugby League 2: World Cup Edition PAL
-    {"SLPS_251.03", ALL_MODE, {PATCH_SRW_IMPACT, 0x00000000, 0x00000000}},         // Super Robot Wars IMPACT Limited Edition
-    {"SLPS_251.04", ALL_MODE, {PATCH_SRW_IMPACT, 0x00000000, 0x00000000}},         // Super Robot Wars IMPACT
-    {"SCUS_973.53", ALL_MODE, {PATCH_RNC_UYA, 0x0084c645, 0x00000000}},            // Ratchet and Clank: Up Your Arsenal
-    {"SCES_524.56", ALL_MODE, {PATCH_RNC_UYA, 0x0084c726, 0x00000000}},            // Ratchet and Clank: Up Your Arsenal
-    {"SLES_533.98", ALL_MODE, {PATCH_ZOMBIE_ZONE, 0x001b2c08, 0x00000000}},        // Zombie Zone
-    {"SLES_544.61", ALL_MODE, {PATCH_ZOMBIE_ZONE, 0x001b3e20, 0x00000000}},        // Zombie Hunters
-    {"SLPM_625.25", ALL_MODE, {PATCH_ZOMBIE_ZONE, 0x001b1dc0, 0x00000000}},        // Simple 2000 Series Vol. 61: The Oneechanbara
-    {"SLPM_626.38", ALL_MODE, {PATCH_ZOMBIE_ZONE, 0x001b355c, 0x00000000}},        // Simple 2000 Series Vol. 80: The Oneechanpuruu
-    {"SLES_522.37", ALL_MODE, {PATCH_DOT_HACK, 0x00000000, 0x00000000}},           // .hack//Infection PAL
-    {"SLES_524.67", ALL_MODE, {PATCH_DOT_HACK, 0x00000000, 0x00000000}},           // .hack//Mutation PAL
-    {"SLES_524.69", ALL_MODE, {PATCH_DOT_HACK, 0x00000000, 0x00000000}},           // .hack//Outbreak PAL
-    {"SLES_524.68", ALL_MODE, {PATCH_DOT_HACK, 0x00000000, 0x00000000}},           // .hack//Quarantine PAL
-    {"SLUS_205.61", ALL_MODE, {PATCH_SOS, 0x00000001, 0x00000000}},                // Disaster Report
-    {"SLES_513.01", ALL_MODE, {PATCH_SOS, 0x00000002, 0x00000000}},                // SOS: The Final Escape
-    {"SLPS_251.13", ALL_MODE, {PATCH_SOS, 0x00000000, 0x00000000}},                // Zettai Zetsumei Toshi
-    {"SLES_535.08", ALL_MODE, {PATCH_ULT_PRO_PINBALL, 0x00000000, 0x00000000}},    // Ultimate Pro Pinball
-    {"SLUS_200.02", BDM_MODE, {0x002c7758, 0x0000182d, 0x8c436d18}},               // Ridge Racer V (NTSC-U/C) - workaround disabling (bugged?) streaming code in favour of processing all data at once, for USB devices.
-    {"SCES_500.00", BDM_MODE, {0x002c9760, 0x0000182d, 0x8c43a2f8}},               // Ridge Racer V (PAL) - workaround by disabling (bugged?) streaming code in favour of processing all data at once, for USB devices.
-    {"SLES_552.94", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0012fcc8, 0x00000000}},   // Ferrari Challenge: Trofeo Pirelli (PAL)
-    {"SLUS_217.80", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0012fcb0, 0x00000000}},   // Ferrari Challenge: Trofeo Pirelli (NTSC-U/C)
-    {"SLUS_205.82", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0033b534, 0x00000000}},   // SRS: Street Racing Syndicate (NTSC-U/C)
-    {"SLES_530.45", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0033fbfc, 0x00000000}},   // SRS: Street Racing Syndicate (PAL)
-    {"SLUS_214.49", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00361dfc, 0x00000000}},   // The Fast and the Furious (NTSC-U/C)
-    {"SLES_544.83", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00363c4c, 0x00000000}},   // The Fast and the Furious (PAL)
-    {"SLUS_214.38", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0034c944, 0x00000000}},   // Cartoon Network Racing (NTSC-U/C)
-    {"SLES_543.06", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0034c8A4, 0x00000000}},   // Cartoon Network Racing (PAL)
-    {"SLUS_216.28", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0023cbc8, 0x00000000}},   // Hot Wheels - Beat That! (NTSC-U/C)
-    {"SLES_549.71", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x0023d7b8, 0x00000000}},   // Hot Wheels - Beat That! (PAL)
-    {"SLUS_213.57", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00386b14, 0x00000000}},   // Hummer Badlands (NTSC-U/C)
-    {"SLES_541.58", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00388a84, 0x00000000}},   // Hummer Badlands (PAL)
-    {"SLUS_211.62", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00144bcc, 0x00000000}},   // Ford Mustang - The Legend Lives (NTSC-U/C)
-    {"SLES_532.96", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00144cc4, 0x00000000}},   // Ford Mustang - The Legend Lives (PAL)
-    {"SLUS_212.76", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00332814, 0x00000000}},   // Ford vs. Chevy (NTSC-U/C)
-    {"SLES_536.98", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00335674, 0x00000000}},   // Ford vs. Chevy  (PAL)
-    {"SLUS_210.86", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x001462fc, 0x00000000}},   // Big Mutha Truckers 2 (NTSC-U/C)
-    {"SLES_529.80", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x00146124, 0x00000000}},   // Big Mutha Truckers 2 - Truck Me Harder (PAL)
-    {"SLES_546.32", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x001f60f8, 0x00000000}},   // MTV Pimp My Ride (PAL)
-    {"SLES_546.07", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x001f37d0, 0x00000000}},   // MTV Pimp My Ride (PAL-Australia)
-    {"SLUS_215.80", ALL_MODE, {PATCH_EUTECHNYX_WU_TID, 0x01f52d8, 0x00000000}},    // MTV Pimp My Ride (v1.00/default) (NTSC-U/C)
-    {"SLUS_201.99", ALL_MODE, {PATCH_PRO_SNOWBOARDER, 0x00000000, 0x00000000}},    // Shaun Palmer's Pro Snowboarder (NTSC-U/C)
-    {"SLES_504.00", ALL_MODE, {PATCH_PRO_SNOWBOARDER, 0x00000000, 0x00000000}},    // Shaun Palmer's Pro Snowboarder (PAL)
-    {"SLES_504.01", ALL_MODE, {PATCH_PRO_SNOWBOARDER, 0x00000000, 0x00000000}},    // Shaun Palmer's Pro Snowboarder (PAL French)
-    {"SLES_504.02", ALL_MODE, {PATCH_PRO_SNOWBOARDER, 0x00000000, 0x00000000}},    // Shaun Palmer's Pro Snowboarder (PAL German)
-    {"SLPM_651.98", ALL_MODE, {PATCH_PRO_SNOWBOARDER, 0x00000000, 0x00000000}},    // Shaun Palmer's Pro Snowboarder (NTSC-J) - Untested
-    {"SLUS_204.13", ALL_MODE, {PATCH_SHADOW_MAN_2, 0x00000001, 0x00000000}},       // Shadow Man: 2econd Coming (NTSC-U/C)
-    {"SLES_504.46", ALL_MODE, {PATCH_SHADOW_MAN_2, 0x00000002, 0x00000000}},       // Shadow Man: 2econd Coming (PAL)
-    {"SLES_506.08", ALL_MODE, {PATCH_SHADOW_MAN_2, 0x00000003, 0x00000000}},       // Shadow Man: 2econd Coming (PAL German)
-    {"SLPS_254.21", ALL_MODE, {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}},   // Harvest Moon: A Wonderful Life (NTSC-J) (First Print Edition)
-    {"SLPS_254.31", ALL_MODE, {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}},   // Harvest Moon: A Wonderful Life (NTSC-J)
-    {"SLPS_732.22", ALL_MODE, {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}},   // Harvest Moon: A Wonderful Life (NTSC-J) (PlayStation 2 The Best)
-    {"SLUS_211.71", ALL_MODE, {PATCH_HARVEST_MOON_AWL, 0x00000001, 0x00000000}},   // Harvest Moon: A Wonderful Life (NTSC-U/C)
-    {"SLES_534.80", ALL_MODE, {PATCH_HARVEST_MOON_AWL, 0x00000002, 0x00000000}},   // Harvest Moon: A Wonderful Life (NTSC-PAL)
-    {NULL, 0, {0x00000000, 0x00000000, 0x00000000}}                                // terminator
+    {"SLUS_213.17", {PATCH_GENERIC_CAPCOM,   0x00149210, 0x00000000}}, // SFA anthology US
+    {"SLES_540.85", {PATCH_GENERIC_CAPCOM,   0x00148db0, 0x00000000}}, // SFA anthology EUR
+    {"SLPM_664.09", {PATCH_GENERIC_CAPCOM,   0x00149210, 0x00000000}}, // SFZ Generation JP
+    {"SLPM_659.98", {PATCH_GENERIC_CAPCOM,   0x00146fd0, 0x00000000}}, // Vampire: Darkstakers collection JP
+    {"SLUS_209.77", {PATCH_VIRTUA_QUEST,     0x00000000, 0x00000000}}, // Virtua Quest
+    {"SLPM_656.32", {PATCH_VIRTUA_QUEST,     0x00000000, 0x00000000}}, // Virtua Fighter Cyber Generation: Judgment Six No Yabou
+    {"SLUS_202.30", {0x00132d14, 0x10000018, 0x0c046744}},             // Max Payne NTSC U - skip IOP reset before to exec demo elfs
+    {"SLES_503.25", {0x00132ce4, 0x10000018, 0x0c046744}},             // Max Payne PAL - skip IOP reset before to exec demo elfs
+    {"SLUS_204.40", {0x0021bb00, 0x03e00008, 0x27bdff90}},             // Kya: Dark Lineage NTSC U - disable game debug prints
+    {"SLES_514.73", {0x0021bd10, 0x03e00008, 0x27bdff90}},             // Kya: Dark Lineage PAL - disable game debug prints
+    {"SLUS_204.96", {0x00104900, 0x03e00008, 0x27bdff90}},             // V-Rally 3 NTSC U - disable game debug prints
+    {"SLES_507.25", {0x00104518, 0x03e00008, 0x27bdff70}},             // V-Rally 3 PAL - disable game debug prints
+    {"SLUS_201.99", {0x0012a6d0, 0x24020001, 0x0c045e0a}},             // Shaun Palmer's Pro Snowboarder NTSC U
+    {"SLUS_201.99", {0x0013c55c, 0x10000012, 0x04400012}},             // Shaun Palmer's Pro Snowboarder NTSC U
+    {"SLES_553.46", {0x0035414C, 0x2402FFFF, 0x0C0EE74E}},             // Rugby League 2: World Cup Edition PAL
+    {"SLPS_251.03", {PATCH_SRW_IMPACT,       0x00000000, 0x00000000}}, // Super Robot Wars IMPACT Limited Edition
+    {"SLPS_251.04", {PATCH_SRW_IMPACT,       0x00000000, 0x00000000}}, // Super Robot Wars IMPACT
+    {"SCUS_973.53", {PATCH_RNC_UYA,          0x0084c645, 0x00000000}}, // Ratchet and Clank: Up Your Arsenal
+    {"SCES_524.56", {PATCH_RNC_UYA,          0x0084c726, 0x00000000}}, // Ratchet and Clank: Up Your Arsenal
+    {"SLES_533.98", {PATCH_ZOMBIE_ZONE,      0x001b2c08, 0x00000000}}, // Zombie Zone
+    {"SLES_544.61", {PATCH_ZOMBIE_ZONE,      0x001b3e20, 0x00000000}}, // Zombie Hunters
+    {"SLPM_625.25", {PATCH_ZOMBIE_ZONE,      0x001b1dc0, 0x00000000}}, // Simple 2000 Series Vol. 61: The Oneechanbara
+    {"SLPM_626.38", {PATCH_ZOMBIE_ZONE,      0x001b355c, 0x00000000}}, // Simple 2000 Series Vol. 80: The Oneechanpuruu
+    {"SLES_522.37", {PATCH_DOT_HACK,         0x00000000, 0x00000000}}, // .hack//Infection PAL
+    {"SLES_524.67", {PATCH_DOT_HACK,         0x00000000, 0x00000000}}, // .hack//Mutation PAL
+    {"SLES_524.69", {PATCH_DOT_HACK,         0x00000000, 0x00000000}}, // .hack//Outbreak PAL
+    {"SLES_524.68", {PATCH_DOT_HACK,         0x00000000, 0x00000000}}, // .hack//Quarantine PAL
+#ifdef IREMSSND_PATCH
+    {"SLUS_205.61", {PATCH_SOS,              0x00000001, 0x00000000}}, // Disaster Report
+    {"SLES_513.01", {PATCH_SOS,              0x00000002, 0x00000000}}, // SOS: The Final Escape
+    {"SLPS_251.13", {PATCH_SOS,              0x00000000, 0x00000000}}, // Zettai Zetsumei Toshi
+#endif
+#ifdef APEMOD_PATCH
+    {"SLES_535.08", {PATCH_ULT_PRO_PINBALL,  0x00000000, 0x00000000}}, // Ultimate Pro Pinball
+#endif
+    {"SLES_552.94", {PATCH_EUTECHNYX_WU_TID, 0x0012fcc8, 0x00000000}}, // Ferrari Challenge: Trofeo Pirelli (PAL)
+    {"SLUS_217.80", {PATCH_EUTECHNYX_WU_TID, 0x0012fcb0, 0x00000000}}, // Ferrari Challenge: Trofeo Pirelli (NTSC-U/C)
+    {"SLUS_205.82", {PATCH_EUTECHNYX_WU_TID, 0x0033b534, 0x00000000}}, // SRS: Street Racing Syndicate (NTSC-U/C)
+    {"SLES_530.45", {PATCH_EUTECHNYX_WU_TID, 0x0033fbfc, 0x00000000}}, // SRS: Street Racing Syndicate (PAL)
+    {"SLUS_214.49", {PATCH_EUTECHNYX_WU_TID, 0x00361dfc, 0x00000000}}, // The Fast and the Furious (NTSC-U/C)
+    {"SLES_544.83", {PATCH_EUTECHNYX_WU_TID, 0x00363c4c, 0x00000000}}, // The Fast and the Furious (PAL)
+    {"SLUS_214.38", {PATCH_EUTECHNYX_WU_TID, 0x0034c944, 0x00000000}}, // Cartoon Network Racing (NTSC-U/C)
+    {"SLES_543.06", {PATCH_EUTECHNYX_WU_TID, 0x0034c8A4, 0x00000000}}, // Cartoon Network Racing (PAL)
+    {"SLUS_216.28", {PATCH_EUTECHNYX_WU_TID, 0x0023cbc8, 0x00000000}}, // Hot Wheels - Beat That! (NTSC-U/C)
+    {"SLES_549.71", {PATCH_EUTECHNYX_WU_TID, 0x0023d7b8, 0x00000000}}, // Hot Wheels - Beat That! (PAL)
+    {"SLUS_213.57", {PATCH_EUTECHNYX_WU_TID, 0x00386b14, 0x00000000}}, // Hummer Badlands (NTSC-U/C)
+    {"SLES_541.58", {PATCH_EUTECHNYX_WU_TID, 0x00388a84, 0x00000000}}, // Hummer Badlands (PAL)
+    {"SLUS_211.62", {PATCH_EUTECHNYX_WU_TID, 0x00144bcc, 0x00000000}}, // Ford Mustang - The Legend Lives (NTSC-U/C)
+    {"SLES_532.96", {PATCH_EUTECHNYX_WU_TID, 0x00144cc4, 0x00000000}}, // Ford Mustang - The Legend Lives (PAL)
+    {"SLUS_212.76", {PATCH_EUTECHNYX_WU_TID, 0x00332814, 0x00000000}}, // Ford vs. Chevy (NTSC-U/C)
+    {"SLES_536.98", {PATCH_EUTECHNYX_WU_TID, 0x00335674, 0x00000000}}, // Ford vs. Chevy  (PAL)
+    {"SLUS_210.86", {PATCH_EUTECHNYX_WU_TID, 0x001462fc, 0x00000000}}, // Big Mutha Truckers 2 (NTSC-U/C)
+    {"SLES_529.80", {PATCH_EUTECHNYX_WU_TID, 0x00146124, 0x00000000}}, // Big Mutha Truckers 2 - Truck Me Harder (PAL)
+    {"SLES_546.32", {PATCH_EUTECHNYX_WU_TID, 0x001f60f8, 0x00000000}}, // MTV Pimp My Ride (PAL)
+    {"SLES_546.07", {PATCH_EUTECHNYX_WU_TID, 0x001f37d0, 0x00000000}}, // MTV Pimp My Ride (PAL-Australia)
+    {"SLUS_215.80", {PATCH_EUTECHNYX_WU_TID, 0x001f52d8, 0x00000000}}, // MTV Pimp My Ride (v1.00/default) (NTSC-U/C)
+    {"SLUS_201.99", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (NTSC-U/C)
+    {"SLES_504.00", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (PAL)
+    {"SLES_504.01", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (PAL French)
+    {"SLES_504.02", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (PAL German)
+    {"SLPM_651.98", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (NTSC-J) - Untested
+#ifdef F2TECH_PATCH
+    {"SLUS_204.13", {PATCH_SHADOW_MAN_2,     0x00000001, 0x00000000}}, // Shadow Man: 2econd Coming (NTSC-U/C)
+    {"SLES_504.46", {PATCH_SHADOW_MAN_2,     0x00000002, 0x00000000}}, // Shadow Man: 2econd Coming (PAL)
+    {"SLES_506.08", {PATCH_SHADOW_MAN_2,     0x00000003, 0x00000000}}, // Shadow Man: 2econd Coming (PAL German)
+#endif
+    {"SLPS_254.21", {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-J) (First Print Edition)
+    {"SLPS_254.31", {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-J)
+    {"SLPS_732.22", {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-J) (PlayStation 2 The Best)
+    {"SLUS_211.71", {PATCH_HARVEST_MOON_AWL, 0x00000001, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-U/C)
+    {"SLES_534.80", {PATCH_HARVEST_MOON_AWL, 0x00000002, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-PAL)
+    {NULL, {0x00000000, 0x00000000, 0x00000000}}                       // terminator
 };
 
 #define JAL(addr)      (0x0c000000 | (((addr)&0x03ffffff) >> 2))
 #define JMP(addr)      (0x08000000 | (0x3ffffff & ((addr) >> 2)))
 #define FNADDR(jal)    (((jal)&0x03ffffff) << 2)
 #define NIBBLE2CHAR(n) ((n) <= 9 ? '0' + (n) : 'a' + (n))
-
-static int (*cdRead)(u32 lsn, u32 nsectors, void *buf, int *mode);
-static unsigned int g_delay_cycles;
-//static int g_mode; // Patch may use this for anything.
-
-// Nippon Ichi Software games generic patch to disable cdvd timeout
-static void NIS_generic_patches(void)
-{
-    static const u32 NIScdtimeoutpattern[] = {
-        0x3c010000,
-        0x8c230000,
-        0x24630001,
-        0x3c010000,
-        0xac230000,
-        0x3c010000,
-        0x8c230000,
-        0x2861037b,
-        0x14200000,
-        0x00000000};
-    static const u32 NIScdtimeoutpattern_mask[] = {
-        0xffff0000,
-        0xffff0000,
-        0xffffffff,
-        0xffff0000,
-        0xffff0000,
-        0xffff0000,
-        0xffff0000,
-        0xffffffff,
-        0xffff0000,
-        0xffffffff};
-    u32 *ptr;
-
-    ptr = find_pattern_with_mask((u32 *)0x00100000, 0x01e00000, NIScdtimeoutpattern, NIScdtimeoutpattern_mask, 0x28);
-    if (ptr) {
-        u16 jmp = _lw((u32)ptr + 32) & 0xffff;
-        _sw(0x10000000 | jmp, (u32)ptr + 32);
-    }
-}
-
-// Armored Core 9 Breaker generic USB patch
-static void AC9B_generic_patches(void)
-{
-    static u32 AC9Bpattern[] = {
-        0x8e450000,
-        0x0220202d,
-        0x0c000000,
-        0x0000302d,
-        0x04410003,
-        0x00000000,
-        0x10000005,
-        0x2402ffff,
-        0x8e020000,
-        0x1040fff6};
-    static const u32 AC9Bpattern_mask[] = {
-        0xffffffff,
-        0xffffffff,
-        0xfc000000,
-        0xffffffff,
-        0xffffffff,
-        0xffffffff,
-        0xffffffff,
-        0xffffffff,
-        0xffffffff,
-        0xffffffff};
-    u32 *ptr;
-
-    ptr = find_pattern_with_mask((u32 *)0x00100000, 0x01e00000, AC9Bpattern, AC9Bpattern_mask, 0x28);
-    if (ptr)
-        _sw(0, (u32)ptr + 36);
-}
-
-static int delayed_cdRead(u32 lsn, u32 nsectors, void *buf, int *mode)
-{
-    int r;
-    unsigned int count;
-
-    r = cdRead(lsn, nsectors, buf, mode);
-    count = g_delay_cycles;
-    while (count--)
-        asm("nop\nnop\nnop\nnop");
-
-    return r;
-}
-
-static void generic_delayed_cdRead_patches(u32 patch_addr, u32 delay_cycles)
-{
-    // set configureable delay cycles
-    g_delay_cycles = delay_cycles;
-
-    // get original cdRead() pointer
-    cdRead = (void *)FNADDR(_lw(patch_addr));
-
-    // overwrite with a JAL to our delayed_cdRead function
-    _sw(JAL((u32)delayed_cdRead), patch_addr);
-}
 
 static int (*capcom_lmb)(void *modpack_addr, int mod_index, int mod_argc, char **mod_argv);
 
@@ -288,25 +156,6 @@ static void generic_capcom_protection_patches(u32 patch_addr)
 {
     capcom_lmb = (void *)FNADDR(_lw(patch_addr));
     _sw(JAL((u32)apply_capcom_protection_patch), patch_addr);
-}
-
-static void Invoke_CRSGUI_Start(void)
-{
-    int (*pCRSGUI_Start)(int arg1, int arg2) = (void *)0x003054b0;
-
-    pCRSGUI_Start(*(int *)0x0078f79c, 0);
-}
-
-static void SDF_Macross_patch(void)
-{
-    /*  Choujikuu Yousai Macross appears to have a rather large problem with it: it appears to use its GUI before initialization is completed.
-        I did not attempt to figure out whether it's really a timing problem (whereby this happens before initialization is completed by another thread... if there is one),
-        or if its normal functionality was the result of pure luck that SEGA had.
-
-        The problems that it has are quite evident when this game is run within PCSX2. I still do not know why DECI2 does not detect the TLB exception when it
-        dereferences NULL pointers, but it might have something to do with the game accessing the debug registers (PCSX2's logs indicate that). */
-
-    _sw(JMP((unsigned int)&Invoke_CRSGUI_Start), 0x001f8520);
 }
 
 extern void SRWI_IncrementCntrlFlag(void);
@@ -879,22 +728,8 @@ void apply_patches(const char *path)
 
     // if there are patches matching game name/mode then fill the patch table
     for (p = patch_list; p->game; p++) {
-        if ((!_strcmp(eec.GameID, p->game)) && (p->mode & eec.GameMode)) {
+        if (!_strcmp(eec.GameID, p->game)) {
             switch (p->patch.addr) {
-                case PATCH_GENERIC_NIS:
-                    NIS_generic_patches();
-                    break;
-                case PATCH_GENERIC_AC9B:
-                    AC9B_generic_patches();
-                    break;
-                case PATCH_GENERIC_SLOW_READS:
-                    if (file_eq_gameid)
-                        generic_delayed_cdRead_patches(p->patch.check, p->patch.val); // slow reads generic patch
-                    break;
-                case PATCH_SDF_MACROSS:
-                    if (file_eq_gameid)
-                        SDF_Macross_patch();
-                    break;
                 case PATCH_GENERIC_CAPCOM:
                     if (file_eq_gameid)
                         generic_capcom_protection_patches(p->patch.val); // Capcom anti cdvd emulator protection patch
@@ -914,20 +749,20 @@ void apply_patches(const char *path)
                 case PATCH_DOT_HACK:
                     DotHack_patches(path);
                     break;
-                case PATCH_SOS:
 #ifdef IREMSSND_PATCH
+                case PATCH_SOS:
                     SOSPatch(p->patch.val);
-#endif
                     break;
+#endif
                 case PATCH_VIRTUA_QUEST:
                     if (file_eq_gameid)
                         VirtuaQuest_patches();
                     break;
-                case PATCH_ULT_PRO_PINBALL:
 #ifdef APEMOD_PATCH
+                case PATCH_ULT_PRO_PINBALL:
                     UltProPinballPatch(path);
-#endif
                     break;
+#endif
                 case PATCH_EUTECHNYX_WU_TID:
                     if (file_eq_gameid)
                         EutechnyxWakeupTIDPatch(p->patch.val);
@@ -935,11 +770,11 @@ void apply_patches(const char *path)
                 case PATCH_PRO_SNOWBOARDER:
                     ProSnowboarderPatch();
                     break;
-                case PATCH_SHADOW_MAN_2:
 #ifdef F2TECH_PATCH
+                case PATCH_SHADOW_MAN_2:
                     ShadowMan2Patch(p->patch.val);
-#endif
                     break;
+#endif
                 case PATCH_HARVEST_MOON_AWL:
                     HarvestMoonAWLPatch(p->patch.val);
                     break;
