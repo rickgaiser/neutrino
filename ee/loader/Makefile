@@ -40,8 +40,10 @@ all: $(EE_BIN_PACKED) version.txt
 #GAME = 'DVD/The Incredibles - Rise of the Underminer (E).iso' -gsm=fp # sound issues, starting at second level
 #GAME = 'DVD/Driv3r (U).iso'                            # neutrino github issue 56: USB: freezes and unfreezes during gameplay
 #GAME = 'DVD/Syberia II (E).iso' # -gsm=fp # with GSM some things run at 2x speed?
-#GAME = 'CD/Simple 2000 Series Ultimate Vol. 15 - Love - Ping Pong! (J).iso' -gc=2 # neutrino github issue 88: black screen on boot - fixed with mode0+2 ?
-#GAME = 'CD/Simple 2000 Series Ultimate Vol. 5 - Love - Mahjong! (J).iso' -gc=2 # neutrino github issue 89: randomly hangs
+#GAME = 'CD/Simple 2000 Series Ultimate Vol. 15 - Love - Ping Pong! (J).iso' -gc=02 # neutrino github issue 88: black screen on boot - fixed with mode0+2 ?
+#GAME = 'CD/Pink Pong (E).iso' # same game as above
+#GAME = 'CD/Simple 2000 Series Ultimate Vol. 5 - Love - Mahjong! (J).iso' -gc=02 # neutrino github issue 89: randomly hangs
+#GAME = 'DVD/Amplitude (U).iso'
 
 # This game gets stuck trying to start the first battle
 #GAME = 'DVD/World Destruction League - Thunder Tanks (E).iso' -gsm=fp:fp2
@@ -53,6 +55,8 @@ all: $(EE_BIN_PACKED) version.txt
 # Test SOCOM II with DLC on HDD
 # https://psrewired.com/guides/socom2#install-dlc-pcsx2
 #GAME = 'DVD/SOCOM II - U.S. Navy SEALs (E).iso' # -gsm=fp # with GSM some things run at 2x speed?!
+#GAME = 'DVD/SOCOM II - U.S. Navy SEALs (U).iso' # -gsm=fp # with GSM some things run at 2x speed?!
+#ATA0 = 'HDD/bd_apa.raw' # 40GB general purpose apa formatted using uLE
 #ATA0 = 'HDD/SOCOM II HDD.raw'
 
 # These games allocate ALL IOP RAM as an anti-piracy method
@@ -138,7 +142,8 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp -gc=0
 #GAME = 'DVD/Jak and Daxter - Complete Trilogy (U).iso'
 #GAME = 'DVD/Jak and Daxter - The Lost Frontier (U).iso'
 #GAME = 'DVD/Crash of the Titans (E).iso'
-#GAME = 'DVD/EyeToy Play 3 (E).iso' # interlaced frame mode
+#GAME = 'DVD/EyeToy - Play 2 (E).iso'
+#GAME = 'DVD/EyeToy - Play 3 (E).iso' # interlaced frame mode
 #GAME = 'DVD/GTA Vice City Stories (E).iso' -gsm=fp
 #GAME = 'DVD/Medal of Honor - Frontline (U).iso' -gsm=fp::1
 #GAME = 'DVD/Silent Hill 2 (U).iso' -gsm=fp::1
@@ -152,6 +157,8 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp -gc=0
 #GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 1).iso'
 #GAME = 'DVD/Shadow Hearts - Covenant (U) (Disc 2).iso'
 #GAME = 'DVD/Ibara (J).iso'
+#GAME = 'DVD/Dot Hack Part 1 - Infection (U).iso' # large buffer overrun issue, fixed
+#GAME = 'DVD/Street Fighter Alpha Anthology (U).iso'
 
 # Example arguments
 #-bsd=udpbd -dvd=mass:$(GAME)
@@ -164,8 +171,11 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp -gc=0
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
-ARGS = -bsd=udpbd -dvd=mass:$(GAME) -dbc
+ARGS = -bsd=udpbd -dvd=mass:$(GAME)
 #ARGS = -bsd=mmce -dvd=mmce1:$(GAME)
+#ARGS = -bsd=mmce -dvd=mmce1:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mmce1:'HDD/SOCOM II HDD.raw' -gc=0
+#ARGS = -bsd=usb -dvd=mass:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mass:'HDD/SOCOM II HDD.raw' -gc=0
+#ARGS = -bsd=udpbd-hdd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -gc=0
 #ARGS = -bsd=udpbd -dvd=bdfs:udp0p0 -bsdfs=bd
 
 run: all copy copy_extra
