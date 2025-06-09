@@ -151,7 +151,7 @@ static int cdvdman_fill_toc(u8 *tocBuff)
             memset(tocBuff, 0, 2048);
 
             u8 dual = 0;
-            if ((!(cdvdman_settings.flags & CDVDMAN_COMPAT_EMU_DVDDL)) || (cdvdman_settings.layer1_start > 0))
+            if ((!(cdvdman_settings.flags & CDVDMAN_COMPAT_DVD_DL)) || (cdvdman_settings.layer1_start > 0))
                 dual = 1;
 
             // Write only what we need, memset has cleared the above buffers.

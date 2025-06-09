@@ -1,0 +1,9 @@
+# Name of loaded config, to show to user
+name = "Patch memory buffer overrun - 256 bytes"
+
+# These games have IOP memory buffer overrun issues
+# Load patch module that fixes this game bug
+[[module]]
+file = "patch_membo.irx"
+#args = ["0"] # 0=256 (default), 1=512, 2=1K, 3=2K ... 9=128K
+env = ["EE"]

@@ -1,0 +1,108 @@
+#
+# Default mode of operation is configured here first
+#
+
+# Include compatibility .toml files/patches
+#depends = ["p-patch"]
+
+# CDVDMAN: compatibility flags
+# - FAST_READ = MODE0: Fast reads (sceCdRead)
+# - SYNC_READ = MODE2: Sync reads (sceCdRead)
+# - DVD_DL    = MODE5: Emulate DVD-DL
+# - F1_2001   = Game specific comp. mode for: F1 2001
+#cdvdman_flags = ["FAST_READ", "SYNC_READ"]
+
+# CDVDMAN: select the number of sectors for the FS buffer
+# A small value can increase game compatibility
+# A large value can increase performance
+# Min=2, Max=128, Default=8
+cdvdman_fs_sectors = 8
+
+# CDVDMAN: Override the 8-byte string returned by:
+# - sceCdRI
+# This string is also used by:
+# - sceCdReadGUID
+# - sceCdReadModelID
+#
+# This string is used (for instance) by the sony network configuration
+# to verify if the config belongs to the specific console.
+#
+#cdvdman_ilink_id = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+# CDVDMAN: Use the 5-byte string returned by:
+# - sceCdReadDiskID
+#cdvdman_disk_id = [0x00, 0x00, 0x00, 0x00, 0x00]
+
+# EECORE: compatibility flags
+# - UNHOOK = MODE3: Unhook syscalls
+#eecore_flags = ["UNHOOK"]
+
+# EECORE: module base address
+# This is where all IOP modules are stored
+eecore_mod_base = 0x95000
+#eecore_mod_base = 0xA7000
+
+#
+# Compatibility modes from the command line
+# These override the default modes
+#
+
+MODE0 = {name = "Compat MODE0: Fast reads (sceCdRead)",        cdvdman_flags = ["FAST_READ"]}
+MODE1 = {name = "Compat MODE1: NOP (user configurable)"}
+MODE2 = {name = "Compat MODE2: Sync reads (sceCdRead)",        cdvdman_flags = ["SYNC_READ"]}
+MODE3 = {name = "Compat MODE3: Unhook syscalls",               eecore_flags  = ["UNHOOK"]}
+MODE4 = {name = "Compat MODE4: NOP (user configurable)"}
+MODE5 = {name = "Compat MODE5: Emulate DVD-DL",                cdvdman_flags = ["DVD_DL"]}
+MODE6 = {name = "Compat MODE6: NOP (user configurable)"}
+MODE7 = {name = "Compat MODE7: Fix game buffer overrun",       depends = ["p-membo"]}
+MODE8 = {name = "Compat MODE8: NOP (user configurable)"}
+MODE9 = {name = "Compat MODE9: NOP (user configurable)"}
+
+#
+# Game specific modes
+# These override the default modes AND the command line
+#
+
+#"SLUS_205.61" = {name = "Disaster Report",                       depends = ["p-iremsnd"]}
+#"SLES_513.01" = {name = "SOS: The Final Escape",                 depends = ["p-iremsnd"]}
+#"SLPS_251.13" = {name = "Zettai Zetsumei Toshi",                 depends = ["p-iremsnd"]}
+#"SLES_535.08" = {name = "Ultimate Pro Pinball",                  depends = ["p-apemod"]}
+#"SLUS_204.13" = {name = "Shadow Man: 2econd Coming",             depends = ["p-f2tech"]}
+#"SLES_504.46" = {name = "Shadow Man: 2econd Coming",             depends = ["p-f2tech"]}
+#"SLES_506.08" = {name = "Shadow Man: 2econd Coming",             depends = ["p-f2tech"]}
+"SLUS_973.53" = {name = "Ratchet & Clank Up Your Arsenal",       depends = ["p-uya"]}
+"SCES_524.56" = {name = "Ratchet & Clank 3",                     depends = ["p-uya"]}
+"SCES_511.76" = {name = "Disney's Treasure Planet",              depends = ["p-membo"]}
+"SLES_548.38" = {name = "Donkey Xote",                           depends = ["p-membo"]}
+"SLUS_202.67" = {name = "Dot Hack Part 1 - Infection",           depends = ["p-membo2k"]}
+
+"SCES_524.12" = {name = "Jackie Chan Adventures",                cdvdman_flags = ["SYNC_READ"]}
+"SCUS_971.50" = {name = "Formula One 2001",                      cdvdman_flags = ["F1_2001"]}
+"SCES_500.04" = {name = "Formula One 2001",                      cdvdman_flags = ["F1_2001"]}
+"SCED_502.54" = {name = "Formula One 2001",                      cdvdman_flags = ["F1_2001"]}
+"SCED_503.13" = {name = "Formula One 2001",                      cdvdman_flags = ["F1_2001"]}
+"SCPS_150.19" = {name = "Formula One 2001",                      cdvdman_flags = ["F1_2001"]}
+
+"SCUS_971.24" = {name = "Jak and Daxter - The Precursor Legacy", eecore_flags = ["UNHOOK"]}
+"SCES_503.61" = {name = "Jak and Daxter - The Precursor Legacy", eecore_flags = ["UNHOOK"]}
+"SCES_506.14" = {name = "Jak and Daxter - The Precursor Legacy", eecore_flags = ["UNHOOK"]}
+"SCPS_150.21" = {name = "Jak and Daxter - The Precursor Legacy", eecore_flags = ["UNHOOK"]}
+"SCPS_550.04" = {name = "Jak and Daxter - The Precursor Legacy", eecore_flags = ["UNHOOK"]}
+"SCPS_560.03" = {name = "Jak and Daxter - The Precursor Legacy", eecore_flags = ["UNHOOK"]}
+"SCUS_972.65" = {name = "Jak II",                                eecore_flags = ["UNHOOK"]}
+"SCES_516.08" = {name = "Jak II",                                eecore_flags = ["UNHOOK"]}
+"SCKA_200.10" = {name = "Jak II",                                eecore_flags = ["UNHOOK"]}
+"SCPS_150.57" = {name = "Jak II",                                eecore_flags = ["UNHOOK"]}
+"SCAJ_200.73" = {name = "Jak II",                                eecore_flags = ["UNHOOK"]}
+"SCUS_973.30" = {name = "Jak 3",                                 eecore_flags = ["UNHOOK"]}
+"SCES_524.60" = {name = "Jak 3",                                 eecore_flags = ["UNHOOK"]}
+"SCKA_200.40" = {name = "Jak 3",                                 eecore_flags = ["UNHOOK"]}
+
+"SLUS_209.77" = {name = "Virtua Quest",                          eecore_mod_base = 0x01fc7000}
+"SLPM_656.32" = {name = "Virtua Fighter Cyber Generation: JSNY", eecore_mod_base = 0x01fc7000}
+
+#
+# Game optimizations
+#
+
+"SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman_fs_sectors = 64}
