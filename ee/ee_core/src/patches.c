@@ -23,10 +23,6 @@
 // Currently not supported by neutrino, fix later
 //#define APEMOD_PATCH
 
-// This patch needs f2techioppatch.irx loaded
-// Currently not supported by neutrino, fix later
-//#define F2TECH_PATCH
-
 // This patch needs iremsndpatch.irx loaded
 // Currently not supported by neutrino, fix later
 //#define IREMSSND_PATCH
@@ -122,11 +118,6 @@ static const patchlist_t patch_list[] = {
     {"SLES_504.01", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (PAL French)
     {"SLES_504.02", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (PAL German)
     {"SLPM_651.98", {PATCH_PRO_SNOWBOARDER,  0x00000000, 0x00000000}}, // Shaun Palmer's Pro Snowboarder (NTSC-J) - Untested
-#ifdef F2TECH_PATCH
-    {"SLUS_204.13", {PATCH_SHADOW_MAN_2,     0x00000001, 0x00000000}}, // Shadow Man: 2econd Coming (NTSC-U/C)
-    {"SLES_504.46", {PATCH_SHADOW_MAN_2,     0x00000002, 0x00000000}}, // Shadow Man: 2econd Coming (PAL)
-    {"SLES_506.08", {PATCH_SHADOW_MAN_2,     0x00000003, 0x00000000}}, // Shadow Man: 2econd Coming (PAL German)
-#endif
     {"SLPS_254.21", {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-J) (First Print Edition)
     {"SLPS_254.31", {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-J)
     {"SLPS_732.22", {PATCH_HARVEST_MOON_AWL, 0x00000000, 0x00000000}}, // Harvest Moon: A Wonderful Life (NTSC-J) (PlayStation 2 The Best)
@@ -602,90 +593,6 @@ static void ProSnowboarderPatch(void)
     }
 }
 
-#ifdef F2TECH_PATCH // for ShadowMan2
-static int ShadowMan2_SifLoadModuleHook(const char *path, int arg_len, const char *args)
-{
-    // int (*pSifLoadModule)(const char *path, int arg_len, const char *args);
-    void *(*pSifAllocIopHeap)(int size);
-    int (*pSifFreeIopHeap)(void *addr);
-    int (*pSifLoadModuleBuffer)(void *ptr, int arg_len, const char *args);
-    void *iopmem;
-    SifDmaTransfer_t sifdma;
-    int dma_id, ret;
-    void *f2techioppatch_irx;
-    unsigned int f2techioppatch_irx_size;
-
-    switch (g_mode) {
-        case 1: // NTSC-U/C
-            // pSifLoadModule = (void *)0x00234188;
-            pSifAllocIopHeap = (void *)0x239df0;
-            pSifFreeIopHeap = (void *)0x239f58;
-            pSifLoadModuleBuffer = (void *)0x00233f20;
-            break;
-        case 2: // PAL
-            // pSifLoadModule = (void *)0x002336c8;
-            pSifAllocIopHeap = (void *)0x00239330;
-            pSifFreeIopHeap = (void *)0x00239498;
-            pSifLoadModuleBuffer = (void *)0x00233460;
-            break;
-        case 3: // PAL German
-            // pSifLoadModule = (void *)0x00233588;
-            pSifAllocIopHeap = (void *)0x002391f0;
-            pSifFreeIopHeap = (void *)0x00239358;
-            pSifLoadModuleBuffer = (void *)0x00233320;
-            break;
-        default:
-            // pSifLoadModule = NULL;
-            pSifAllocIopHeap = NULL;
-            pSifFreeIopHeap = NULL;
-            pSifLoadModuleBuffer = NULL;
-            // Should not happen.
-            asm volatile("break\n");
-    }
-
-    GetOPLModInfo(EECORE_MODULE_ID_IOP_PATCH, &f2techioppatch_irx, &f2techioppatch_irx_size);
-
-    iopmem = pSifAllocIopHeap(f2techioppatch_irx_size);
-    if (iopmem != NULL) {
-        sifdma.src = f2techioppatch_irx;
-        sifdma.dest = iopmem;
-        sifdma.size = f2techioppatch_irx_size;
-        sifdma.attr = 0;
-        do {
-            dma_id = SifSetDma(&sifdma, 1);
-        } while (!dma_id);
-
-        do {
-            ret = pSifLoadModuleBuffer(iopmem, strlen(path) + 1, path);
-        } while (ret < 0);
-
-        pSifFreeIopHeap(iopmem);
-    } else {
-        ret = -1;
-        asm volatile("break\n");
-    }
-
-    return ret;
-}
-
-static void ShadowMan2Patch(int region)
-{
-    g_mode = region;
-
-    switch (region) { // JAL ShadowMan2_SifLoadModuleHook.
-        case 1:       // NTSC-U/C
-            _sw(JAL((u32)&ShadowMan2_SifLoadModuleHook), 0x001d2838);
-            break;
-        case 2: // PAL
-            _sw(JAL((u32)&ShadowMan2_SifLoadModuleHook), 0x001d2768);
-            break;
-        case 3: // PAL German
-            _sw(JAL((u32)&ShadowMan2_SifLoadModuleHook), 0x001d2650);
-            break;
-    }
-}
-#endif
-
 static void HarvestMoonAWLPatch(int region)
 {
     /* Harvest Moon create alot of threads. When the game gets stuck, all the threads are either suspended or waiting.
@@ -770,11 +677,6 @@ void apply_patches(const char *path)
                 case PATCH_PRO_SNOWBOARDER:
                     ProSnowboarderPatch();
                     break;
-#ifdef F2TECH_PATCH
-                case PATCH_SHADOW_MAN_2:
-                    ShadowMan2Patch(p->patch.val);
-                    break;
-#endif
                 case PATCH_HARVEST_MOON_AWL:
                     HarvestMoonAWLPatch(p->patch.val);
                     break;

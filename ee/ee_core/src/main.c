@@ -25,6 +25,7 @@
 extern void *_stack_end;
 
 int isInit = 0;
+static int callcount = 0;
 
 // Global data
 u32 g_ee_core_flags = 0; // easy to use copy for asm.S
@@ -37,46 +38,49 @@ void _ps2sdk_timezone_update() {}
 DISABLE_PATCHED_FUNCTIONS();      // Disable the patched functionalities
 DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
 
-static int callcount = 0;
 int main(int argc, char **argv)
 {
     int i;
 
+    isInit = 1;
     callcount++;
-    DPRINTF("EE_CORE main called (count=%d):\n", callcount);
+
+    //if (callcount == 1) {
+        // 1st time the ee_core is started (from neutrino)
+
+        // Enable debug messages
+        // DINIT(); // In PCSX2 I see double messages after this call, why?
+    //}
+
+    DPRINTF("EE_CORE main called (argc=%d, callcount=%d):\n", argc, callcount);
     for (i = 0; i < argc; i++) {
         DPRINTF("- argv[%d]=%s\n", i, argv[i]);
     }
 
-    if (isInit == 0) {
+    if (callcount == 1) {
         // 1st time the ee_core is started (from neutrino)
-        services_start();
 
-        // DINIT(); // In PCSX2 I see double messages after this call, why?
-        DPRINTF("EE core start!\n");
+        // Easy to use copy for asm.S
         g_ee_core_flags = eec.flags;
 
-        // Enable cheat engine
-        if (eec.CheatList != NULL)
+        // Enable cheats
+        if (eec.CheatList != NULL) {
+            DPRINTF("Enabling cheats\n");
             EnableCheats();
+        }
 
         // Enable GSM, only possible when kernel hooks are allowed
-        if (((eec.flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) != 0) && ((eec.flags & EECORE_FLAG_UNHOOK) == 0))
+        if (((eec.flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) != 0) && ((eec.flags & EECORE_FLAG_UNHOOK) == 0)) {
+            DPRINTF("Enabling GSM\n");
             EnableGSM();
+        }
 
-        /* installing kernel hooks */
-        DPRINTF("Installing Kernel Hooks...\n");
+        // Install kernel hooks
+        DPRINTF("Install kernel hooks\n");
         Install_Kernel_Hooks();
 
-        // Reboot the IOP into the Emulation Environment
-        New_Reset_Iop(NULL, 0);
-
-        isInit = 1;
-
         // Start selected elf file (should be something like "cdrom0:\ABCD_123.45;1")
-        services_exit();
-        int argOffset = 0;
-        LoadExecPS2(argv[argOffset], argc - 1 - argOffset, &argv[1 + argOffset]);
+        LoadExecPS2(argv[0], argc - 1, &argv[1]);
     } else {
         // 2nd time and later the ee_core is started (from LoadExecPS2)
         // LoadExecPS2 is patched so instead of running rom0:EELOAD, this ee_core is started
@@ -92,7 +96,12 @@ int main(int argc, char **argv)
         // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
         // WipeUserMemory((void *)ModStorageEnd, (void *)GetMemorySize());
 
-        SifInitRpc(0);
+        if ((eec.iop_rm[0] > 1) || (callcount <= 2)) {
+            // Reboot the IOP into a clean Emulation Environment
+            New_Reset_Iop2(NULL, 0, eec.iop_rm[0], 1);
+        }
+        // Load the ELF
+        services_start();
         int r = SifLoadElf(argv[0], &elf);
         if (!r) {
             apply_patches(argv[0]);

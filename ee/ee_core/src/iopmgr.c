@@ -274,11 +274,30 @@ void New_Reset_Iop(const char *arg, int arglen)
     return;
 }
 
-//---------------------------------------------------------------------------
-// This function is called when SifSetDma catches a reboot request
-u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
+void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
 {
-    struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
+    static int iopdirty = 1;
+    int reboot1 = 0;
+    int reboot2 = 0;
+    int reboot3 = 0;
+
+    // Reboot mode 4 is the same as 3, but forces the reboot
+    if (reboot_mode == 4)
+        force = 1;
+    // 3 stage reboot requested. Do we need the first reboot?
+    if (reboot_mode >= 3 && (force || iopdirty))
+        reboot1 = 1;
+    // 2 stage reboot requested. Do we need the second reboot?
+    if (reboot_mode >= 2 && (force || iopdirty))
+        reboot2 = 1;
+    // Do we need the third reboot?
+    if (arg != NULL)
+        reboot3 = 1;
+
+    if ((reboot1 + reboot2 + reboot3) == 0)
+        return;
+
+    DPRINTF("%s %d-%d-%d\n", __FUNCTION__, reboot1, reboot2, reboot3);
 
     // Validate module storage
     module_checksum();
@@ -287,32 +306,55 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
     if (eec.flags & EECORE_FLAG_DBC)
         *GS_REG_BGCOLOR = COLOR_LBLUE;
 
-    // Reboot the IOP
-    SifInitRpc(0);
-    while (!Reset_Iop("", 0)) {}
-    while (!SifIopSync()) {}
-    services_start();
-    sbv_patch_enable_lmb();
+    if (reboot1) {
+        // Reboot the IOP to base state
+        SifInitRpc(0);
+        while (!Reset_Iop("", 0)) {}
+        while (!SifIopSync()) {}
+        services_start();
+        sbv_patch_enable_lmb();
+        // Unusable state, no neutrino modules loaded
+        iopdirty = 1;
+    } else {
+        services_start();
+    }
 
-    // Reboot the IOP with neutrino modules
-    if (eec.flags & EECORE_FLAG_DBC)
-        *GS_REG_BGCOLOR = COLOR_MAGENTA;
-    New_Reset_Iop(NULL, 0);
+    if (reboot2) {
+        // Reboot the IOP with neutrino modules
+        if (eec.flags & EECORE_FLAG_DBC)
+            *GS_REG_BGCOLOR = COLOR_MAGENTA;
+        New_Reset_Iop(NULL, 0);
+        // Known clean neutrino reboot state
+        iopdirty = 0;
+    }
 
-    // Reboot the IOP with neutrino modules and IOPRP
-    if (eec.flags & EECORE_FLAG_DBC)
-        *GS_REG_BGCOLOR = COLOR_YELLOW;
-    New_Reset_Iop(reset_pkt->arg, reset_pkt->arglen);
+    if (reboot3) {
+        // Reboot the IOP with neutrino modules and IOPRP
+        if (eec.flags & EECORE_FLAG_DBC)
+            *GS_REG_BGCOLOR = COLOR_YELLOW;
+        New_Reset_Iop(arg, arglen);
+        // The game will use the IOP for unknown purposes now
+        iopdirty = 1;
+    }
 
     // Exit services
     services_exit();
 
+    if (eec.flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_BLACK;
+}
+
+//---------------------------------------------------------------------------
+// This function is called when SifSetDma catches a reboot request
+u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
+{
+    struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
+
+    New_Reset_Iop2(reset_pkt->arg, reset_pkt->arglen, eec.iop_rm[1], 0);
+
     // Ignore EE still trying to complete the IOP reset
     set_reg_hook = 4;
     get_reg_hook = 1;
-
-    if (eec.flags & EECORE_FLAG_DBC)
-        *GS_REG_BGCOLOR = COLOR_BLACK;
 
     return 1;
 }

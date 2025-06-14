@@ -20,7 +20,7 @@ default_dbc = false
 default_logo = false
 
 # EE_CORE configuration
-eecore_elf = "ee_core.elf"
+eecore.elf = "ee_core.elf"
 
 # Modules to load in emulation environment
 [[module]]

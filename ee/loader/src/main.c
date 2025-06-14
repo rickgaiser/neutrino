@@ -206,23 +206,27 @@ struct SSystemSettings {
     int bLogo;
     int bQuickBoot;
 
-    // CDVDMAN settings
-    uint32_t cdvdman_flags;
-    int cdvdman_fs_sectors;
-    union {
-        uint8_t cdvdman_ilink_id[8];
-        uint64_t cdvdman_ilink_id_int;
-    };
-    union {
-        uint8_t cdvdman_disk_id[5];
-        uint64_t cdvdman_disk_id_int; // 8 bytes, but that's ok for compare reasons
-    };
+    struct {
+        // CDVDMAN settings
+        uint32_t flags;
+        int fs_sectors;
+        union {
+            uint8_t ilink_id[8];
+            uint64_t ilink_id_int;
+        };
+        union {
+            uint8_t disk_id[5];
+            uint64_t disk_id_int; // 8 bytes, but that's ok for compare reasons
+        };
+    } cdvdman;
 
-    // EECORE settings
-    uint32_t eecore_flags;
-    char *eecore_elf;
-    int eecore_mod_base;
-
+    struct {
+        // EECORE settings
+        uint32_t flags;
+        int iop_reboot_mode[2];
+        char *elf;
+        int mod_base;
+    } eecore;
 } sys;
 
 struct SDriver {
@@ -715,7 +719,83 @@ void toml_int_in_overwrite(toml_datum_t t, const char *name, int *dest)
         *dest = v.u.int64;
 }
 
-void load_config(toml_datum_t t)
+int load_config_eecore(toml_datum_t t)
+{
+    toml_datum_t arr;
+    toml_datum_t v;
+
+    toml_string_in_overwrite(t, "elf",      &sys.eecore.elf);
+    toml_int_in_overwrite   (t, "mod_base", &sys.eecore.mod_base);
+
+    arr = toml_get(t, "irm");
+    if (arr.type == TOML_ARRAY && arr.u.arr.size == 2) {
+        int i;
+        for (i=0; i < arr.u.arr.size; i++) {
+            v = arr.u.arr.elem[i];
+            if (v.type == TOML_INT64)
+                sys.eecore.iop_reboot_mode[i] = v.u.int64;
+        }
+    }
+
+    arr = toml_get(t, "flags");
+    if (arr.type == TOML_ARRAY) {
+        int i;
+        for (i=0; i < arr.u.arr.size; i++) {
+            v = arr.u.arr.elem[i];
+            if (v.type == TOML_STRING) {
+                if(!strcmp(v.u.s, "UNHOOK")) sys.eecore.flags |= EECORE_FLAG_UNHOOK;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int load_config_cdvdman(toml_datum_t t)
+{
+    toml_datum_t arr;
+    toml_datum_t v;
+
+    toml_int_in_overwrite(t, "fs_sectors", &sys.cdvdman.fs_sectors);
+
+    arr = toml_get(t, "flags");
+    if (arr.type == TOML_ARRAY) {
+        int i;
+        for (i=0; i < arr.u.arr.size; i++) {
+            v = arr.u.arr.elem[i];
+            if (v.type == TOML_STRING) {
+                if(!strcmp(v.u.s, "FAST_READ")) sys.cdvdman.flags |= CDVDMAN_COMPAT_FAST_READ;
+                if(!strcmp(v.u.s, "SYNC_READ")) sys.cdvdman.flags |= CDVDMAN_COMPAT_SYNC_READ;
+                if(!strcmp(v.u.s, "DVD_DL"))    sys.cdvdman.flags |= CDVDMAN_COMPAT_DVD_DL;
+                if(!strcmp(v.u.s, "F1_2001"))   sys.cdvdman.flags |= CDVDMAN_COMPAT_F1_2001;
+            }
+        }
+    }
+
+    arr = toml_get(t, "ilink_id");
+    if (arr.type == TOML_ARRAY && arr.u.arr.size == 8) {
+        int i;
+        for (i=0; i < 8; i++) {
+            v = arr.u.arr.elem[i];
+            if (v.type == TOML_INT64)
+                sys.cdvdman.ilink_id[i] = v.u.int64;
+        }
+    }
+
+    arr = toml_get(t, "disk_id");
+    if (arr.type == TOML_ARRAY && arr.u.arr.size == 5) {
+        int i;
+        for (i=0; i < 5; i++) {
+            v = arr.u.arr.elem[i];
+            if (v.type == TOML_INT64)
+                sys.cdvdman.disk_id[i] = v.u.int64;
+        }
+    }
+
+    return 0;
+}
+
+int load_config(toml_datum_t t)
 {
     toml_datum_t arr;
     toml_datum_t v;
@@ -727,7 +807,9 @@ void load_config(toml_datum_t t)
         for (i=0; i < arr.u.arr.size; i++) {
             v = arr.u.arr.elem[i];
             if (v.type == TOML_STRING) {
-                load_config_file(v.u.s, NULL);
+                if (load_config_file(v.u.s, NULL) < 0) {
+                    return -1;
+                }
             }
         }
     }
@@ -738,97 +820,58 @@ void load_config(toml_datum_t t)
         printf("Loading: %s\n", v.u.s);
     }
 
-    toml_string_in_overwrite(t, "default_bsd",        &sys.sBSD);
-    toml_string_in_overwrite(t, "default_bsdfs",      &sys.sBSDFS);
-    toml_string_in_overwrite(t, "default_dvd",        &sys.sDVDMode);
-    toml_string_in_overwrite(t, "default_ata0",       &sys.sATA0File);
-    toml_string_in_overwrite(t, "default_ata0id",     &sys.sATA0IDFile);
-    toml_string_in_overwrite(t, "default_ata1",       &sys.sATA1File);
-    toml_string_in_overwrite(t, "default_mc0",        &sys.sMC0File);
-    toml_string_in_overwrite(t, "default_mc1",        &sys.sMC1File);
-    toml_string_in_overwrite(t, "default_elf",        &sys.sELFFile);
-    toml_string_in_overwrite(t, "default_mt",         &sys.sMT);
-    toml_string_in_overwrite(t, "default_gc",         &sys.sGC);
-    toml_string_in_overwrite(t, "default_gsm",        &sys.sGSM);
-    toml_string_in_overwrite(t, "default_cfg",        &sys.sCFGFile);
-    toml_bool_in_overwrite  (t, "default_dbc",        &sys.bDebug);
-    toml_bool_in_overwrite  (t, "default_logo",       &sys.bLogo);
-    toml_string_in_overwrite(t, "eecore_elf",         &sys.eecore_elf);
-    toml_int_in_overwrite   (t, "eecore_mod_base",    &sys.eecore_mod_base);
-    toml_int_in_overwrite   (t, "cdvdman_fs_sectors", &sys.cdvdman_fs_sectors);
+    toml_string_in_overwrite(t, "default_bsd",    &sys.sBSD);
+    toml_string_in_overwrite(t, "default_bsdfs",  &sys.sBSDFS);
+    toml_string_in_overwrite(t, "default_dvd",    &sys.sDVDMode);
+    toml_string_in_overwrite(t, "default_ata0",   &sys.sATA0File);
+    toml_string_in_overwrite(t, "default_ata0id", &sys.sATA0IDFile);
+    toml_string_in_overwrite(t, "default_ata1",   &sys.sATA1File);
+    toml_string_in_overwrite(t, "default_mc0",    &sys.sMC0File);
+    toml_string_in_overwrite(t, "default_mc1",    &sys.sMC1File);
+    toml_string_in_overwrite(t, "default_elf",    &sys.sELFFile);
+    toml_string_in_overwrite(t, "default_mt",     &sys.sMT);
+    toml_string_in_overwrite(t, "default_gc",     &sys.sGC);
+    toml_string_in_overwrite(t, "default_gsm",    &sys.sGSM);
+    toml_string_in_overwrite(t, "default_cfg",    &sys.sCFGFile);
+    toml_bool_in_overwrite  (t, "default_dbc",    &sys.bDebug);
+    toml_bool_in_overwrite  (t, "default_logo",   &sys.bLogo);
 
-    arr = toml_get(t, "cdvdman_flags");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                if(!strcmp(v.u.s, "FAST_READ")) sys.cdvdman_flags |= CDVDMAN_COMPAT_FAST_READ;
-                if(!strcmp(v.u.s, "SYNC_READ")) sys.cdvdman_flags |= CDVDMAN_COMPAT_SYNC_READ;
-                if(!strcmp(v.u.s, "DVD_DL"))    sys.cdvdman_flags |= CDVDMAN_COMPAT_DVD_DL;
-                if(!strcmp(v.u.s, "F1_2001"))   sys.cdvdman_flags |= CDVDMAN_COMPAT_F1_2001;
-            }
-        }
-    }
+    load_config_eecore (toml_get(t, "eecore"));
+    load_config_cdvdman(toml_get(t, "cdvdman"));
 
-    arr = toml_get(t, "eecore_flags");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                if(!strcmp(v.u.s, "UNHOOK")) sys.eecore_flags |= EECORE_FLAG_UNHOOK;
-            }
-        }
-    }
+    if (modlist_add_array(&drv.mod, t) < 0)
+        return -1;
+    if (fakelist_add_array(&drv.fake, t) < 0)
+        return -1;
 
-    arr = toml_get(t, "cdvdman_ilink_id");
-    if (arr.type == TOML_ARRAY) {
-        if (arr.u.arr.size == 8) {
-            int i;
-            for (i=0; i < 8; i++) {
-                v = arr.u.arr.elem[i];
-                if (v.type == TOML_INT64)
-                    sys.cdvdman_ilink_id[i] = v.u.int64;
-            }
-        }
-    }
-
-    arr = toml_get(t, "cdvdman_disk_id");
-    if (arr.type == TOML_ARRAY) {
-        if (arr.u.arr.size == 5) {
-            int i;
-            for (i=0; i < 5; i++) {
-                v = arr.u.arr.elem[i];
-                if (v.type == TOML_INT64)
-                    sys.cdvdman_disk_id[i] = v.u.int64;
-            }
-        }
-    }
-
-    modlist_add_array(&drv.mod, t);
-    fakelist_add_array(&drv.fake, t);
+    return 0;
 }
 
 toml_result_t load_config_file_toml(const char * type, const char * subtype)
 {
     char filename[256];
+    toml_result_t res;
 
     // Open and parse file
     if (subtype != NULL)
         snprintf(filename, 256, "config/%s-%s.toml", type, subtype);
     else
         snprintf(filename, 256, "config/%s.toml", type);
-    return toml_parse_file_ex(filename);
+
+    res = toml_parse_file_ex(filename);
+    if (!res.ok)
+        printf("ERROR: failed to load and parse %s: %s\n", filename, res.errmsg);
+
+    return res;
 }
 
 int load_config_file(const char * type, const char * subtype)
 {
     toml_result_t res = load_config_file_toml(type, subtype);
     if (res.ok) {
-        load_config(res.toptab);
+        int rv = load_config(res.toptab);
         toml_free(res);
-        return 0;
+        return rv;
     }
     else {
         return -1;
@@ -1084,18 +1127,21 @@ int main(int argc, char *argv[])
     }
 
     /*
-     * Load compat settings
+     * Load default compat settings
      */
     toml_result_t toml_compat = load_config_file_toml("compat", NULL);
     if (!toml_compat.ok) {
+        printf("ERROR: failed to load compat file\n");
+        return -1;
+    }
+    if (load_config(toml_compat.toptab) < 0) {
         printf("ERROR: failed to load compat settings\n");
         return -1;
     }
-    load_config(toml_compat.toptab);
     // Do not free the table, we need it later!
 
     /*
-     * Load user/game settings
+     * Load user settings
      */
     if (sys.sCFGFile != NULL) {
         if (load_config_file(sys.sCFGFile, NULL) < 0) {
@@ -1158,8 +1204,12 @@ int main(int argc, char *argv[])
                 {
                     const char mode[] = {'M', 'O', 'D', 'E', *c};
                     toml_datum_t t_mode = toml_get(toml_compat.toptab, mode);
-                    if (t_mode.type == TOML_TABLE)
-                        load_config(t_mode);
+                    if (t_mode.type == TOML_TABLE) {
+                        if (load_config(t_mode) < 0) {
+                            printf("ERROR: failed to load %s\n", mode);
+                            return -1;
+                        }
+                    }
                     break;
                 }
                 default:
@@ -1170,11 +1220,32 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Process ELF file and game compatibility
+    // We do this early if (while still in the LE) if possible so we can load patch files
+    if (strcmp(sys.sELFFile, "auto") != 0) {
+        // Not "auto", so the ELF filename should have been provided
+        if ((strlen(sys.sELFFile) > 18) && (sys.sELFFile[12] == '_') && (sys.sELFFile[16] == '.')) {
+            // We need the GameID
+            memcpy(sGameID, &sys.sELFFile[8], 11);
+            sGameID[11] = '\0';
+
+            toml_datum_t tbl_gc = toml_get(toml_compat.toptab, sGameID);
+            if (tbl_gc.type == TOML_TABLE) {
+                if (load_config(tbl_gc) < 0) {
+                    printf("ERROR: failed to load %s compat\n", sGameID);
+                    return -1;
+                }
+            }
+        }
+        // Now free the entire compat.toml table, we no longer need it
+        toml_free(toml_compat);
+    }
+
     /*
      * Background debug colors
      */
     if (sys.bDebug)
-        sys.eecore_flags |= EECORE_FLAG_DBC;
+        sys.eecore.flags |= EECORE_FLAG_DBC;
 
     /*
      * GSM: process user flags
@@ -1190,7 +1261,7 @@ int main(int argc, char *argv[])
         // Interlaced field mode
         if (!strncmp(pgsm, "fp", 2)) {
             printf("GSM: Interlaced Field Mode = Force Progressive\n");
-            sys.eecore_flags |= EECORE_FLAG_GSM_FLD_FP;
+            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP;
             pgsm += 2;
         }
 
@@ -1199,19 +1270,19 @@ int main(int argc, char *argv[])
         //
         else if (!strncmp(pgsm, "1F", 2)) {
             printf("GSM: Deprecated mode 1F\n");
-            sys.eecore_flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_C_1;
+            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_C_1;
             goto gsm_done;
         } else if (!strncmp(pgsm, "1", 1)) {
             printf("GSM: Deprecated mode 1\n");
-            sys.eecore_flags |= EECORE_FLAG_GSM_FLD_FP;
+            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP;
             goto gsm_done;
         } else if (!strncmp(pgsm, "2F", 2)) {
             printf("GSM: Deprecated mode 2F\n");
-            sys.eecore_flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2 | EECORE_FLAG_GSM_C_1;
+            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2 | EECORE_FLAG_GSM_C_1;
             goto gsm_done;
         } else if (!strncmp(pgsm, "2", 1)) {
             printf("GSM: Deprecated mode 2\n");
-            sys.eecore_flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2;
+            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2;
             goto gsm_done;
         }
         //
@@ -1231,11 +1302,11 @@ int main(int argc, char *argv[])
             // Interlaced frame mode
             if (!strncmp(pgsm, "fp1", 3)) {
                 printf("GSM: Interlaced Frame Mode = Force Progressive 1\n");
-                sys.eecore_flags |= EECORE_FLAG_GSM_FRM_FP1;
+                sys.eecore.flags |= EECORE_FLAG_GSM_FRM_FP1;
                 pgsm += 3;
             } else if (!strncmp(pgsm, "fp2", 3)) {
                 printf("GSM: Interlaced Frame Mode = Force Progressive 2\n");
-                sys.eecore_flags |= EECORE_FLAG_GSM_FRM_FP2;
+                sys.eecore.flags |= EECORE_FLAG_GSM_FRM_FP2;
                 pgsm += 3;
             } else {
                 goto gsm_error;
@@ -1251,15 +1322,15 @@ int main(int argc, char *argv[])
             // Compatibility mode
             if (!strncmp(pgsm, "1", 1)) {
                 printf("GSM: Compatibility Mode = 1\n");
-                sys.eecore_flags |= EECORE_FLAG_GSM_C_1;
+                sys.eecore.flags |= EECORE_FLAG_GSM_C_1;
                 pgsm += 1;
             } else if (!strncmp(pgsm, "2", 1)) {
                 printf("GSM: Compatibility Mode = 2\n");
-                sys.eecore_flags |= EECORE_FLAG_GSM_C_2;
+                sys.eecore.flags |= EECORE_FLAG_GSM_C_2;
                 pgsm += 1;
             } else if (!strncmp(pgsm, "3", 1)) {
                 printf("GSM: Compatibility Mode = 3\n");
-                sys.eecore_flags |= EECORE_FLAG_GSM_C_3;
+                sys.eecore.flags |= EECORE_FLAG_GSM_C_3;
                 pgsm += 1;
             } else {
                 goto gsm_error;
@@ -1277,7 +1348,7 @@ gsm_done:
     /*
      * GSM: check for 576p capability
      */
-    if (sys.eecore_flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) {
+    if (sys.eecore.flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) {
         int fd_ROMVER;
         if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) >= 0) {
             char romver[16], romverNum[5];
@@ -1291,7 +1362,7 @@ gsm_done:
 
             if (strtoul(romverNum, NULL, 10) < 210) {
                 printf("WARNING: disabling GSM 576p mode on incompatible ps2 model\n");
-                sys.eecore_flags |= EECORE_FLAG_GSM_NO_576P;
+                sys.eecore.flags |= EECORE_FLAG_GSM_NO_576P;
             }
         }
     }
@@ -1350,11 +1421,26 @@ gsm_done:
     /*
      * Load all needed files before rebooting the IOP
      */
-    mod_ee_core.sFileName = sys.eecore_elf;
-    if (module_load(&mod_ee_core) < 0)
+    mod_ee_core.sFileName = sys.eecore.elf;
+    if (module_load(&mod_ee_core) < 0) {
+        printf("ERROR: failed to load ee_core\n");
         return -1;
-    if (modlist_load(&drv.mod, (sys.bQuickBoot == 0) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0)
+    }
+    if (modlist_load(&drv.mod, (sys.bQuickBoot == 0) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0) {
+        printf("ERROR: failed to load drv.mod\n");
         return -1;
+    }
+
+    /*
+     * **********************************************************************
+     * Changing from Boot Environment (BE) to Load Environment (LE)
+     * After this point, modules and configs can no longer be accessed
+     * But the BSD's will become accessible
+     *
+     * Except when using QuickBoot, then BE and LE are the same and all can
+     * be accessed.
+     * **********************************************************************
+     */
 
     if (sys.bQuickBoot == 0) {
         /*
@@ -1553,25 +1639,23 @@ gsm_done:
         }
         fname_end[1] = '1';
         fname_end[2] = '\0';
+
+        if ((strlen(sys.sELFFile) > 18) && (sys.sELFFile[12] == '_') && (sys.sELFFile[16] == '.')) {
+            memcpy(sGameID, &sys.sELFFile[8], 11);
+            sGameID[11] = '\0';
+        } else
+            sGameID[0] = '\0';
+
+        toml_datum_t tbl_gc = toml_get(toml_compat.toptab, sGameID);
+        if (tbl_gc.type == TOML_TABLE) {
+            if (load_config(tbl_gc) < 0) {
+                printf("ERROR: failed to load %s compat\n", sGameID);
+                return -1;
+            }
+        }
+        // Now free the entire compat.toml table, we no longer need it
+        toml_free(toml_compat);
     }
-
-    /*
-     * Check if ELF file path contains Game ID
-     */
-    if ((strlen(sys.sELFFile) > 18) && (sys.sELFFile[12] == '_') && (sys.sELFFile[16] == '.')) {
-        memcpy(sGameID, &sys.sELFFile[8], 11);
-        sGameID[11] = '\0';
-    } else
-        sGameID[0] = '\0';
-
-    /*
-     * Get ELF/game compatibility table
-     */
-    toml_datum_t tbl_gc = toml_get(toml_compat.toptab, sGameID);
-    if (tbl_gc.type == TOML_TABLE)
-        load_config(tbl_gc);
-    // Now free the entire compat.toml table, we no longer need it
-    toml_free(toml_compat);
 
     /*
      * Set CDVDMAN settings
@@ -1582,16 +1666,16 @@ gsm_done:
 
         set_cdvdman->media = eMediaType;
         set_cdvdman->layer1_start = layer1_lba_start;
-        set_cdvdman->flags = sys.cdvdman_flags;
-        set_cdvdman->fs_sectors = sys.cdvdman_fs_sectors;
+        set_cdvdman->flags = sys.cdvdman.flags;
+        set_cdvdman->fs_sectors = sys.cdvdman.fs_sectors;
     } else {
-        if (sys.cdvdman_flags != 0)
+        if (sys.cdvdman.flags != 0)
             printf("WARNING: compatibility cannot be changed without emulating the DVD\n");
         if (eMediaType != SCECdNODISC)
             printf("WARNING: media type cannot be changed without emulating the DVD\n");
-        if (sys.cdvdman_ilink_id_int != 0)
+        if (sys.cdvdman.ilink_id_int != 0)
             printf("WARNING: ilink_id cannot be changed without emulating the DVD\n");
-        if (sys.cdvdman_disk_id_int != 0)
+        if (sys.cdvdman.disk_id_int != 0)
             printf("WARNING: disk_id cannot be changed without emulating the DVD\n");
     }
 
@@ -1737,7 +1821,7 @@ gsm_done:
         modcount++;
     }
 
-    irxtable = (irxtab_t *)sys.eecore_mod_base;
+    irxtable = (irxtab_t *)sys.eecore.mod_base;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
     irxptr = (uint8_t *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
 
@@ -1811,7 +1895,9 @@ gsm_done:
     set_ee_core->CheatList       = NULL;
     set_ee_core->ModStorageStart = irxtable;
     set_ee_core->ModStorageEnd   = irxptr;
-    set_ee_core->flags           = sys.eecore_flags;
+    set_ee_core->flags           = sys.eecore.flags;
+    set_ee_core->iop_rm[0]       = sys.eecore.iop_reboot_mode[0];
+    set_ee_core->iop_rm[1]       = sys.eecore.iop_reboot_mode[1];
 
     // Add simple checksum
     uint32_t *pms = (uint32_t *)irxtable;
@@ -1903,34 +1989,39 @@ gsm_done:
     printf("- media           = %s\n",    sMT);
     printf("- layer1_start    = %d\n",    set_cdvdman->layer1_start);
     printf("- ilink_id        = %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n"
-    , sys.cdvdman_ilink_id[0]
-    , sys.cdvdman_ilink_id[1]
-    , sys.cdvdman_ilink_id[2]
-    , sys.cdvdman_ilink_id[3]
-    , sys.cdvdman_ilink_id[4]
-    , sys.cdvdman_ilink_id[5]
-    , sys.cdvdman_ilink_id[6]
-    , sys.cdvdman_ilink_id[7]);
-    set_cdvdman->ilink_id_int = sys.cdvdman_ilink_id_int;
+    , sys.cdvdman.ilink_id[0]
+    , sys.cdvdman.ilink_id[1]
+    , sys.cdvdman.ilink_id[2]
+    , sys.cdvdman.ilink_id[3]
+    , sys.cdvdman.ilink_id[4]
+    , sys.cdvdman.ilink_id[5]
+    , sys.cdvdman.ilink_id[6]
+    , sys.cdvdman.ilink_id[7]);
+    set_cdvdman->ilink_id_int = sys.cdvdman.ilink_id_int;
     printf("- disk_id         = %02x-%02x-%02x-%02x-%02x\n"
-    , sys.cdvdman_disk_id[0]
-    , sys.cdvdman_disk_id[1]
-    , sys.cdvdman_disk_id[2]
-    , sys.cdvdman_disk_id[3]
-    , sys.cdvdman_disk_id[4]);
-    set_cdvdman->disk_id_int = sys.cdvdman_disk_id_int;
+    , sys.cdvdman.disk_id[0]
+    , sys.cdvdman.disk_id[1]
+    , sys.cdvdman.disk_id[2]
+    , sys.cdvdman.disk_id[3]
+    , sys.cdvdman.disk_id[4]);
+    set_cdvdman->disk_id_int = sys.cdvdman.disk_id_int;
     printf("EE CORE settings:\n");
-    printf("- flags           = 0x%lx\n", set_ee_core->flags);
-    printf("- mod_base        = 0x%p\n",  set_ee_core->ModStorageStart);
+    printf("- flags     = 0x%lx\n", set_ee_core->flags);
+    printf("- iop_rm[0] = %ld\n",   set_ee_core->iop_rm[0]);
+    printf("- iop_rm[1] = %ld\n",   set_ee_core->iop_rm[1]);
+    printf("- mod_base  = 0x%p\n",  set_ee_core->ModStorageStart);
     printf("- args:\n");
     for (int i = 0; i < ee_core_argc; i++) {
         printf("  - [%d] %s\n", i, ee_core_argv[i]);
     }
     printf("------------------------------\n");
 
-    //
-    // Start Emulation Environment
-    //
+    /*
+     * **********************************************************************
+     * Changing from Load Environment (LE) to Emulation Environment (EE)
+     * **********************************************************************
+     */
+
     ExecPS2((void *)eh->entry, NULL, ee_core_argc, ee_core_argv);
 
     return 0;
