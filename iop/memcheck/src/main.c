@@ -11,16 +11,16 @@ IRX_ID(MODNAME, 1, 1);
 
 typedef void * (*fp_AllocSysMemory)(int mode, int size, void *ptr);
 typedef int    (*fp_FreeSysMemory)(void *ptr);
-//typedef u32    (*fp_QueryMemSize)();
-//typedef u32    (*fp_QueryMaxFreeMemSize)();
-//typedef u32    (*fp_QueryTotalFreeMemSize)();
+typedef u32    (*fp_QueryMemSize)();
+typedef u32    (*fp_QueryMaxFreeMemSize)();
+typedef u32    (*fp_QueryTotalFreeMemSize)();
 typedef void * (*fp_QueryBlockTopAddress)(void *address);
 typedef int    (*fp_QueryBlockSize)(void *address);
 fp_AllocSysMemory        org_AllocSysMemory;
 fp_FreeSysMemory         org_FreeSysMemory;
-//fp_QueryMemSize          org_QueryMemSize;
-//fp_QueryMaxFreeMemSize   org_QueryMaxFreeMemSize;
-//fp_QueryTotalFreeMemSize org_QueryTotalFreeMemSize;
+fp_QueryMemSize          org_QueryMemSize;
+fp_QueryMaxFreeMemSize   org_QueryMaxFreeMemSize;
+fp_QueryTotalFreeMemSize org_QueryTotalFreeMemSize;
 fp_QueryBlockTopAddress  org_QueryBlockTopAddress;
 fp_QueryBlockSize        org_QueryBlockSize;
 
@@ -35,7 +35,8 @@ struct SMemBlock {
     unsigned char flags;
 };
 
-#define CHECKREGION 256
+#define CHECKREGION_BEFORE 256
+#define CHECKREGION_AFTER  256
 #define MAX_BLOCKS 256
 struct SMemBlock blocks[MAX_BLOCKS];
 
@@ -48,7 +49,7 @@ static void check_block(struct SMemBlock *pmb)
     c_end = -1;
     count = 0;
     mem_check = &pmb->addr[0];
-    for (i = 0; i < CHECKREGION; i++) {
+    for (i = 0; i < CHECKREGION_BEFORE; i++) {
         if (mem_check[i] != 0xAA) {
             M_DEBUG("[%d] 0x%x = %d\n", i, &mem_check[i], mem_check[i]);
 
@@ -65,7 +66,7 @@ static void check_block(struct SMemBlock *pmb)
 
     if (count > 0) {
         M_DEBUG("\n");
-        M_DEBUG("- %d byte guard region BEFORE block corrupt!\n", CHECKREGION);
+        M_DEBUG("- %d byte guard region BEFORE block corrupt!\n", CHECKREGION_BEFORE);
         M_DEBUG("- first byte: %d @ 0x%x\n", c_start, &mem_check[c_start]);
         M_DEBUG("- last  byte: %d @ 0x%x\n", c_end, &mem_check[c_end]);
         M_DEBUG("- count:      %d\n", count);
@@ -74,13 +75,19 @@ static void check_block(struct SMemBlock *pmb)
         M_DEBUG("- guard:      0x%x\n", mem_check);
         M_DEBUG("\n");
         pmb->flags |= SMBF_CORRUPT;
+
+        i = 0;
+        while (mem_check[i] == 255)
+            i++;
+        M_DEBUG("- found %d bytes 0xff\n", i);
+        while (1) {}
     }
 
     c_start = -1;
     c_end = -1;
     count = 0;
-    mem_check = &pmb->addr[CHECKREGION + pmb->size];
-    for (i = 0; i < CHECKREGION; i++) {
+    mem_check = &pmb->addr[CHECKREGION_BEFORE + pmb->size];
+    for (i = 0; i < CHECKREGION_AFTER; i++) {
         if (mem_check[i] != 0xAA) {
             M_DEBUG("[%d] 0x%x = %d\n", i, &mem_check[i], mem_check[i]);
 
@@ -97,7 +104,7 @@ static void check_block(struct SMemBlock *pmb)
 
     if (count > 0) {
         M_DEBUG("\n");
-        M_DEBUG("- %d byte guard region AFTER block corrupt!\n", CHECKREGION);
+        M_DEBUG("- %d byte guard region AFTER block corrupt!\n", CHECKREGION_AFTER);
         M_DEBUG("- first byte: %d @ 0x%x\n", c_start, &mem_check[c_start]);
         M_DEBUG("- last  byte: %d @ 0x%x\n", c_end, &mem_check[c_end]);
         M_DEBUG("- count:      %d\n", count);
@@ -106,6 +113,12 @@ static void check_block(struct SMemBlock *pmb)
         M_DEBUG("- guard:      0x%x\n", mem_check);
         M_DEBUG("\n");
         pmb->flags |= SMBF_CORRUPT;
+
+        i = 0;
+        while (mem_check[i] == 255)
+            i++;
+        M_DEBUG("- found %d bytes 0xff\n", i);
+        while (1) {}
     }
 }
 
@@ -127,7 +140,7 @@ static void * hooked_AllocSysMemory(int mode, int size, void *ptr)
     check();
 
     // Make new allocation
-    rv = org_AllocSysMemory(mode, CHECKREGION + size + CHECKREGION, ptr);
+    rv = org_AllocSysMemory(mode, CHECKREGION_BEFORE + size + CHECKREGION_AFTER, ptr);
 
     // Find a free entry
     for (i = 0; i < MAX_BLOCKS; i++) {
@@ -144,14 +157,15 @@ static void * hooked_AllocSysMemory(int mode, int size, void *ptr)
         pmb->flags = SMBF_USED;
 
         // Pattern fill extra memory
-        for (i = 0; i < CHECKREGION; i++) {
+        for (i = 0; i < CHECKREGION_BEFORE; i++)
             pmb->addr[i] = 0xAA;
-            pmb->addr[CHECKREGION + pmb->size + i] = 0xAA;
-        }
-        rv += CHECKREGION;
+        for (i = 0; i < CHECKREGION_AFTER; i++)
+            pmb->addr[CHECKREGION_BEFORE + pmb->size + i] = 0xAA;
+
+        rv += CHECKREGION_BEFORE;
     }
 
-    //M_DEBUG("%s(%d, %dB/%dKiB, 0x%x) = 0x%x\n", __FUNCTION__, mode, size, size/1024, ptr, rv);
+    M_DEBUG("%s(%d, %dB/%dKiB, 0x%x) = 0x%x\n", __FUNCTION__, mode, size, size/1024, ptr, rv);
 
     return rv;
 }
@@ -165,44 +179,58 @@ static int hooked_FreeSysMemory(void *ptr)
 
     // Clear entry
     for (i = 0; i < MAX_BLOCKS; i++) {
-        if (blocks[i].addr == ((unsigned char *)ptr - CHECKREGION)) {
+        if (blocks[i].addr == ((unsigned char *)ptr - CHECKREGION_BEFORE)) {
             blocks[i].flags = 0;
-            ptr = (unsigned char *)ptr - CHECKREGION;
+            ptr = (unsigned char *)ptr - CHECKREGION_BEFORE;
             break;
         }
     }
 
     rv = org_FreeSysMemory(ptr);
-    //M_DEBUG("%s(0x%x) = %d\n", __FUNCTION__, ptr, rv);
+    M_DEBUG("%s(0x%x) = %d\n", __FUNCTION__, ptr, rv);
     return rv;
 }
 
-#if 0
 static u32 hooked_QueryMemSize()
 {
-    return org_QueryMemSize();
+    u32 size = org_QueryMemSize();
+
+    //M_DEBUG("%s() = %dB/%dKiB\n", __FUNCTION__, size, size/1024);
+
+    return size;
 }
 
 static u32 hooked_QueryMaxFreeMemSize()
 {
-    return org_QueryMaxFreeMemSize();
+    u32 size = org_QueryMaxFreeMemSize();
+
+    M_DEBUG("%s() = %dB/%dKiB\n", __FUNCTION__, size, size/1024);
+
+    return size;
 }
 
 static u32 hooked_QueryTotalFreeMemSize()
 {
-    return org_QueryTotalFreeMemSize();
+    u32 size = org_QueryTotalFreeMemSize();
+
+    M_DEBUG("%s() = %dB/%dKiB\n", __FUNCTION__, size, size/1024);
+
+    return size;
 }
-#endif
 
 static void * hooked_QueryBlockTopAddress(void *address)
 {
     int i;
 
+    //M_DEBUG("%s(0x%x)\n", __FUNCTION__, address);
+
     // Find entry
     for (i = 0; i < MAX_BLOCKS; i++) {
-        if (blocks[i].addr == ((unsigned char *)address - CHECKREGION))
-            return blocks[i].addr + CHECKREGION + blocks[i].size;
+        if (blocks[i].addr == ((unsigned char *)address - CHECKREGION_BEFORE))
+            return blocks[i].addr + CHECKREGION_BEFORE + blocks[i].size;
     }
+
+    //M_DEBUG("%s(0x%x) BLOCK NOT FOUND!\n", __FUNCTION__, address);
 
     return org_QueryBlockTopAddress(address);
 }
@@ -211,11 +239,15 @@ static int hooked_QueryBlockSize(void *address)
 {
     int i;
 
+    //M_DEBUG("%s(0x%x)\n", __FUNCTION__, address);
+
     // Find entry
     for (i = 0; i < MAX_BLOCKS; i++) {
-        if (blocks[i].addr == ((unsigned char *)address - CHECKREGION))
+        if (blocks[i].addr == ((unsigned char *)address - CHECKREGION_BEFORE))
             return blocks[i].size;
     }
+
+    //M_DEBUG("%s(0x%x) BLOCK NOT FOUND!\n", __FUNCTION__, address);
 
     return org_QueryBlockSize(address);
 }
@@ -232,9 +264,9 @@ int _start(int argc, char **argv)
     iop_library_t * lib_sysmem = ioplib_getByName("sysmem");
     org_AllocSysMemory        = ioplib_hookExportEntry(lib_sysmem,  4, hooked_AllocSysMemory);
     org_FreeSysMemory         = ioplib_hookExportEntry(lib_sysmem,  5, hooked_FreeSysMemory);
-    //org_QueryMemSize          = ioplib_hookExportEntry(lib_sysmem,  6, hooked_QueryMemSize);
-    //org_QueryMaxFreeMemSize   = ioplib_hookExportEntry(lib_sysmem,  7, hooked_QueryMaxFreeMemSize);
-    //org_QueryTotalFreeMemSize = ioplib_hookExportEntry(lib_sysmem,  8, hooked_QueryTotalFreeMemSize);
+    org_QueryMemSize          = ioplib_hookExportEntry(lib_sysmem,  6, hooked_QueryMemSize);
+    org_QueryMaxFreeMemSize   = ioplib_hookExportEntry(lib_sysmem,  7, hooked_QueryMaxFreeMemSize);
+    org_QueryTotalFreeMemSize = ioplib_hookExportEntry(lib_sysmem,  8, hooked_QueryTotalFreeMemSize);
     org_QueryBlockTopAddress  = ioplib_hookExportEntry(lib_sysmem,  9, hooked_QueryBlockTopAddress);
     org_QueryBlockSize        = ioplib_hookExportEntry(lib_sysmem, 10, hooked_QueryBlockSize);
     ioplib_relinkExports(lib_sysmem);
