@@ -129,3 +129,4 @@ MODE9 = {name = "Compat MODE9: NOP (user configurable)"}
 "SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4]}
 "SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4]}
 "SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.flags = ["FAST_READ"], cdvdman.fs_sectors = 64} # Optimization
+#"SLUS_202.30" = {name = "Max Payne",                             default_elf = "cdrom0:\\MAIN.RUN;1"} # for USB on non-DECKARD only! Fix freezing at rockstar logo
