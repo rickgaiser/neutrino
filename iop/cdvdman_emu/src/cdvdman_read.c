@@ -65,9 +65,8 @@ static u32 accurate_read_clocks(u32 lsn, unsigned int sectors)
         const u32 cd_const_2 = (       1500 * 333000ll) / (3600 - 1500);
         usec_per_sector = cd_const_1 / (cd_const_2 + lsn);
         // CD is limited to 3000KiB/s = 667us / sector
-        // Compensation: our code seems 23us / sector slower than sony CDVD
-        if (usec_per_sector < (667-23))
-            usec_per_sector = (667-23);
+        if (usec_per_sector < 667)
+            usec_per_sector = 667;
     } else if (cdvdman_settings.layer1_start != 0) {
         // DVD dual layer constant values
         // ------------------------------
