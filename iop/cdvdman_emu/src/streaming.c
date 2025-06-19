@@ -67,7 +67,7 @@ static int StFillStreamBuffer(void)
     CpuResumeIntr(OldState);
 
     if (result == 0) {
-        // M_DEBUG("Stream fill buffer: Stream lsn 0x%08x - %u sectors:%p\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr);
+        // M_DEBUG("StFillStreamBuffer: Stream lsn 0x%08x - %u sectors:%p\n", cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr);
         if (sceCdRead_internal(cdvdman_stat.StreamingData.Stlsn, cdvdman_stat.StreamingData.StBanksize, ptr, NULL, ECS_STREAMING) == 0) {
             // Failed to start reading.
             cdvdman_stat.StreamingData.StIsReading = 0;
@@ -76,7 +76,7 @@ static int StFillStreamBuffer(void)
             result = 0;
         }
     } else {
-        M_DEBUG("Stream fill buffer: Stream full.\n");
+        M_DEBUG("StFillStreamBuffer: Stream full.\n");
         // Nothing else to read.
         cdvdman_stat.StreamingData.StIsReading = 0;
         result = 1;
@@ -90,7 +90,7 @@ static void StStartFillStreamBuffer(void)
     iop_sys_clock_t StmScheduleClock;
 
     if (StFillStreamBuffer() < 0) {
-        M_DEBUG("StmCallback: Rescheduling read.\n");
+        M_DEBUG("StStartFillStreamBuffer: Rescheduling read.\n");
         StmScheduleClock.lo = 0x00704000;
         StmScheduleClock.hi = 0;
         SetAlarm(&StmScheduleClock, &StmScheduleCb, &cdvdman_stat.StreamingData);
@@ -150,7 +150,7 @@ static int ReadSectorsEE(int maxcount, void *buffer)
     SifDmaTransfer_t dmat[2];
     void *ptr;
 
-    //	M_DEBUG("ReadSectors EE: wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
+    //M_DEBUG("ReadSectorsEE: wr: %u, rd: %u, streamed: %u\n", cdvdman_stat.StreamingData.StWritePtr, cdvdman_stat.StreamingData.StReadPtr, cdvdman_stat.StreamingData.StStreamed);
 
     result = 0;
     ptr = buffer;
@@ -388,7 +388,7 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
     void *ptr;
 
     M_DEBUG("%s(%lu, 0x%X, %lu, 0x%x)\n", __FUNCTION__, sectors, buffer, mode, error);
-    //M_DEBUG("StRead called: sectors %lu:%p, mode: %lu, stat: %u,%u\n", sectors, buffer, mode, cdvdman_stat.StreamingData.StStat, cdvdman_stat.StreamingData.StIsReading);
+    //M_DEBUG("sceCdStRead: sectors %lu:%p, mode: %lu, stat: %u,%u\n", sectors, buffer, mode, cdvdman_stat.StreamingData.StStat, cdvdman_stat.StreamingData.StIsReading);
 
     cdvdman_stat.err = SCECdErNO;
     if (cdvdman_stat.StreamingData.StStat) {
@@ -405,7 +405,7 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
             //		M_DEBUG(", Read: %u\n", SectorsRead);
 
             if (SectorsRead == 0)
-                M_DEBUG("StRead: buffer underrun. %u/%lu read.\n", result, sectors);
+                M_DEBUG("sceCdStRead: buffer underrun. %u/%lu read.\n", result, sectors);
 
             result += SectorsRead;
             // if(mode == STMNBLK) break;
