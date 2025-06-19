@@ -101,11 +101,6 @@ void print_usage()
     printf("                    - auto (elf file from cd/dvd) (default)\n");
     printf("                    - <file>\n");
     printf("\n");
-    printf("  -mt=<type>        Select media type, supported are:\n");
-    printf("                    - cd\n");
-    printf("                    - dvd\n");
-    printf("                    Defaults to cd for size<=650MiB, and dvd for size>650MiB\n");
-    printf("\n");
     printf("  -gc=<compat>      Game compatibility modes, supported are:\n");
     printf("                    - 0: IOP: Fast reads (sceCdRead)\n");
     printf("                    - 1: dummy\n");
@@ -198,7 +193,6 @@ struct SSystemSettings {
     char *sMC0File;
     char *sMC1File;
     char *sELFFile;
-    char *sMT;
     char *sGC;
     char *sGSM;
     char *sCFGFile;
@@ -208,6 +202,7 @@ struct SSystemSettings {
 
     struct {
         // CDVDMAN settings
+        char *media_type;
         uint32_t flags;
         int fs_sectors;
         union {
@@ -756,6 +751,7 @@ int load_config_cdvdman(toml_datum_t t)
     toml_datum_t arr;
     toml_datum_t v;
 
+    toml_string_in_overwrite(t, "media_type", &sys.cdvdman.media_type);
     toml_int_in_overwrite(t, "fs_sectors", &sys.cdvdman.fs_sectors);
 
     arr = toml_get(t, "flags");
@@ -829,7 +825,6 @@ int load_config(toml_datum_t t)
     toml_string_in_overwrite(t, "default_mc0",    &sys.sMC0File);
     toml_string_in_overwrite(t, "default_mc1",    &sys.sMC1File);
     toml_string_in_overwrite(t, "default_elf",    &sys.sELFFile);
-    toml_string_in_overwrite(t, "default_mt",     &sys.sMT);
     toml_string_in_overwrite(t, "default_gc",     &sys.sGC);
     toml_string_in_overwrite(t, "default_gsm",    &sys.sGSM);
     toml_string_in_overwrite(t, "default_cfg",    &sys.sCFGFile);
@@ -1078,7 +1073,6 @@ int main(int argc, char *argv[])
     const char *sATAMode = "no";
     const char *sMCMode = "no";
     int iELFArgcStart = -1;
-    enum SCECdvdMediaType eMediaType = SCECdNODISC;
     for (i=1; i<argc; i++) {
         //printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-bsd=", 5))
@@ -1099,8 +1093,6 @@ int main(int argc, char *argv[])
             sys.sMC1File = &argv[i][5];
         else if (!strncmp(argv[i], "-elf=", 5))
             sys.sELFFile = &argv[i][5];
-        else if (!strncmp(argv[i], "-mt=", 4))
-            sys.sMT = &argv[i][4];
         else if (!strncmp(argv[i], "-gc=", 4))
             sys.sGC = &argv[i][4];
         else if (!strncmp(argv[i], "-gsm=", 5))
@@ -1168,22 +1160,6 @@ int main(int argc, char *argv[])
     // Check for "file" mode of mc emulation
     if (sys.sMC0File != NULL || sys.sMC1File != NULL) {
         sMCMode = "file";
-    }
-
-    if (sys.sMT != NULL) {
-        if (!strncmp(sys.sMT, "cdda", 4)) {
-            eMediaType = SCECdPS2CDDA;
-        } else if (!strncmp(sys.sMT, "cd", 2)) {
-            eMediaType = SCECdPS2CD;
-        } else if (!strncmp(sys.sMT, "dvdv", 4)) {
-            eMediaType = SCECdDVDV;
-        } else if (!strncmp(sys.sMT, "dvd", 3)) {
-            eMediaType = SCECdPS2DVD;
-        } else {
-            printf("ERROR: media type %s not supported\n", sys.sMT);
-            print_usage();
-            return -1;
-        }
     }
 
     // Process command line game compatibility modes
@@ -1661,6 +1637,18 @@ gsm_done:
      * Set CDVDMAN settings
      */
     if (sDVDFile != NULL) {
+        enum SCECdvdMediaType eMediaType = SCECdNODISC;
+        if (sys.cdvdman.media_type != NULL) {
+            if (!strncmp(sys.cdvdman.media_type, "cdda", 4)) {
+                eMediaType = SCECdPS2CDDA;
+            } else if (!strncmp(sys.cdvdman.media_type, "cd", 2)) {
+                eMediaType = SCECdPS2CD;
+            } else if (!strncmp(sys.cdvdman.media_type, "dvdv", 4)) {
+                eMediaType = SCECdDVDV;
+            } else if (!strncmp(sys.cdvdman.media_type, "dvd", 3)) {
+                eMediaType = SCECdPS2DVD;
+            }
+        }
         if (eMediaType == SCECdNODISC)
             eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
 
@@ -1671,7 +1659,7 @@ gsm_done:
     } else {
         if (sys.cdvdman.flags != 0)
             printf("WARNING: compatibility cannot be changed without emulating the DVD\n");
-        if (eMediaType != SCECdNODISC)
+        if (sys.cdvdman.media_type != SCECdNODISC)
             printf("WARNING: media type cannot be changed without emulating the DVD\n");
         if (sys.cdvdman.ilink_id_int != 0)
             printf("WARNING: ilink_id cannot be changed without emulating the DVD\n");

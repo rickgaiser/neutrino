@@ -5,6 +5,11 @@
 # Include compatibility .toml files/patches
 #depends = ["p-patch"]
 
+# CDVDMAN: media type
+# - cd
+# - dvd
+#cdvdman.media_type = "dvd"
+
 # CDVDMAN: compatibility flags
 # - FAST_READ = MODE0: Fast reads (sceCdRead)
 # - SYNC_READ = MODE2: Sync reads (sceCdRead)

@@ -108,11 +108,6 @@ Options:
                     - auto (elf file from cd/dvd) (default)
                     - <file>
 
-  -mt=<type>        Select media type, supported are:
-                    - cd
-                    - dvd
-                    Defaults to cd for size<=650MiB, and dvd for size>650MiB
-
   -gc=<compat>      Game compatibility modes, supported are:
                     - 0: IOP: Fast reads (sceCdRead)
                     - 1: dummy
