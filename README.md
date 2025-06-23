@@ -17,17 +17,17 @@ An environment in neutrino describes what IOP modules are loaded and defines wha
 ## Backing Store Driver
 A backing store driver provides a storage location for storing virtual disk images. For instance of DVD's, HDD's or MC's.
 The following backing storage devices are supported:
-Device             | PS2 model  | Speed                                                     | Device comp.                       | Type         | bsd      | internal
--------------------|------------|-----------------------------------------------------------|------------------------------------|--------------|----------|-----
-USB                | FAT + 70k  |![x](https://progress-bar.xyz/750?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
-USB                | slim       |![x](https://progress-bar.xyz/900?scale=2200&suffix=KB/s)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
-MX4SIO             | slim       |![x](https://progress-bar.xyz/1150?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
-MMCE               | slim       |![x](https://progress-bar.xyz/1350?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
-MX4SIO             | FAT + 70k  |![x](https://progress-bar.xyz/1500?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
-MMCE               | FAT + 70k  |![x](https://progress-bar.xyz/1700?scale=2200&suffix=KB/s) | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
-iLink / IEEE1394   | FAT        |![x](https://progress-bar.xyz/6?scale=2&suffix=MB/s)       | ![x](https://progress-bar.xyz/10)  | Block Device | `ilink`  | `sd`
-UDPBD              | ALL        |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)      | ![x](https://progress-bar.xyz/100) | Block Device | `udpbd`  | `udp`
-ATA (internal HDD) | FAT        |![x](https://progress-bar.xyz/30?scale=2&suffix=MB/s)      | ![x](https://progress-bar.xyz/100) | Block Device | `ata`    | `ata`
+Device             | PS2 model  | Speed                                                                            | Device comp.                       | Type         | bsd      | internal
+-------------------|------------|----------------------------------------------------------------------------------|------------------------------------|--------------|----------|-----
+USB                | FAT + 70k  |![x](https://progress-bar.xyz/750?scale=2200&suffix=KB/s&&progress_color=d9534f)  | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
+USB                | slim       |![x](https://progress-bar.xyz/900?scale=2200&suffix=KB/s)                         | ![x](https://progress-bar.xyz/80)  | Block Device | `usb`    | `usb`
+MX4SIO             | slim       |![x](https://progress-bar.xyz/1150?scale=2200&suffix=KB/s)                        | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
+MMCE               | slim       |![x](https://progress-bar.xyz/1350?scale=2200&suffix=KB/s)                        | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
+MX4SIO             | FAT + 70k  |![x](https://progress-bar.xyz/1500?scale=2200&suffix=KB/s)                        | ![x](https://progress-bar.xyz/60)  | Block Device | `mx4sio` | `sdc`
+MMCE               | FAT + 70k  |![x](https://progress-bar.xyz/1700?scale=2200&suffix=KB/s)                        | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
+iLink / IEEE1394   | FAT        |![x](https://progress-bar.xyz/6?scale=2&suffix=MB/s)                              | ![x](https://progress-bar.xyz/10)  | Block Device | `ilink`  | `sd`
+UDPBD              | ALL        |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)                             | ![x](https://progress-bar.xyz/100) | Block Device | `udpbd`  | `udp`
+ATA (internal HDD) | FAT        |![x](https://progress-bar.xyz/30?scale=2&suffix=MB/s)                             | ![x](https://progress-bar.xyz/100) | Block Device | `ata`    | `ata`
 
 PS2 model: The older FAT PS2 models and the first slim PS2 model (70k) have the original PS1 MIPS R3000 CPU. Later slim PS2 models have a new CPU with 'DECKARD' emulating the MIPS R3000. This is why there is a speed difference between those two groups of PS2 models.
 
