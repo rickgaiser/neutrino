@@ -116,6 +116,7 @@ MODE9 = {name = "Compat MODE9: NOP (user configurable)"}
 "SLUS_204.13" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLES_506.08" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLES_524.82" = {name = "Steel Dragon EX",                       depends = ["p-steeldr"]}
+"SCUS_971.96" = {name = "Twisted Metal Black Online",            eecore.mod_base = 0xA7000}
 "SCES_524.12" = {name = "Jackie Chan Adventures",                cdvdman.flags = ["SYNC_READ"]}
 "SCUS_971.50" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
 "SCES_500.04" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
