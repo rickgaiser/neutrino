@@ -5,5 +5,8 @@
 
 #include <intrman.h>
 #include <loadcore.h>
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 
 #endif

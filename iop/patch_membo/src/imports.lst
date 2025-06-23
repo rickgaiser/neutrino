@@ -6,3 +6,9 @@ intrman_IMPORTS_end
 loadcore_IMPORTS_start
 I_GetLoadcoreInternalData
 loadcore_IMPORTS_end
+
+#ifdef DEBUG
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+#endif
