@@ -762,6 +762,7 @@ int load_config_cdvdman(toml_datum_t t)
             if (v.type == TOML_STRING) {
                 if(!strcmp(v.u.s, "FAST_READ")) sys.cdvdman.flags |= CDVDMAN_COMPAT_FAST_READ;
                 if(!strcmp(v.u.s, "SYNC_READ")) sys.cdvdman.flags |= CDVDMAN_COMPAT_SYNC_READ;
+                if(!strcmp(v.u.s, "SYNC_CB"))   sys.cdvdman.flags |= CDVDMAN_COMPAT_SYNC_CALLBACK;
                 if(!strcmp(v.u.s, "DVD_DL"))    sys.cdvdman.flags |= CDVDMAN_COMPAT_DVD_DL;
                 if(!strcmp(v.u.s, "F1_2001"))   sys.cdvdman.flags |= CDVDMAN_COMPAT_F1_2001;
             }
