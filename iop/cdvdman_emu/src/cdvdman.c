@@ -20,7 +20,6 @@ extern struct irx_export_table _exp_cdvdstm;
 // internal functions prototypes
 static int cdvdman_writeSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 out_size);
 static unsigned int event_alarm_cb(void *args);
-static void cdvdman_create_semaphores(void);
 
 struct cdvdman_cb_data
 {
@@ -31,18 +30,9 @@ struct cdvdman_cb_data
 cdvdman_status_t cdvdman_stat;
 static struct cdvdman_cb_data cb_data;
 
-int cdrom_io_sema;
 static int cdvdman_scmdsema;
-int cdvdman_searchfilesema;
 
 static iop_sys_clock_t gCallbackSysClock;
-
-// buffers
-u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
-u8 *cdvdman_fs_buf;
-
-#define CDVDMAN_MODULE_VERSION 0x225
-static int cdvdman_debug_print_flag = 0;
 
 volatile unsigned char cdvdman_cdinited = 0;
 
@@ -53,8 +43,6 @@ void cdvdman_init(void)
 
     if (!cdvdman_cdinited) {
         cdvdman_stat.err = SCECdErNO;
-
-        cdvdman_fs_init();
         cdvdman_cdinited = 1;
     }
 }
@@ -73,15 +61,6 @@ int sceCdMmode(int media)
 {
     M_DEBUG("%s(%d)\n", __FUNCTION__, media);
     return 1;
-}
-
-//-------------------------------------------------------------------------
-static void cdvdman_initDiskType(void)
-{
-    cdvdman_stat.err = SCECdErNO;
-
-    cdvdman_stat.disc_type_reg = (int)cdvdman_settings.media;
-    M_DEBUG("DiskType=0x%x\n", cdvdman_settings.media);
 }
 
 //-------------------------------------------------------------------------
@@ -139,43 +118,6 @@ sceCdCBFunc sceCdCallback(sceCdCBFunc func)
     CpuResumeIntr(oldstate);
 
     return old_cb;
-}
-
-//-------------------------------------------------------------------------
-int sceCdSC(int code, int *param)
-{
-    int result;
-
-    M_DEBUG("%s(0x%X, 0x%X)\n", __FUNCTION__, code, *param);
-
-    switch (code) {
-        case CDSC_GET_INTRFLAG:
-            result = cdvdman_stat.intr_ef;
-            break;
-        case CDSC_IO_SEMA:
-            if (*param) {
-                WaitSema(cdrom_io_sema);
-            } else
-                SignalSema(cdrom_io_sema);
-
-            result = *param; // EE N-command code.
-            break;
-        case CDSC_GET_VERSION:
-            result = CDVDMAN_MODULE_VERSION;
-            break;
-        case CDSC_GET_DEBUG_STATUS:
-            *param = (int)&cdvdman_debug_print_flag;
-            result = 0xFF;
-            break;
-        case CDSC_SET_ERROR:
-            result = cdvdman_stat.err = *param;
-            break;
-        default:
-            M_DEBUG("%s(0x%X, 0x%X) unknown code\n", __FUNCTION__, code, *param);
-            result = 1; // dummy result
-    }
-
-    return result;
 }
 
 //-------------------------------------------------------------------------
@@ -256,7 +198,7 @@ retry:
 //--------------------------------------------------------------
 void cdvdman_cb_event(int reason)
 {
-    M_DEBUG("    %s(%d) cb=0x%x\n", __FUNCTION__, reason, cb_data.user_cb);
+    //M_DEBUG("    %s(%d) cb=0x%x\n", __FUNCTION__, reason, cb_data.user_cb);
 
     if (cb_data.user_cb != NULL) {
         cb_data.reason = reason;
@@ -270,7 +212,7 @@ void cdvdman_cb_event(int reason)
             WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
     }
 
-    M_DEBUG("    %s(%d) done\n", __FUNCTION__, reason);
+    //M_DEBUG("    %s(%d) done\n", __FUNCTION__, reason);
 }
 
 //--------------------------------------------------------------
@@ -278,7 +220,7 @@ static unsigned int event_alarm_cb(void *args)
 {
     struct cdvdman_cb_data *cb_data = args;
 
-    M_DEBUG("      %s\n", __FUNCTION__);
+    M_DEBUG("      %s reason=%d cb=0x%x\n", __FUNCTION__, cb_data->reason, cb_data->user_cb);
 
     if (cb_data->user_cb != NULL) // This interrupt does not occur immediately, hence check for the callback again here.
         cb_data->user_cb(cb_data->reason);
@@ -289,19 +231,6 @@ static unsigned int event_alarm_cb(void *args)
     M_DEBUG("      %s done\n", __FUNCTION__);
 
     return 0;
-}
-
-//-------------------------------------------------------------------------
-static void cdvdman_create_semaphores(void)
-{
-    iop_sema_t smp;
-
-    smp.initial = 1;
-    smp.max = 1;
-    smp.attr = 0;
-    smp.option = 0;
-
-    cdvdman_scmdsema = CreateSema(&smp);
 }
 
 //-------------------------------------------------------------------------
@@ -319,8 +248,38 @@ static int intrh_cdrom(void *common)
 }
 
 //-------------------------------------------------------------------------
-static inline void InstallIntrHandler(void)
+int _start(int argc, char **argv)
 {
+    iop_sema_t smp;
+    iop_event_t event;
+
+    // Register exports
+    RegisterLibraryEntries(&_exp_cdvdman);
+    RegisterLibraryEntries(&_exp_cdvdstm);
+
+    // Setup the callback timer.
+    USec2SysClock((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READ) ? 0 : 5000, &gCallbackSysClock);
+
+    // Create SCMD semaphores
+    smp.initial = 1;
+    smp.max = 1;
+    smp.attr = 0;
+    smp.option = 0;
+    cdvdman_scmdsema = CreateSema(&smp);
+
+    // Create interrupt event flag
+    event.attr = EA_MULTI;
+    event.option = 0;
+    event.bits = CDVDEF_MAN_UNLOCKED;
+    cdvdman_stat.intr_ef = CreateEventFlag(&event);
+
+    // start cdvdman threads
+    cdvdman_read_init();
+
+    // register cdrom device driver
+    cdvdman_initdev();
+
+    // Install interrupt handler
     RegisterIntrHandler(IOP_IRQ_CDVD, 1, &intrh_cdrom, NULL);
     EnableIntr(IOP_IRQ_CDVD);
 
@@ -329,37 +288,11 @@ static inline void InstallIntrHandler(void)
         CDVDreg_PWOFF = CDL_DATA_END;
     if (CDVDreg_PWOFF & CDL_DATA_RDY)
         CDVDreg_PWOFF = CDL_DATA_RDY;
-}
-
-//-------------------------------------------------------------------------
-int _start(int argc, char **argv)
-{
-    // register exports
-    RegisterLibraryEntries(&_exp_cdvdman);
-    RegisterLibraryEntries(&_exp_cdvdstm);
-
-    // Setup the callback timer.
-    USec2SysClock((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READ) ? 0 : 5000, &gCallbackSysClock);
-
-    // Limit min/max sectors
-    if (cdvdman_settings.fs_sectors < 2)
-        cdvdman_settings.fs_sectors = 2;
-    if (cdvdman_settings.fs_sectors > 128)
-        cdvdman_settings.fs_sectors = 128;
-    cdvdman_fs_buf = AllocSysMemory(0, cdvdman_settings.fs_sectors * 2048 + CDVDMAN_FS_BUF_ALIGNMENT, NULL);
-
-    // create SCMD/searchfile semaphores
-    cdvdman_create_semaphores();
-
-    // start cdvdman threads
-    cdvdman_read_init();
-
-    // register cdrom device driver
-    cdvdman_initdev();
-    InstallIntrHandler();
 
     // init disk type stuff
-    cdvdman_initDiskType();
+    cdvdman_stat.err = SCECdErNO;
+    cdvdman_stat.disc_type_reg = (int)cdvdman_settings.media;
+    M_DEBUG("DiskType=0x%x\n", cdvdman_settings.media);
 
     return MODULE_RESIDENT_END;
 }

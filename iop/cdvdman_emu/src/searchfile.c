@@ -7,12 +7,9 @@
 #include "internal.h"
 #include "cdvdman_read.h"
 
-static void cdvdman_trimspaces(char *str);
-static struct dirTocEntry *cdvdman_locatefile(char *name, u32 tocLBA, int tocLength, int layer);
-static int cdvdman_findfile(sceCdlFILE *pcd_file, const char *name, int layer);
-
-// The max lsn/sectors available based on value retrieved from iso. Used for out of bounds checking. Only check if value non zero.
-u32 mediaLsnCount;
+static int cdvdman_searchfilesema;
+static u8 cdvdman_buf[2048];
+static int initialized = 0;
 
 typedef struct
 {
@@ -165,8 +162,6 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
         layer = 0;
     pLayerInfo = (layer != 0) ? &layer_info[1] : &layer_info[0]; // SCE CDVDMAN simply treats a non-zero value as a signal for the 2nd layer.
 
-    WaitSema(cdvdman_searchfilesema);
-
     M_DEBUG("%s %s layer%d\n", __FUNCTION__, name, layer);
 
     strncpy(cdvdman_filepath, name, sizeof(cdvdman_filepath));
@@ -176,13 +171,11 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
     M_DEBUG("%s cdvdman_filepath=%s\n", __FUNCTION__, cdvdman_filepath);
 
     if (pLayerInfo->rootDirtocLBA == 0) {
-        SignalSema(cdvdman_searchfilesema);
         return 0;
     }
 
     tocEntryPointer = cdvdman_locatefile(cdvdman_filepath, pLayerInfo->rootDirtocLBA, pLayerInfo->rootDirtocLength, layer);
     if (tocEntryPointer == NULL) {
-        SignalSema(cdvdman_searchfilesema);
         return 0;
     }
 
@@ -199,30 +192,22 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
 
     M_DEBUG("%s found %s\n", __FUNCTION__, name);
 
-    SignalSema(cdvdman_searchfilesema);
-
     return 1;
 }
 
 //-------------------------------------------------------------------------
-int sceCdSearchFile(sceCdlFILE *pcd_file, const char *name)
+static void cdvdman_searchfile_init(void)
 {
-    M_DEBUG("%s %s\n", __FUNCTION__, name);
+    iop_sema_t smp;
 
-    return cdvdman_findfile(pcd_file, name, 0);
-}
+    M_DEBUG("%s\n", __FUNCTION__);
 
-//-------------------------------------------------------------------------
-int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
-{
-    M_DEBUG("%s %s\n", __FUNCTION__, name);
+    smp.initial = 1;
+    smp.max = 1;
+    smp.attr = 1;
+    smp.option = 0;
+    cdvdman_searchfilesema = CreateSema(&smp);
 
-    return cdvdman_findfile(fp, name, layer);
-}
-
-//-------------------------------------------------------------------------
-void cdvdman_searchfile_init(void)
-{
     // Read the volume descriptor
     sceCdRead_internal(16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
     sceCdSync(0);
@@ -231,30 +216,57 @@ void cdvdman_searchfile_init(void)
     layer_info[0].rootDirtocLBA = tocEntryPointer->fileLBA;
     layer_info[0].rootDirtocLength = tocEntryPointer->fileSize;
 
-    // PVD Volume Space Size field
-    //mediaLsnCount = *(u32 *)&cdvdman_buf[0x50];
-    //M_DEBUG("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
-
     // DVD DL support
     if (!(cdvdman_settings.flags & CDVDMAN_COMPAT_DVD_DL)) {
         int on_dual;
         unsigned int layer1_start;
         sceCdReadDvdDualInfo(&on_dual, &layer1_start);
         if (on_dual) {
-            //u32 lsn0 = mediaLsnCount;
-            // So that CdRead below can read more than first layer.
-            //mediaLsnCount = 0;
             sceCdRead_internal(layer1_start + 16, 1, cdvdman_buf, NULL, ECS_SEARCHFILE);
             sceCdSync(0);
             tocEntryPointer = (struct dirTocEntry *)&cdvdman_buf[0x9c];
             layer_info[1].rootDirtocLBA = layer1_start + tocEntryPointer->fileLBA;
             layer_info[1].rootDirtocLength = tocEntryPointer->fileSize;
-
-            //u32 lsn1 = *(u32 *)&cdvdman_buf[0x50];
-            //M_DEBUG("cdvdman_searchfile_init DVD9 L0 mediaLsnCount=%d \n", lsn0);
-            //M_DEBUG("cdvdman_searchfile_init DVD9 L1 mediaLsnCount=%d \n", lsn1);
-            //mediaLsnCount = lsn0 + lsn1 - 16;
-            //M_DEBUG("cdvdman_searchfile_init DVD9 mediaLsnCount=%d\n", mediaLsnCount);
         }
     }
+
+    initialized = 1;
+}
+
+//-------------------------------------------------------------------------
+int sceCdSearchFile(sceCdlFILE *pcd_file, const char *name)
+{
+    int r;
+
+    if (!initialized)
+        cdvdman_searchfile_init();
+
+    WaitSema(cdvdman_searchfilesema);
+
+    M_DEBUG("%s %s\n", __FUNCTION__, name);
+
+    r = cdvdman_findfile(pcd_file, name, 0);
+
+    SignalSema(cdvdman_searchfilesema);
+
+    return r;
+}
+
+//-------------------------------------------------------------------------
+int sceCdLayerSearchFile(sceCdlFILE *fp, const char *name, int layer)
+{
+    int r;
+
+    if (!initialized)
+        cdvdman_searchfile_init();
+
+    WaitSema(cdvdman_searchfilesema);
+
+    M_DEBUG("%s %s\n", __FUNCTION__, name);
+
+    r = cdvdman_findfile(fp, name, layer);
+
+    SignalSema(cdvdman_searchfilesema);
+
+    return r;
 }

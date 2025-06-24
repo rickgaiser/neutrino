@@ -10,7 +10,15 @@
 //-------------------------------------------------------------------------
 int sceCdSync(int mode)
 {
-    M_DEBUG("%s(%d) locked=%d, ic=%d\n", __FUNCTION__, mode, sync_flag_locked, QueryIntrContext());
+#ifdef DEBUG
+    M_DEBUG("%s(%d) locked=%d\n", __FUNCTION__, mode, sync_flag_locked);
+
+    // Sanity check
+    if (((mode & 1) == 0) && QueryIntrContext()) {
+        M_DEBUG("%s: ERROR: Cannot wait in interrupt context!\n", __FUNCTION__);
+        while(1){DelayThread(10000);}
+    }
+#endif
 
     if (!sync_flag_locked)
         return 0; // Completed
@@ -39,10 +47,28 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 {
     int result;
 
-    result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
+#ifdef DEBUG
+    if (mode != NULL)
+        M_DEBUG("%s(%d, %d, %08x, {%d, %d, %d})\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, mode->trycount, mode->spindlctrl, mode->datapattern);
+    else
+        M_DEBUG("%s(%d, %d, %08x, NULL)\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf);
 
-    if ((result == 1) && (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_READ) && !QueryIntrContext())
+    // Sanity check
+    if ((cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_READ) && QueryIntrContext()) {
+        M_DEBUG("%s: ERROR: Cannot wait in interrupt context!\n", __FUNCTION__);
+        while(1){DelayThread(10000);}
+    }
+#endif
+
+    result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
+    while ((result == 0) && (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_READ)) {
+        DelayThread(10000);
+        result = sceCdRead_internal(lsn, sectors, buf, mode, ECS_EXTERNAL);
+    }
+
+    if ((result == 1) && (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_READ)) {
         WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
+    }
 
     return result;
 }
@@ -50,7 +76,12 @@ int sceCdRead(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 //-------------------------------------------------------------------------
 int sceCdReadCdda(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode)
 {
-    M_DEBUG("%s(%d, %d, %08x, %08x)\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, (int)mode);
+#ifdef DEBUG
+    if (mode != NULL)
+        M_DEBUG("%s(%d, %d, %08x, {%d, %d, %d})\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf, mode->trycount, mode->spindlctrl, mode->datapattern);
+    else
+        M_DEBUG("%s(%d, %d, %08x, NULL)\n", __FUNCTION__, (int)lsn, (int)sectors, (int)buf);
+#endif
 
     return sceCdRead(lsn, sectors, buf, mode);
 }
@@ -89,8 +120,8 @@ typedef struct {
 //-------------------------------------------------------------------------
 static int cdvdman_fill_toc(u8 *tocBuff)
 {
-
     u8 discType = cdvdman_stat.disc_type_reg & 0xFF;
+    u32 mediaLsnCount = fhi_get_lsn();
 
     M_DEBUG("cdvdman_fill_toc tocBuff=%08x discType=%02X\n", (int)tocBuff, discType);
 
@@ -218,19 +249,21 @@ int sceCdGetToc(u8 *toc)
 //-------------------------------------------------------------------------
 int sceCdSeek_internal(u32 lsn, enum ECallSource source)
 {
+    u32 mediaLsnCount;
+
     M_DEBUG("%s(%d, %d)\n", __FUNCTION__, (int)lsn, source);
 
     if (sync_flag_locked)
         return 0;
 
     cdvdman_stat.err = SCECdErNO;
-
     cdvdman_stat.status = SCECdStatPause;
 
     // Set the invalid parament error in case of trying to seek more than max lsn.
+    mediaLsnCount = fhi_get_lsn();
     if (mediaLsnCount) {
         if (lsn >= mediaLsnCount) {
-            M_DEBUG("cdvdman_searchfile_init mediaLsnCount=%d\n", mediaLsnCount);
+            M_DEBUG("%s: %d >= %d\n", lsn, mediaLsnCount);
             cdvdman_stat.err = SCECdErIPI;
         }
     }

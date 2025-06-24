@@ -11,6 +11,8 @@ static int cdrom_rthread_sema;
 static StmCallback_t Stm0Callback = NULL;
 static unsigned int ReadPos = 0; /* Current buffer offset in 2048-byte sectors. */
 static int cdvdman_ReadingThreadID;
+#define BOUNCE_BUF_SECTORS 1
+static u8 bounce_buf[BOUNCE_BUF_SECTORS * 2048];
 volatile unsigned char sync_flag_locked;
 
 
@@ -154,6 +156,7 @@ static void cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
     void *ptr;
     int endOfMedia = 0;
     u32 clocks_delay = 0;
+    u32 mediaLsnCount = fhi_get_lsn();
 
     M_DEBUG("    %s lsn=%lu sectors=%u buf=%p\n", __FUNCTION__, lsn, sectors, buf);
 
@@ -197,7 +200,7 @@ static void cdvdman_read_sectors(u32 lsn, unsigned int sectors, void *buf)
             SetAlarm(&TargetTime, &cdvdman_read_sectors_end_cb, NULL);
         }
 
-        cdvdman_stat.err = DeviceReadSectors(lsn, ptr, SectorsToRead);
+        cdvdman_stat.err = fhi_read_sectors(lsn, ptr, SectorsToRead);
         if (cdvdman_stat.err != SCECdErNO) {
             if (clocks_delay > 0)
                 CancelAlarm(&cdvdman_read_sectors_end_cb, NULL);
@@ -253,22 +256,21 @@ static void cdvdman_read_sectors_bounce(u32 lsn, u32 sectors, u16 sector_size, v
     buf = (void *)PHYSADDR(buf);
 
     // For transfers to unaligned buffers, a double-copy is required to avoid stalling the device's DMA channel.
-    WaitSema(cdvdman_searchfilesema);
 
     u32 nsectors, nbytes;
     u32 rpos = lsn;
 
     while (sectors > 0) {
         nsectors = sectors;
-        if (nsectors > CDVDMAN_BUF_SECTORS)
-            nsectors = CDVDMAN_BUF_SECTORS;
+        if (nsectors > BOUNCE_BUF_SECTORS)
+            nsectors = BOUNCE_BUF_SECTORS;
 
         // For other sizes we can only read one sector at a time.
         // There are only very few games (CDDA games, EA Tiburon) that will be affected
         if (sector_size != 2048)
             nsectors = 1;
 
-        cdvdman_read_sectors(rpos, nsectors, cdvdman_buf);
+        cdvdman_read_sectors(rpos, nsectors, bounce_buf);
 
         rpos += nsectors;
         sectors -= nsectors;
@@ -277,7 +279,7 @@ static void cdvdman_read_sectors_bounce(u32 lsn, u32 sectors, u16 sector_size, v
 
         // Copy the data for buffer.
         // For any sector other than 2048 one sector at a time is copied.
-        memcpy((void *)((u32)buf + offset), cdvdman_buf, nbytes);
+        memcpy((void *)((u32)buf + offset), bounce_buf, nbytes);
 
         // For these custom sizes we need to manually fix the header.
         // For 2340 we have 12bytes. 4 are position.
@@ -300,8 +302,6 @@ static void cdvdman_read_sectors_bounce(u32 lsn, u32 sectors, u16 sector_size, v
 
         buf = (void *)((u8 *)buf + nbytes);
     }
-
-    SignalSema(cdvdman_searchfilesema);
 }
 
 //--------------------------------------------------------------
@@ -336,7 +336,7 @@ static void cdvdman_read_thread(void *args)
                 cdvdman_cb_event(SCECdFuncRead);
                 break;
             case ECS_SEARCHFILE:
-            case ECS_EE_RPC:
+            case ECS_IOOPS:
                 // Call from searchfile and ioops
                 break;
             case ECS_STREAMING:
@@ -362,13 +362,8 @@ static void cdvdman_read_thread(void *args)
 //-------------------------------------------------------------------------
 int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum ECallSource source)
 {
-#ifdef DEBUG
-    static u32 free_prev = 0;
-    u32 free;
-#endif
     int OldState;
     u16 sector_size = 2048;
-
     int intct = QueryIntrContext();
 
 #ifdef DEBUG
@@ -387,14 +382,6 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
         if (mode->datapattern == SCECdSecS2340)
             sector_size = 2340;
     }
-
-#ifdef DEBUG
-    free = QueryTotalFreeMemSize();
-    if (free != free_prev) {
-        free_prev = free;
-        M_PRINTF("- memory free = %dKiB\n", free / 1024);
-    }
-#endif
 
     //
     // Atomically add a new read request
@@ -425,12 +412,12 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     //
     // Wake up read thread for processing the read request
     //
-    M_DEBUG("%s: waking up thread...\n", __FUNCTION__);
+    //M_DEBUG("%s: waking up thread...\n", __FUNCTION__);
     if (intct)
         iSignalSema(cdrom_rthread_sema);
     else
         SignalSema(cdrom_rthread_sema);
-    M_DEBUG("%s: waking up thread...done\n", __FUNCTION__);
+    //M_DEBUG("%s: waking up thread...done\n", __FUNCTION__);
 
     return 1;
 }
