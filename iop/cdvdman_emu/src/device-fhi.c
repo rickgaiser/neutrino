@@ -1,5 +1,6 @@
-#include "internal.h"
+#include <stdint.h>
 
+#include "internal.h"
 #include "device.h"
 #include "fhi.h"
 #include "ioplib.h"
@@ -8,10 +9,15 @@
 uint32_t (*fp_fhi_size)(int file_handle);
 int (*fp_fhi_read)(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count);
 
-void DeviceFSInit(void)
+static uint32_t iso_lsn = 0;
+
+uint32_t fhi_get_lsn()
 {
     uint64_t iso_size;
     iop_library_t *lib;
+
+    if (iso_lsn)
+        return iso_lsn;
 
     // Connect to FHI functions
     lib = ioplib_getByName("fhi\0\0\0\0\0");
@@ -26,17 +32,21 @@ void DeviceFSInit(void)
             break;
         DelayThread(100 * 1000); // 100ms
     }
+    iso_lsn = (iso_size + 3) / 4;
 
-    mediaLsnCount = (iso_size + 3) / 4;
+    M_DEBUG("Waiting for device...done! connected to %dMiB iso\n", iso_lsn/512);
 
-    M_DEBUG("Waiting for device...done! connected to %dMiB iso\n", mediaLsnCount/512);
+    return iso_lsn;
 }
 
-int DeviceReadSectors(u32 vlsn, void *buffer, unsigned int sectors)
+int fhi_read_sectors(uint32_t vlsn, void *buffer, unsigned int sectors)
 {
     int rv = SCECdErNO;
-    u32 fid = vlsn >> 23;
-    u32 lsn = vlsn & ((1U << 23) - 1);
+    uint32_t fid = vlsn >> 23;
+    uint32_t lsn = vlsn & ((1U << 23) - 1);
+
+    // Late binding
+    fhi_get_lsn();
 
     // M_DEBUG("%s(%u-%u, 0x%p, %u)\n", __func__, (unsigned int)fid, (unsigned int)lsn, buffer, sectors);
 

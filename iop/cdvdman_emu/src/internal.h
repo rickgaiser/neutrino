@@ -53,7 +53,7 @@ enum ECallSource {
     ECS_EXTERNAL = 0,
     ECS_SEARCHFILE,
     ECS_STREAMING,
-    ECS_EE_RPC
+    ECS_IOOPS
 };
 
 typedef struct
@@ -102,24 +102,12 @@ extern int cdvdman_sendSCmd(u8 cmd, const void *in, u16 in_size, void *out, u16 
 extern void cdvdman_cb_event(int reason);
 
 extern void cdvdman_init(void);
-extern void cdvdman_fs_init(void);
-extern void cdvdman_searchfile_init(void);
 extern void cdvdman_initdev(void);
 
 extern struct cdvdman_settings_common cdvdman_settings;
 
-// Normally this buffer is only used by 'searchfile', only 1 sector used
-#define CDVDMAN_BUF_SECTORS 1
-extern u8 cdvdman_buf[CDVDMAN_BUF_SECTORS * 2048];
-#define CDVDMAN_FS_BUF_ALIGNMENT 64
-extern u8 *cdvdman_fs_buf;
-
-extern int cdrom_io_sema;
-extern int cdvdman_searchfilesema;
-
 extern cdvdman_status_t cdvdman_stat;
 
 extern volatile unsigned char cdvdman_cdinited;
-extern u32 mediaLsnCount;
 
 #endif
