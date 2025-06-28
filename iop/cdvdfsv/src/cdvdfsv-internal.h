@@ -26,7 +26,8 @@
 extern void cdvdfsv_register_scmd_rpc(SifRpcDataQueue_t *rpc_DQ);
 extern void cdvdfsv_register_ncmd_rpc(SifRpcDataQueue_t *rpc_DQ);
 extern void cdvdfsv_register_searchfile_rpc(SifRpcDataQueue_t *rpc_DQ);
-extern void sysmemSendEE(void *buf, void *EE_addr, int size);
+extern void sysmemSendEE2(void *src0, void *dst0, int size0, void *src1, void *dst1, int size1);
+extern void sysmemSendEE(void *src0, void *dst0, int size0);
 extern int sceCdChangeThreadPriority(int priority);
 
 extern u8 *cdvdfsv_buf;

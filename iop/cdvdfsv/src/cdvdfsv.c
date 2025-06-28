@@ -284,26 +284,56 @@ static void *cbrpc_S596(int fno, void *buf, int size)
 }
 
 //--------------------------------------------------------------
-void sysmemSendEE(void *buf, void *EE_addr, int size)
+static void sysmemSendEE_do(SifDmaTransfer_t *dmat, int count)
 {
-    SifDmaTransfer_t dmat;
     int oldstate, id;
-
-    M_DEBUG("%s\n", __FUNCTION__);
-
-    dmat.dest = (void *)EE_addr;
-    dmat.size = size;
-    dmat.src = (void *)buf;
-    dmat.attr = 0;
 
     do {
         CpuSuspendIntr(&oldstate);
-        id = sceSifSetDma(&dmat, 1);
+        id = sceSifSetDma(dmat, count);
         CpuResumeIntr(oldstate);
+        if (id)
+            break;
+        DelayThread(500);
     } while (!id);
 
     while (sceSifDmaStat(id) >= 0)
         ;
+}
+
+//--------------------------------------------------------------
+void sysmemSendEE2(void *src0, void *dst0, int size0, void *src1, void *dst1, int size1)
+{
+    SifDmaTransfer_t dmat[2];
+
+    M_DEBUG("%s(0x%x, 0x%x, %d, 0x%x, 0x%x, %d)\n", __FUNCTION__, src0, dst0, size0, src1, dst1, size1);
+
+    dmat[0].dest = dst0;
+    dmat[0].size = size0;
+    dmat[0].src = src0;
+    dmat[0].attr = 0;
+
+    dmat[1].dest = dst1;
+    dmat[1].size = size1;
+    dmat[1].src = src1;
+    dmat[1].attr = 0;
+
+    sysmemSendEE_do(dmat, 2);
+}
+
+//--------------------------------------------------------------
+void sysmemSendEE(void *src0, void *dst0, int size0)
+{
+    SifDmaTransfer_t dmat;
+
+    M_DEBUG("%s(0x%x, 0x%x, %d)\n", __FUNCTION__, src0, dst0, size0);
+
+    dmat.dest = dst0;
+    dmat.size = size0;
+    dmat.src = src0;
+    dmat.attr = 0;
+
+    sysmemSendEE_do(&dmat, 1);
 }
 
 //-------------------------------------------------------------------------
