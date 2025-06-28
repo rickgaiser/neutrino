@@ -98,7 +98,7 @@ enum CDVD_ST_CMDS {
     CDVD_ST_CMD_SEEKF
 };
 
-#define READ_EE_SIMPLE
+//#define READ_EE_SIMPLE
 #ifdef READ_EE_SIMPLE
 //--------------------------------------------------------------
 static inline int cdvd_readee(RpcCdvd_t *r)
