@@ -16,33 +16,14 @@ jobs:
       - name: Compile
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          make clean all
-
-      - name: Define target name
-        id: slug
-        run: |
-          echo "TARGET=neutrino-$(date "+%Y%m%d")-${GITHUB_SHA::8}" >> $GITHUB_ENV
-
-      - name: Pack release
-        run: |
-          TARGET=${{ env.TARGET }}
-          cd ee/loader
-          make copy
-          mkdir $TARGET
-          cp *.elf $TARGET/
-          cp version.txt $TARGET/
-          cp -r modules/ $TARGET/modules/
-          cp -r config/ $TARGET/config/
-          cp ../../README.md $TARGET/
-          7z a -t7z $TARGET.7z $TARGET/*
+          make clean all release
 
       - name: Upload release as artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.TARGET }}
           path: |
-            ee/loader/*.7z
+            releases/*.7z
 
       - name: Create latest release
         if: github.ref == 'refs/heads/master'
@@ -52,121 +33,4 @@ jobs:
           automatic_release_tag: "latest"
           title: "Latest development build"
           files: |
-            ee/loader/*.7z
-
-  build-iopcore-debug:
-    runs-on: ubuntu-latest
-    container: ps2max/dev:v20250725
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Compile
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          make clean all IOPCORE_DEBUG=1
-
-      - name: Define target name
-        id: slug
-        run: |
-          echo "TARGET=neutrino-IOPCORE_DEBUG-$(date "+%Y%m%d")-${GITHUB_SHA::8}" >> $GITHUB_ENV
-
-      - name: Pack release
-        run: |
-          TARGET=${{ env.TARGET }}
-          cd ee/loader
-          make copy
-          mkdir $TARGET
-          cp *.elf $TARGET/
-          cp version.txt $TARGET/
-          cp -r modules/ $TARGET/modules/
-          cp -r config/ $TARGET/config/
-          cp ../../README.md $TARGET/
-          7z a -t7z $TARGET.7z $TARGET/*
-
-      - name: Upload release as artifact
-        if: ${{ success() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.TARGET }}
-          path: |
-            ee/loader/*.7z
-
-  build-eesio-debug:
-    runs-on: ubuntu-latest
-    container: ps2max/dev:v20250725
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Compile
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          make clean all EESIO_DEBUG=1
-
-      - name: Define target name
-        id: slug
-        run: |
-          echo "TARGET=neutrino-EESIO_DEBUG-$(date "+%Y%m%d")-${GITHUB_SHA::8}" >> $GITHUB_ENV
-
-      - name: Pack release
-        run: |
-          TARGET=${{ env.TARGET }}
-          cd ee/loader
-          make copy
-          mkdir $TARGET
-          cp *.elf $TARGET/
-          cp version.txt $TARGET/
-          cp -r modules/ $TARGET/modules/
-          cp -r config/ $TARGET/config/
-          cp ../../README.md $TARGET/
-          7z a -t7z $TARGET.7z $TARGET/*
-
-      - name: Upload release as artifact
-        if: ${{ success() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.TARGET }}
-          path: |
-            ee/loader/*.7z
-
-  build-debug:
-    runs-on: ubuntu-latest
-    container: ps2max/dev:v20250725
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Compile
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          make clean all IOPCORE_DEBUG=1 EESIO_DEBUG=1
-
-      - name: Define target name
-        id: slug
-        run: |
-          echo "TARGET=neutrino-debug-$(date "+%Y%m%d")-${GITHUB_SHA::8}" >> $GITHUB_ENV
-
-      - name: Pack release
-        run: |
-          TARGET=${{ env.TARGET }}
-          cd ee/loader
-          make copy
-          mkdir $TARGET
-          cp *.elf $TARGET/
-          cp version.txt $TARGET/
-          cp -r modules/ $TARGET/modules/
-          cp -r config/ $TARGET/config/
-          cp ../../README.md $TARGET/
-          7z a -t7z $TARGET.7z $TARGET/*
-
-      - name: Upload release as artifact
-        if: ${{ success() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.TARGET }}
-          path: |
-            ee/loader/*.7z
+            releases/*.7z
