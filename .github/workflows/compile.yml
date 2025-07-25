@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ghcr.io/ps2homebrew/ps2homebrew:main
+    container: ps2max/dev:v20250725
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,19 +44,19 @@ jobs:
           path: |
             ee/loader/*.7z
 
-      #- name: Create latest release
-      #  if: github.ref == 'refs/heads/master'
-      #  uses: marvinpinto/action-automatic-releases@latest
-      #  with:
-      #    repo_token: "${{ secrets.GITHUB_TOKEN }}"
-      #    automatic_release_tag: "latest"
-      #    title: "Latest development build"
-      #    files: |
-      #      ee/loader/*.7z
+      - name: Create latest release
+        if: github.ref == 'refs/heads/master'
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          title: "Latest development build"
+          files: |
+            ee/loader/*.7z
 
   build-iopcore-debug:
     runs-on: ubuntu-latest
-    container: ghcr.io/ps2homebrew/ps2homebrew:main
+    container: ps2max/dev:v20250725
     steps:
       - uses: actions/checkout@v4
         with:
@@ -95,7 +95,7 @@ jobs:
 
   build-eesio-debug:
     runs-on: ubuntu-latest
-    container: ghcr.io/ps2homebrew/ps2homebrew:main
+    container: ps2max/dev:v20250725
     steps:
       - uses: actions/checkout@v4
         with:
@@ -134,7 +134,7 @@ jobs:
 
   build-debug:
     runs-on: ubuntu-latest
-    container: ghcr.io/ps2homebrew/ps2homebrew:main
+    container: ps2max/dev:v20250725
     steps:
       - uses: actions/checkout@v4
         with:
