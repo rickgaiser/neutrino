@@ -16,6 +16,7 @@ jobs:
       - name: Compile
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          apk add 7zip
           make clean all release
 
       - name: Upload release as artifact
