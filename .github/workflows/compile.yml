@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ps2max/dev:v20250725
+    container: ps2max/dev:v20250725-2
     steps:
       - uses: actions/checkout@v4
         with:
@@ -16,7 +16,6 @@ jobs:
       - name: Compile
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          apk add 7zip
           make clean all release
 
       - name: Upload release as artifact
