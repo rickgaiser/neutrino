@@ -1,4 +1,4 @@
-GIT_TAG = $(shell git describe --tags)
+GIT_TAG = $(shell git describe --tags --exclude=latest)
 
 EE_OBJS = main.o xparam.o patch.o ioprp.o tomlc17.o iso_cnf.o
 EE_LIBS = -lfileXio -lpatches
