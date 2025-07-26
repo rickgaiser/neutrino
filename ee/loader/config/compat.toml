@@ -13,6 +13,7 @@
 # CDVDMAN: compatibility flags
 # - FAST_READ = MODE0: Fast reads (sceCdRead)
 # - SYNC_READ = MODE2: Sync reads (sceCdRead)
+# - SYNC_CB   =        Sync callbacks (sceCdRead)
 # - DVD_DL    = MODE5: Emulate DVD-DL
 # - F1_2001   = Game specific comp. mode for: F1 2001
 #cdvdman.flags = ["FAST_READ", "SYNC_READ"]
@@ -108,15 +109,14 @@ MODE9 = {name = "Compat MODE9: NOP (user configurable)"}
 "SLUS_211.93" = {name = "Inuyasha - Feudal Combat",              depends = ["p-membo"]}
 "SCES_524.24" = {name = "Ace Combat Squadron Leader",            depends = ["p-membo"]}
 "SLUS_208.51" = {name = "Ace Combat 5 The Unsung War",           depends = ["p-membo"]}
-"SLUS_202.13" = {name = "Test Drive",                            depends = ["p-membo"]}
-"SLES_514.66" = {name = "Splinter Cell",                         depends = ["p-membo"]} # ??? cannot reproduce ???
 "SLES_504.86" = {name = "Splashdown",                            depends = ["p-membo2k"]}
 "SLUS_202.67" = {name = "Dot Hack Part 1 - Infection",           depends = ["p-membo2k"]}
 "SLES_504.46" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLUS_204.13" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLES_506.08" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLES_524.82" = {name = "Steel Dragon EX",                       depends = ["p-steeldr"]}
-"SCUS_971.96" = {name = "Twisted Metal Black Online",            eecore.mod_base = 0xA7000}
+"SCUS_974.65" = {name = "Ratchet - Deadlocked",                  depends = ["p-freemem"]}
+"SCES_532.85" = {name = "Ratchet Gladiator",                     depends = ["p-freemem"]}
 "SCES_524.12" = {name = "Jackie Chan Adventures",                cdvdman.flags = ["SYNC_READ"]}
 "SCUS_971.50" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
 "SCES_500.04" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
@@ -139,7 +139,16 @@ MODE9 = {name = "Compat MODE9: NOP (user configurable)"}
 "SCKA_200.40" = {name = "Jak 3",                                 eecore.flags = ["UNHOOK"]}
 "SLUS_209.77" = {name = "Virtua Quest",                          eecore.mod_base = 0x01fc7000}
 "SLPM_656.32" = {name = "Virtua Fighter Cyber Generation: JSNY", eecore.mod_base = 0x01fc7000}
+"SCUS_971.96" = {name = "Twisted Metal Black Online",            eecore.mod_base = 0xA7000}
 "SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4]}
 "SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4]}
-"SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.flags = ["FAST_READ"], cdvdman.fs_sectors = 64} # Optimization
+"SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.fs_sectors = 64} # Optimization
 #"SLUS_202.30" = {name = "Max Payne",                             default_elf = "cdrom0:\\MAIN.RUN;1"} # for USB on non-DECKARD only! Fix freezing at rockstar logo
+
+# Workarounds, need to find a better solution
+"SLPM_622.48" = {name = "Love - Mahjong!",                       cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+"SLPM_624.29" = {name = "Love - Ping Pong!",                     cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+"SLES_525.19" = {name = "Pink Pong",                             cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+"SLPM_666.98" = {name = "Ragnarok Hachikengou",                  cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+"SLPM_660.57" = {name = "Taito Memories - Joukan",               cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+"SLUS_202.13" = {name = "Test Drive",                            cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
