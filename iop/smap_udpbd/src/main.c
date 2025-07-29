@@ -7,7 +7,7 @@
 
 #include "main.h"
 #include "xfer.h"
-#include "ministack.h"
+#include "ministack_ip.h"
 
 // Last SDK 3.1.0 has INET family version "2.26.0"
 // SMAP module is the same as "2.25.0"

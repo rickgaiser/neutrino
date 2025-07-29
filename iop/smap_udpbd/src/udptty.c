@@ -1,6 +1,6 @@
 #include <thsemap.h>
 #include <ioman.h>
-#include "ministack.h"
+#include "ministack_udp.h"
 
 
 static int tty_sema   = -1;

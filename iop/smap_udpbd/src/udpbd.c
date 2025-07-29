@@ -7,7 +7,7 @@
 #include <dev9.h>
 
 #include "udpbd.h"
-#include "ministack.h"
+#include "ministack_udp.h"
 #include "main.h"
 #include "mprintf.h"
 

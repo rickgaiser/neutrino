@@ -3,6 +3,7 @@
 
 
 #include <stdint.h>
+#include "ministack_udp.h"
 
 
 #define UDPBD_SERVER_PORT     0xBDBD
@@ -101,7 +102,6 @@ union block_type
  * - 256 *   5 = 1280 bytes
  * - 512 *   2 = 1024 bytes
  */
-#define UDP_MAX_PAYLOAD  1472
 #define RDMA_MAX_PAYLOAD (UDP_MAX_PAYLOAD - sizeof(struct SUDPBDv2_Header) - sizeof(union block_type)) // 1466
 
 struct SUDPBDv2_RDMA {

@@ -5,7 +5,7 @@
 #include <smapregs.h>
 
 #include "xfer.h"
-#include "ministack.h"
+#include "ministack_eth.h"
 
 extern struct SmapDriverData SmapDriverData;
 static int tx_sema = -1;
@@ -171,7 +171,7 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, u
 
     if (SmapDrivPrivData->NumPacketsInTx >= SMAP_BD_MAX_ENTRY)
         return -1;
-    
+
     if (SmapDrivPrivData->TxBufferSpaceAvailable < SizeRounded)
         return -2;
 
