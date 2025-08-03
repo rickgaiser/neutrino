@@ -45,7 +45,7 @@ struct ee_core_data
 
     uint32_t flags;
     uint32_t iop_rm[2];
-    char GameID[16];
+    char GameID[12];
 
     int *CheatList;
 

@@ -1880,7 +1880,7 @@ gsm_done:
     //
     // Set EE_CORE settings before loading into place
     //
-    strncpy(set_ee_core->GameID, sGameID, 16);
+    strncpy(set_ee_core->GameID, sGameID, 12);
     set_ee_core->CheatList       = NULL;
     set_ee_core->ModStorageStart = irxtable;
     set_ee_core->ModStorageEnd   = irxptr;
