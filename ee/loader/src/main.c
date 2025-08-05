@@ -218,7 +218,7 @@ struct SSystemSettings {
     struct {
         // EECORE settings
         uint32_t flags;
-        int iop_reboot_mode[2];
+        int iop_reboot_mode[3];
         char *elf;
         int mod_base;
     } eecore;
@@ -723,7 +723,7 @@ int load_config_eecore(toml_datum_t t)
     toml_int_in_overwrite   (t, "mod_base", &sys.eecore.mod_base);
 
     arr = toml_get(t, "irm");
-    if (arr.type == TOML_ARRAY && arr.u.arr.size == 2) {
+    if (arr.type == TOML_ARRAY && arr.u.arr.size == 3) {
         int i;
         for (i=0; i < arr.u.arr.size; i++) {
             v = arr.u.arr.elem[i];
@@ -1887,6 +1887,7 @@ gsm_done:
     set_ee_core->flags           = sys.eecore.flags;
     set_ee_core->iop_rm[0]       = sys.eecore.iop_reboot_mode[0];
     set_ee_core->iop_rm[1]       = sys.eecore.iop_reboot_mode[1];
+    set_ee_core->iop_rm[2]       = sys.eecore.iop_reboot_mode[2];
 
     // Add simple checksum
     uint32_t *pms = (uint32_t *)irxtable;
@@ -1998,6 +1999,7 @@ gsm_done:
     printf("- flags     = 0x%lx\n", set_ee_core->flags);
     printf("- iop_rm[0] = %ld\n",   set_ee_core->iop_rm[0]);
     printf("- iop_rm[1] = %ld\n",   set_ee_core->iop_rm[1]);
+    printf("- iop_rm[2] = %ld\n",   set_ee_core->iop_rm[2]);
     printf("- mod_base  = 0x%p\n",  set_ee_core->ModStorageStart);
     printf("- args:\n");
     for (int i = 0; i < ee_core_argc; i++) {

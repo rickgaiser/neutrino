@@ -277,9 +277,22 @@ void New_Reset_Iop(const char *arg, int arglen)
 void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
 {
     static int iopdirty = 1;
+    static int force_prev = 0;
     int reboot1 = 0;
     int reboot2 = 0;
     int reboot3 = 0;
+
+    // Filter out multiple IOP reboots
+    // Normally the reboots are:
+    // - 1x on EE ELF load
+    // - 1x for game IOPRP
+    // This pattern repeats for every EE ELF loaded
+    // However Max Payne reboots the IOP also BEFORE loading a new EE ELF
+    // This is not needed and causes issues in OPL/neutrino
+    // Using the 'force' flag to detect game IOP reboots
+    if (eec.iop_rm[2] == 1 && force_prev == 0 && force == 0)
+        return;
+    force_prev = force;
 
     // Reboot mode 4 is the same as 3, but forces the reboot
     if (reboot_mode == 4)
@@ -297,8 +310,6 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
     if ((reboot1 + reboot2 + reboot3) == 0)
         return;
 
-    DPRINTF("%s %d-%d-%d\n", __FUNCTION__, reboot1, reboot2, reboot3);
-
     // Validate module storage
     module_checksum();
 
@@ -308,6 +319,7 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
 
     if (reboot1) {
         // Reboot the IOP to base state
+        DPRINTF("%s: reboot1: IOP to base state\n", __FUNCTION__);
         SifInitRpc(0);
         while (!Reset_Iop("", 0)) {}
         while (!SifIopSync()) {}
@@ -321,6 +333,7 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
 
     if (reboot2) {
         // Reboot the IOP with neutrino modules
+        DPRINTF("%s: reboot2: IOP with neutrino modules\n", __FUNCTION__);
         if (eec.flags & EECORE_FLAG_DBC)
             *GS_REG_BGCOLOR = COLOR_MAGENTA;
         New_Reset_Iop(NULL, 0);
@@ -330,6 +343,10 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
 
     if (reboot3) {
         // Reboot the IOP with neutrino modules and IOPRP
+        DPRINTF("%s: reboot3: IOP with neutrino modules and IOPRP\n", __FUNCTION__);
+#ifdef __EESIO_DEBUG
+        print_iop_args(arglen, arg);
+#endif
         if (eec.flags & EECORE_FLAG_DBC)
             *GS_REG_BGCOLOR = COLOR_YELLOW;
         New_Reset_Iop(arg, arglen);

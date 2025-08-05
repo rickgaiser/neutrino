@@ -47,6 +47,7 @@ cdvdman.fs_sectors = 8
 # Array if 2 integers.
 #   First is for reboot mode on EELOAD (when starting a new ELF)
 #   Second is for reboot mode in IOP reset by the game
+#   Third is an extra compatibility mode
 #
 # IOP reboot mode on EELOAD:
 # 1: Fast mode:
@@ -72,13 +73,17 @@ cdvdman.fs_sectors = 8
 #    - reboot IOP + neutrino modules
 #    - reboot IOP + neutrino modules + IOPRP
 #
+# Compatibility mode
+# 0: No
+# 1: Ignore duplicate IOP resets
+#
 # Note that not all combinations make sense. The following do:
-#eecore.irm = [1, 1] # Fast mode (1 or 2 IOP reboots)
-eecore.irm = [2, 2] # Normal mode (2 IOP reboots)
-#eecore.irm = [3, 3] # Compatibility mode 1 (3 IOP reboots)
-#eecore.irm = [1, 4] # Compatibility mode 2 (3 or 4 IOP reboots)
-#eecore.irm = [2, 4] # Compatibility mode 2 (4 IOP reboots)
-#eecore.irm = [3, 4] # Compatibility mode 2 (5 IOP reboots)
+#eecore.irm = [1, 1, 0] # Fast mode (1 or 2 IOP reboots)
+eecore.irm = [2, 2, 0] # Normal mode (2 IOP reboots)
+#eecore.irm = [3, 3, 0] # Compatibility mode 1 (3 IOP reboots)
+#eecore.irm = [1, 4, 0] # Compatibility mode 2 (3 or 4 IOP reboots)
+#eecore.irm = [2, 4, 0] # Compatibility mode 2 (4 IOP reboots)
+#eecore.irm = [3, 4, 0] # Compatibility mode 2 (5 IOP reboots)
 
 # EECORE: module base address
 # This is where all IOP modules are stored
@@ -140,10 +145,12 @@ MODE9 = {name = "Compat MODE9: NOP (user configurable)"}
 "SLUS_209.77" = {name = "Virtua Quest",                          eecore.mod_base = 0x01fc7000}
 "SLPM_656.32" = {name = "Virtua Fighter Cyber Generation: JSNY", eecore.mod_base = 0x01fc7000}
 "SCUS_971.96" = {name = "Twisted Metal Black Online",            eecore.mod_base = 0xA7000}
-"SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4]}
-"SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4]}
+"SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4, 0]}
+"SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4, 0]}
 "SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.fs_sectors = 64} # Optimization
-#"SLUS_202.30" = {name = "Max Payne",                             default_elf = "cdrom0:\\MAIN.RUN;1"} # for USB on non-DECKARD only! Fix freezing at rockstar logo
+"SLUS_202.30" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
+"SLES_503.25" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
+"SLES_503.26" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 
 # Workarounds, need to find a better solution
 "SLPM_622.48" = {name = "Love - Mahjong!",                       cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}

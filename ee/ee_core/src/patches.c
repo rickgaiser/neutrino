@@ -63,8 +63,6 @@ static const patchlist_t patch_list[] = {
     {"SLPM_659.98", {PATCH_GENERIC_CAPCOM,   0x00146fd0, 0x00000000}}, // Vampire: Darkstakers collection JP
     {"SLUS_209.77", {PATCH_VIRTUA_QUEST,     0x00000000, 0x00000000}}, // Virtua Quest
     {"SLPM_656.32", {PATCH_VIRTUA_QUEST,     0x00000000, 0x00000000}}, // Virtua Fighter Cyber Generation: Judgment Six No Yabou
-    {"SLUS_202.30", {0x00132d14, 0x10000018, 0x0c046744}},             // Max Payne NTSC U - skip IOP reset before to exec demo elfs
-    {"SLES_503.25", {0x00132ce4, 0x10000018, 0x0c046744}},             // Max Payne PAL - skip IOP reset before to exec demo elfs
     {"SLUS_204.40", {0x0021bb00, 0x03e00008, 0x27bdff90}},             // Kya: Dark Lineage NTSC U - disable game debug prints
     {"SLES_514.73", {0x0021bd10, 0x03e00008, 0x27bdff90}},             // Kya: Dark Lineage PAL - disable game debug prints
     {"SLUS_204.96", {0x00104900, 0x03e00008, 0x27bdff90}},             // V-Rally 3 NTSC U - disable game debug prints
