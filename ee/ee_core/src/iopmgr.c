@@ -274,38 +274,62 @@ void New_Reset_Iop(const char *arg, int arglen)
     return;
 }
 
-void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
+void New_Reset_Iop2(const char *arg, int arglen, int eeload)
 {
-    static int iopdirty = 1;
-    static int force_prev = 0;
+    static int iopstate = 0;
+    static int resetcount = 0;
+    static int eeload_prev = 0;
+
     int reboot1 = 0;
     int reboot2 = 0;
     int reboot3 = 0;
 
-    // Filter out multiple IOP reboots
+    DPRINTF("%s(..., %d, %d)\n", __FUNCTION__, arglen, eeload);
+
+    if (eeload) {
+        int reboot_mode = eec.iop_rm[0];
+        if (reboot_mode == 1) {
+            reboot2 = (resetcount == 0) ? 1 : 0;
+        } else if (reboot_mode == 2) {
+            reboot2 = 1;
+        } else if (reboot_mode == 3) {
+            reboot1 = 1;
+            reboot2 = 1;
+        }
+    } else {
+        int reboot_mode = eec.iop_rm[1];
+        if (reboot_mode == 1) {
+            reboot3 = 1;
+        } else if (reboot_mode == 2) {
+            reboot2 = (iopstate != 2) ? 1 : 0;
+            reboot3 = 1;
+        } else if (reboot_mode == 3) {
+            reboot1 = (iopstate != 2) ? 1 : 0;
+            reboot2 = (iopstate != 2) ? 1 : 0;
+            reboot3 = 1;
+        } else if (reboot_mode == 4) {
+            reboot1 = 1;
+            reboot2 = 1;
+            reboot3 = 1;
+        }
+    }
+
+    // Ignore duplicate IOP resets
     // Normally the reboots are:
     // - 1x on EE ELF load
     // - 1x for game IOPRP
     // This pattern repeats for every EE ELF loaded
     // However Max Payne reboots the IOP also BEFORE loading a new EE ELF
     // This is not needed and causes issues in OPL/neutrino
-    // Using the 'force' flag to detect game IOP reboots
-    if (eec.iop_rm[2] == 1 && force_prev == 0 && force == 0)
-        return;
-    force_prev = force;
+    if (eec.iop_rm[2] == 1 && eeload_prev == 0 && eeload == 0) {
+        DPRINTF("- Ignore duplicate IOP resets\n");
+        reboot1 = 0;
+        reboot2 = 0;
+        reboot3 = 0;
+    }
+    eeload_prev = eeload;
 
-    // Reboot mode 4 is the same as 3, but forces the reboot
-    if (reboot_mode == 4)
-        force = 1;
-    // 3 stage reboot requested. Do we need the first reboot?
-    if (reboot_mode >= 3 && (force || iopdirty))
-        reboot1 = 1;
-    // 2 stage reboot requested. Do we need the second reboot?
-    if (reboot_mode >= 2 && (force || iopdirty))
-        reboot2 = 1;
-    // Do we need the third reboot?
-    if (arg != NULL)
-        reboot3 = 1;
+    DPRINTF("- performing reboots: %c-%c-%c\n", reboot1?'1':'X', reboot2?'2':'X', reboot3?'3':'X');
 
     if ((reboot1 + reboot2 + reboot3) == 0)
         return;
@@ -326,7 +350,7 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
         services_start();
         sbv_patch_enable_lmb();
         // Unusable state, no neutrino modules loaded
-        iopdirty = 1;
+        iopstate = 1;
     } else {
         services_start();
     }
@@ -338,7 +362,7 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
             *GS_REG_BGCOLOR = COLOR_MAGENTA;
         New_Reset_Iop(NULL, 0);
         // Known clean neutrino reboot state
-        iopdirty = 0;
+        iopstate = 2;
     }
 
     if (reboot3) {
@@ -351,8 +375,10 @@ void New_Reset_Iop2(const char *arg, int arglen, int reboot_mode, int force)
             *GS_REG_BGCOLOR = COLOR_YELLOW;
         New_Reset_Iop(arg, arglen);
         // The game will use the IOP for unknown purposes now
-        iopdirty = 1;
+        iopstate = 3;
     }
+
+    resetcount++;
 
     // Exit services
     services_exit();
@@ -367,7 +393,7 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
 {
     struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
 
-    New_Reset_Iop2(reset_pkt->arg, reset_pkt->arglen, eec.iop_rm[1], 0);
+    New_Reset_Iop2(reset_pkt->arg, reset_pkt->arglen, 0);
 
     // Ignore EE still trying to complete the IOP reset
     set_reg_hook = 4;

@@ -96,13 +96,9 @@ int main(int argc, char **argv)
         // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
         // WipeUserMemory((void *)ModStorageEnd, (void *)GetMemorySize());
 
-        if (eec.iop_rm[0] >= 2) {
-            // Reboot the IOP into a clean Emulation Environment
-            New_Reset_Iop2(NULL, 0, eec.iop_rm[0], 1);
-        } else if ((eec.iop_rm[0] == 1) || (callcount <= 2)) {
-            // Reboot the IOP into a clean Emulation Environment
-            New_Reset_Iop2(NULL, 0, 2, 1);
-        }
+        // Reboot the IOP into a clean Emulation Environment
+        New_Reset_Iop2(NULL, 0, 1);
+
         // Load the ELF
         services_start();
         int r = SifLoadElf(argv[0], &elf);
