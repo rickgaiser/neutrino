@@ -151,8 +151,8 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp
 #GAME = 'DVD/Dot Hack Part 1 - Infection (U).iso' -elf='cdrom0:\SLUS_202.67;1' # large buffer overrun issue, fixed
 #GAME = 'DVD/Street Fighter Alpha Anthology (U).iso'
 #GAME = 'DVD/Max Payne (E).iso' # -elf='cdrom0:\MAIN_P.RUN;1'
+#GAME = 'DVD/Max Payne (U).iso' # -elf='cdrom0:\MAIN.RUN;1'
 #GAME = 'DVD/Inuyasha - Feudal Combat (U).iso' -elf='cdrom0:\SLUS_211.93;1' -gsm=fp # buffer overrun issue, fixed
-#GAME = 'DVD/Max Payne (U).iso' # -elf='cdrom0:\MAIN_P.RUN;1'
 #GAME = 'CD/Shadow Man - 2econd Coming (E).iso' -elf='cdrom0:\SLES_504.46;1' # buffer overrun issue, fixed
 #GAME = 'DVD/Ace Combat Squadron Leader (E).iso' -elf='cdrom0:\SCES_524.24;1' # buffer overrun issue, fixed
 #GAME = 'DVD/Stuntman (U).iso' # gamebug: slow speed
