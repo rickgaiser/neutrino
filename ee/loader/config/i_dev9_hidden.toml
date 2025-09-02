@@ -6,10 +6,32 @@ name = "DEV9 hidden driver"
 file = "dev9_hidden.irx" # hidden version to hide from the game
 env = ["LE", "EE"]
 
-# Modules of the game that are faked/blocked
+# Faking strategy
+# ---------------
+# We simulate that there is no dev9 hardware present:
+#   - dev9 returns NO_RESIDENT_END, module is hidden
+#   - all modules depending on dev9 fail to load becouse dev9 is not resident
 [[fake]]
 file = "DEV9.IRX"
 name = "dev9"
 version = 0x0208
 loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
 startrv = 1 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "ATAD.IRX"
+name = "atad_driver"
+version = 0x0207
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1   # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "ENT_SMAP.IRX"
+name = "ent_smap"
+version = 0x021f
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1    # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
+[[fake]]
+file = "SMAP.IRX"
+name = "INET_SMAP_driver"
+version = 0x0219
+loadrv = -200 # KE_LINKERR becouse dev9 does not exist
+startrv = 1    # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

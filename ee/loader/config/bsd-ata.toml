@@ -2,16 +2,9 @@
 name = "ATA HDD BDM driver"
 
 # Drivers this driver depends on (config file must exist)
-depends = ["i_bdm", "i_dev9_ns"]
+depends = ["i_bdm", "i_dev9_hidden"]
 
 # Modules to load
 [[module]]
 file = "ata_bd.irx"
 env = ["LE", "EE"]
-
-# Modules of the game that are faked/blocked
-[[fake]]
-file = "ATAD.IRX"
-name = "atad_driver"
-version = 0x0207
-startrv = 0 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END

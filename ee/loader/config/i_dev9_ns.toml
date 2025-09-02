@@ -6,7 +6,10 @@ name = "DEV9 no-shutdown driver"
 file = "dev9_ns.irx" # no-shutdown version, to prevent games shutting down the dev9
 env = ["LE", "EE"]
 
-# Modules of the game that are faked/blocked
+# Faking strategy
+# ---------------
+# To allow games to use the hdd or network:
+# - dev9 (no-shutdown) is resident, and can be used
 [[fake]]
 file = "DEV9.IRX"
 name = "dev9"

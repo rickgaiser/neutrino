@@ -1,0 +1,18 @@
+# Name of loaded config, to show to user
+name = "ATA HDD BDM driver - with network support"
+
+# Drivers this driver depends on (config file must exist)
+depends = ["i_bdm", "i_dev9_ns"]
+
+# Modules to load
+[[module]]
+file = "ata_bd.irx"
+env = ["LE", "EE"]
+
+# Modules of the game that are faked/blocked
+[[fake]]
+file = "ATAD.IRX"
+name = "atad_driver"
+version = 0x0207
+loadrv = 0 # 0=ok, -xxx=error code (module not loaded)
+startrv = 1 # 0=RESIDENT_END, 1=NO_RESIDENT_END, 2=REMOVABLE_END
