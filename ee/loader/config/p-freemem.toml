@@ -1,0 +1,9 @@
+# Name of loaded config, to show to user
+name = "Patch Max Free Memory 1M"
+
+# These games allocate ALL available IOP memory
+# Load patch module that returns a limited amount of free IOP memory
+[[module]]
+file = "patch_freemem.irx"
+args = ["1024"] # 1MiB max free memory
+env = ["EE"]
