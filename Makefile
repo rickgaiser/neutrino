@@ -72,6 +72,7 @@ copy:
 	cp iop/hdlfs/irx/hdlfs.irx                 ee/loader/modules
 	cp iop/imgdrv/irx/imgdrv.irx               ee/loader/modules
 	cp iop/mc_emu/irx/mc_emu.irx               ee/loader/modules
+	cp iop/patch_freemem/irx/patch_freemem.irx ee/loader/modules
 	cp iop/patch_membo/irx/patch_membo.irx     ee/loader/modules
 	cp iop/patch_rc_uya/irx/patch_rc_uya.irx   ee/loader/modules
 	cp iop/smap_udpbd/irx/smap_udpbd.irx       ee/loader/modules
@@ -98,7 +99,6 @@ copy_extra:
 	cp iop/fhi_file/irx/fhi_file.irx           ee/loader/modules
 	cp iop/gapfill/irx/gapfill.irx             ee/loader/modules
 	cp iop/memcheck/irx/memcheck.irx           ee/loader/modules
-	cp iop/patch_freemem/irx/patch_freemem.irx ee/loader/modules
 	cp iop/usbd_null/irx/usbd_null.irx         ee/loader/modules
 
 format:
