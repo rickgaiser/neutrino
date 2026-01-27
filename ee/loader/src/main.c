@@ -1793,7 +1793,9 @@ gsm_done:
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#ifndef __clang__
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
     // Clear the entire "free" memory range
     memset((void *)0x00082000, 0, 0x00100000 - 0x00082000);
 #pragma GCC diagnostic pop

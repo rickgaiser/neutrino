@@ -630,7 +630,7 @@ Old_SetupThread:
 numhooks:
 .word   0
 hooklist:
-.word   0:(MAX_HOOKS*2)
+.fill   (MAX_HOOKS*2), 4, 0
 
 /*
  * Code list to be filled by loader.
@@ -638,7 +638,7 @@ hooklist:
 numcodes:
 .word   0
 codelist:
-.word   0:(MAX_CODES*2)
+.fill   (MAX_CODES*2), 4, 0
 
 .set    pop
 

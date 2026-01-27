@@ -192,7 +192,7 @@ InitRegsExecPS2:
     sync.p
 
     jr      $ra
-    ctc1    $zero, $f31
+    ctc1    $zero, $31
 .end InitRegsExecPS2
 
 .set pop
