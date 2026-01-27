@@ -11,7 +11,6 @@ clean::
 	rm -f -r $(IOP_OBJS_DIR) $(IOP_BIN_DIR)
 
 include $(PS2SDK)/Defs.make
-include $(PS2SDK)/samples/Makefile.pref
 include $(PS2SDK)/samples/Makefile.iopglobal
 
 # include neutrino headers first. Some headers have the same name as ps2sdk ones.
