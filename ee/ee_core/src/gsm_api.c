@@ -29,26 +29,46 @@ ee_registers_t el2_regs __attribute__ ((aligned(128)));
 
 typedef void (*fp_SetGsCrt)(short int interlace, short int mode, short int ffmd);
 
+struct video_mode {
+    u32 mode      : 7;
+    u32 interlace : 1; // 0 = non-interlaced, 1 = interlaced
+    u32 ffmd      : 1; // 0 = field, 1 = frame
+    u32 vck       : 3;
+    u32 reserved  : 20;
+
+    u16 FBHeight; // 240/480/960 = 1/2/4
+    u16 DPHeight;   // 240/480/960 = 1/2/4
+
+    int x_center_vck;
+    int y_center;
+};
+
 // GSM state
 struct gsm_state {
     fp_SetGsCrt org_SetGsCrt;
 
-    u32 SetGsCrt : 1;
-    u32 HalfHeight : 1;
-    u32 LineDouble : 1;
-    u32 VSINTCount : 4;
-    u32 VSINTPrev : 1;
-    u32 VCKDiv : 2; // VCK devide (1 or 2)
-    u32 Spare : 22;
-
+    enum EECORE_GSM_VMODE GsmVideoMode;
+    enum EECORE_GSM_COMP_MODE GsmCompMode;
     u32 flags;
 
-    u64 smode2;
+    struct video_mode game;
+    struct video_mode gsm;
+
+    u32 VSINTCount :  4;
+    u32 VSINTPrev  :  1;
+    u32 VCKDiv     :  3; // VCK    devide   (1x, 2x     or 4x)
+    u32 MAGHMul    :  3; // Width  multiply (1x, 2x, 3x or 4x)
+
+    u32 FBMul    :  3; // Height multiply (1x, 2x     or 4x)
+    u32 FBDiv    :  3; // Height devide   (1x or 2x)
+
+    u32 DPMul      :  3; // Height multiply (1x, 2x     or 4x)
+    u32 DPDiv      :  3; // Height devide   (1x or 2x)
+
+    u64 last_display1;
+    u64 last_display2;
 };
-static struct gsm_state state = {
-    NULL,
-    0, 0, 0,
-};
+static struct gsm_state state = {NULL};
 
 enum MIPS_OP {
     MOP_SPECIAL = 0x00,
@@ -87,58 +107,191 @@ enum MIPS_OP_IMM {
 };
 
 /*
- * Devide x/width by 2 if possible
+ * MAGH is 2x smaller for 480p/576p
  *
- * BufferWidth  MAGH+1  MAGH-new
- * -----------------------------
- * 256          10      5 = perfect
- * 320           8      4 = perfect
- * 384           7      3 = too small, perhaps not bad when stretched on a modern 16:9 TV
- * 512           5      2 = too small, perhaps not bad when stretched on a modern 16:9 TV
- * 640           4      2 = perfect
+ * BufferWidth  MAGH+1 (old)      MAGH+1 (new)
+ * --------------------------------------------
+ * 256          * 10 / 4 = 640    * 5 / 2 = 640    ->    perfect
+ * 320          *  8 / 4 = 640    * 4 / 2 = 640    ->    perfect
+ * 384          *  7 / 4 = 640    * 3 / 2 = 576    ->    too small, perhaps not bad when stretched on a modern 16:9 TV
+ * 512          *  5 / 4 = 640    * 2 / 2 = 512    ->    too small, perhaps not bad when stretched on a modern 16:9 TV
+ * 640          *  4 / 4 = 640    * 2 / 2 = 640    ->    perfect
  *
+ * 
+ * MAGH is 4x smaller for 1080i, but twice as wide, so effectively 2x smaller
+ * More stretch options available
+ * 
+ * Also the Pixel Aspect Ratio has to be taken into account:
+ *      4:3   16:9
+ * ---------------
+ * PAL  1,09  1,45
+ * NTSC 0,91  1,21
+ * 
+ * Resulting in ideal widths of:
+ *      4:3   16:9
+ * ---------------
+ * PAL  1396  1862
+ * NTSC 1164  1552
+ *
+ * BufferWidth  MAGH+1 (old)      MAGH+1 (new) x1.6  x2    x2.4  x3
+ * ------------------------------------------------------------------
+ * 512          *  5 / 4 = 640    * 2 =        1024,       1536
+ * 640          *  4 / 4 = 640    * 2 =              1280,       1920
+ * 
  */
 static u64 mod_DISPLAY(struct gsm_state *pstate, u64 r)
 {
-    u32 dx, dy, magh, magv, dw, dh;
-    u32 magh_new, magv_new, dw_new;
+    int dx   = (r      ) & 0xfff;
+    int dy   = (r >> 12) & 0x7ff;
+    int magh = (r >> 23) & 0x00f;
+    int magv = (r >> 27) & 0x003;
+    int dw   = (r >> 32) & 0xfff;
+    int dh   = (r >> 44) & 0x7ff;
 
-    dx   = (r      ) & 0xfff;
-    dy   = (r >> 12) & 0x7ff;
-    magh = (r >> 23) & 0x00f;
-    magv = (r >> 27) & 0x003;
-    dw   = (r >> 32) & 0xfff;
-    dh   = (r >> 44) & 0x7ff;
+    // Normalize values
+    magh += 1;
+    magv += 1;
+    dw   += 1;
+    dh   += 1;
 
-    if (pstate->LineDouble) {
-        // From 288p/240p to 576p/480p
-        magv_new = ((magv + 1) * 2) - 1;
-    } else {
-        // Do not adjust
-        magv_new = magv;
+    // Change width
+    int magh_new = magh * pstate->MAGHMul / pstate->VCKDiv;
+    int dw_new   = dw * magh_new / magh;
+    int dx_new   = pstate->gsm.x_center_vck - (dw_new / 2);
+
+    // Change height
+    int magv_new = magv * pstate->FBMul / pstate->FBDiv;
+    int dh_new   = dh   * pstate->DPMul / pstate->DPDiv;
+    int dy_new   = pstate->gsm.y_center - (dh_new / 2);
+
+    (void)dx; // Unused
+    (void)dy; // Unused
+
+    // Add game offset
+    //int dx_off_vck = dx - (pstate->game.x_center_vck - (dw / 2));
+    //int dy_off     = dy - (pstate->game.y_center     - (dh / 2));
+    //dx_new += dx_off_vck * magh_new / magh;
+    //dy_new += dy_off     * magv_new / magv;
+
+    // Do not change even/odd order
+    //dy_new = (dy_new & ~1) | (dy & 1);
+
+    // Registers are zero-based
+    magh_new -= 1;
+    magv_new -= 1;
+    dw_new   -= 1;
+    dh_new   -= 1;
+
+    return GS_SET_DISPLAY(dx_new, dy_new, magh_new, magv_new, dw_new, dh_new);
+}
+
+// mode, interlace and ffmd must be set before calling this function
+static void update_scaling_center(struct video_mode *mode)
+{
+    int display_width;  // pixel units
+    int display_height; // pixel units
+    int display_xoff;   // pixel units
+    int display_yoff;   // pixel units
+
+    switch(mode->mode) {
+        case 0x02: // 480i
+        case 0x50: // 480p
+            display_width  = 720;
+            display_height = 480;
+            display_xoff   = 123;
+            display_yoff   =  34;
+            mode->vck      = (mode->mode == 0x02) ? 4 : 2;
+            mode->FBHeight = 2; // 480
+            mode->DPHeight = 2; // 480
+            break;
+        case 0x03: // 576i
+        case 0x53: // 576p
+            display_width  = 720;
+            display_height = 576;
+            display_xoff   = 130;
+            display_yoff   =  40;
+            mode->vck      = (mode->mode == 0x03) ? 4 : 2;
+            mode->FBHeight = 2; // 480
+            mode->DPHeight = 2; // 480
+            break;
+        case 0x51: // 1080i
+            display_width  = 1920;
+            display_height = 1080;
+            display_xoff   =  236;
+            display_yoff   =   38;
+            mode->vck      =    1;
+            mode->FBHeight = 4; // 960
+            mode->DPHeight = 4; // 960
+            break;
+        default:
+            // Unsupported mode
+            return;
     }
 
-    if (pstate->VCKDiv > 1) {
-        // From PAL/NTSC to 576p/480p, the VCK units are twice as small
-
-        // Divide MAGH
-        magh_new = ((magh + 1) / pstate->VCKDiv) - 1;
-
-        // Rescale width to match new MAGH
-        dw_new = ((dw + 1) * (magh_new + 1) / (magh + 1)) - 1;
-
-        // Re-adjust offset by compensating for both:
-        // - VCK change (/2)
-        // - possible in-perfect MAGH change making the image smaller
-        dx /= 2;
-        dx += (((dw + 1) / 2) - (dw_new + 1)) / 2;
-    } else {
-        // Do not adjust
-        magh_new = magh;
-        dw_new = dw;
+    if (mode->interlace == 1 && mode->ffmd == 1) {
+        // interlaced FRAME mode uses half height framebuffer
+        // 960 -> 480
+        // 480 -> 240
+        mode->FBHeight /= 2;
     }
 
-    return GS_SET_DISPLAY(dx, dy, magh_new, magv_new, dw_new, dh);
+    if ((mode->mode == 0x02 || mode->mode == 0x03) && mode->interlace == 0) {
+        // non-interlaced PAL/NTSC video mode is only half the height
+        mode->FBHeight /= 2; // 480 -> 240
+        mode->DPHeight /= 2; // 480 -> 240
+        display_height /= 2; // 480 -> 240
+        display_yoff   /= 2;
+    }
+
+    mode->x_center_vck = (display_xoff + (display_width  / 2)) * mode->vck;
+    mode->y_center     =  display_yoff + (display_height / 2);
+}
+
+static void update_scaling(struct gsm_state *pstate)
+{
+    // Get center positions
+    update_scaling_center(&pstate->game);
+    update_scaling_center(&pstate->gsm);
+
+    // Multiplication factors assume the mimimum video mode of 240p/288p or 480i/576i FRAME mode:
+    //   WidthMul  x1 = 640
+    //   HeightMul x1 = 224 (240p) / 256 (288p)
+    if (pstate->GsmVideoMode == EECORE_GSM_VMODE_FP1) {
+        // 240p/288p mode
+        pstate->MAGHMul = 1; // 640 * 1 = 640
+    } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_FP2) {
+        // 480p/576p mode
+        pstate->MAGHMul = 1; // 640 * 1 = 640
+    } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_1080I_X1) {
+        // 1080i mode
+        pstate->MAGHMul = 1; // 640 * 1 = 640
+        pstate->gsm.FBHeight /= 2;
+        pstate->gsm.DPHeight /= 2;
+    } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_1080I_X2) {
+        // 1080i mode
+        pstate->MAGHMul = 2; // 640 * 2 = 1280
+    } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_1080I_X3) {
+        // 1080i mode
+        pstate->MAGHMul = 3; // 640 * 3 = 1920
+    }
+
+    // How much larger/smaller is the framebuffer
+    if (pstate->game.FBHeight > pstate->gsm.FBHeight) {
+        pstate->FBMul = 1;
+        pstate->FBDiv = pstate->game.FBHeight / pstate->gsm.FBHeight;
+    } else {
+        pstate->FBMul = pstate->gsm.FBHeight / pstate->game.FBHeight;
+        pstate->FBDiv = 1;
+    }
+    // How much larger/smaller is the display
+    if (pstate->game.DPHeight > pstate->gsm.DPHeight) {
+        pstate->DPMul = 1;
+        pstate->DPDiv = pstate->game.DPHeight / pstate->gsm.DPHeight;
+    } else {
+        pstate->DPMul = pstate->gsm.DPHeight / pstate->game.DPHeight;
+        pstate->DPDiv = 1;
+    }
+    pstate->VCKDiv = pstate->game.vck / pstate->gsm.vck;
 }
 
 /*
@@ -203,7 +356,7 @@ void el2_c_handler(ee_registers_t *regs)
             u32 VSINT = (csr >> 3) & 1;
             u32 FIELD_emu = (csr >> 13) & 1;
 
-            if (pstate->flags & EECORE_FLAG_GSM_C_1) {
+            if (pstate->GsmCompMode == EECORE_GSM_COMP_1) {
                 //
                 // mode 1: FIELD flips at VSYNC interrupt with forced ACK
                 //
@@ -214,7 +367,7 @@ void el2_c_handler(ee_registers_t *regs)
                     *GS_REG_CSR = (1 << 3);
                 }
                 FIELD_emu = pstate->VSINTCount & 1;
-            } else if (pstate->flags & EECORE_FLAG_GSM_C_2) {
+            } else if (pstate->GsmCompMode == EECORE_GSM_COMP_2) {
                 //
                 // mode 2: FIELD flips at VSYNC interrupt rising edge
                 //
@@ -222,10 +375,11 @@ void el2_c_handler(ee_registers_t *regs)
                     pstate->VSINTCount++;
                 }
                 FIELD_emu = pstate->VSINTCount & 1;
-            } else if (pstate->flags & EECORE_FLAG_GSM_C_3) {
+            } else if (pstate->GsmCompMode == EECORE_GSM_COMP_3) {
                 //
-                // mode 3: not implemented yet
+                // mode 3: invert FIELD
                 //
+                //FIELD_emu = !FIELD_emu;
             }
 
             // Insert emulated FIELD bit
@@ -251,23 +405,28 @@ void el2_c_handler(ee_registers_t *regs)
     // Process SD instruction (write to register)
     switch((u32)dest & 0x1fffffff) {
         case (u32)GS_REG_DISPLAY1:
+            pstate->last_display1 = value;
             *dest = mod_DISPLAY(pstate, value);
             break;
         case (u32)GS_REG_DISPLAY2:
+            pstate->last_display2 = value;
             *dest = mod_DISPLAY(pstate, value);
             break;
         case (u32)GS_REG_SMODE2:
-            // Check if line-doubling is needed
-            if (pstate->SetGsCrt) {
-                pstate->SetGsCrt = 0;
-            } else if (pstate->HalfHeight == 0) {
-                pstate->LineDouble = (value & 2) ? 1 : 0;
-                // TODO: What if the game switches modes without calling SetGsCrt?
-                *dest = pstate->smode2;
-            } else {
-                // Allow game to change mode
-                *dest = value;
+            // Store game requested mode
+            pstate->game.interlace = (value     ) & 1; // Switching modes is only possible using SetGsCrt ???
+            pstate->game.ffmd      = (value >> 1) & 1;
+            if (pstate->game.interlace == 1) {
+                pstate->gsm.ffmd = pstate->game.ffmd;
             }
+            update_scaling(pstate);
+            // Re-process last DISPLAY register writes
+            if (pstate->last_display1 != 0)
+                *GS_REG_DISPLAY1 = mod_DISPLAY(pstate, pstate->last_display1);
+            if (pstate->last_display2 != 0)
+                *GS_REG_DISPLAY2 = mod_DISPLAY(pstate, pstate->last_display2);
+
+            *dest = GS_SET_SMODE2(pstate->gsm.interlace, pstate->gsm.ffmd, 0);
             break;
         case (u32)GS_REG_CSR:
             // Detect ACK of VSINT interrupt
@@ -424,82 +583,79 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
 
     //printf("%s(%d, 0x%x, %d)\n", __FUNCTION__, interlace, mode, ffmd);
 
-    pstate->HalfHeight = 0; // Normal height = 480p/576p, half height = 240p/288p
-    pstate->VCKDiv = 1; // Do not devide
+    // Set game state
+    pstate->game.interlace = interlace;
+    pstate->game.ffmd      = ffmd;
+    pstate->game.mode      = mode;
+
+    // Set GSM state (default game state)
+    pstate->gsm = pstate->game;
 
     // Only NTSC(2) and PAL(3) modes are supported
-    if ((mode != 2) && (mode != 3))
-        goto no_gsm;
-
-    if (ffmd == 1) {
-        // interlaced FRAME mode
-        if (pstate->flags & EECORE_FLAG_GSM_FRM_FP1 /*&& interlace*/) {
-            // Force 240p/288p
-            pstate->VCKDiv = 1; // Devide by 2
-            pstate->HalfHeight = 1;
-            pstate->LineDouble = 0;
-            interlace = 0;
-            //if (mode == 2) mode = 0x50; // 480p
-            //if (mode == 3) mode = 0x53; // 576p
-            ffmd = 1;
-        } else if (pstate->flags & EECORE_FLAG_GSM_FRM_FP2) {
-            // 576p not supported on pre-DECKARD consoles
-            if (mode == 3 && (pstate->flags & EECORE_FLAG_GSM_NO_576P))
-                goto no_gsm;
-
-            // Force line-doubling to 480p/576p
-            pstate->VCKDiv = 2; // Devide by 2
-            pstate->LineDouble = 1;
-            interlace = 0;
-            if (mode == 2) mode = 0x50; // 480p
-            if (mode == 3) mode = 0x53; // 576p
-            ffmd = 1;
-        } else {
-            goto no_gsm;
+    if ((pstate->game.mode != 2) && (pstate->game.mode != 3))
+        return;
+    
+    // Set GSM state
+    if (pstate->GsmVideoMode == EECORE_GSM_VMODE_FP1) {
+        // 240p/288p non-interlaced FRAME mode -> no change
+        // 480i/576i     interlaced FRAME mode -> 240p/288p (can look ugly if it was true interlaced)
+        // 480i/576i     interlaced FIELD mode -> no change
+        if (pstate->game.interlace == 1 && pstate->game.ffmd == 1) {
+            pstate->gsm.interlace = 0; // non-interlaced
+            pstate->gsm.ffmd      = 1; // FRAME mode
         }
-    } else {
-        // interlaced FIELD mode
-        if (pstate->flags & EECORE_FLAG_GSM_FLD_FP) {
-            // 576p not supported on pre-DECKARD consoles
-            if (mode == 3 && (pstate->flags & EECORE_FLAG_GSM_NO_576P))
-                goto no_gsm;
+    } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_FP2) {
+        // 576p not supported on pre-DECKARD consoles
+        if (pstate->game.mode == 3 && (pstate->flags & EECORE_FLAG_GSM_NO_576P))
+            return;
 
-            // Force 480p/576p
-            pstate->VCKDiv = 2; // Devide by 2
-            pstate->LineDouble = 0;
-            interlace = 0;
-            if (mode == 2) mode = 0x50; // 480p
-            if (mode == 3) mode = 0x53; // 576p
-            ffmd = 1;
+        // 240p/288p non-interlaced FRAME mode -> 480p/576p (line-double)
+        // 480i/576i     interlaced FRAME mode -> 480p/576p (line-double, can look ugly if it was true interlaced)
+        // 480i/576i     interlaced FIELD mode -> 480p/576p (show all lines! output quality x2!)
+        pstate->gsm.interlace = 0; // non-interlaced
+        pstate->gsm.ffmd      = 1; // FRAME mode
+        if (pstate->game.mode == 2) {
+            pstate->gsm.mode = 0x50; // 480p
         } else {
-            goto no_gsm;
+            pstate->gsm.mode = 0x53; // 576p
         }
+    } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_1080I_X1 ||
+               pstate->GsmVideoMode == EECORE_GSM_VMODE_1080I_X2 ||
+               pstate->GsmVideoMode == EECORE_GSM_VMODE_1080I_X3) {
+        // 240p/288p non-interlaced FRAME mode -> 1080i FRAME (line 4x)
+        // 480i/576i     interlaced FRAME mode -> 1080i FRAME (line 4x, can look ugly if it was true interlaced)
+        // 480i/576i     interlaced FIELD mode -> 1080i FIELD (line 2x, output quality x2!)
+        pstate->gsm.interlace = 1; // interlaced
+        pstate->gsm.ffmd      = pstate->game.ffmd; // keep game setting
+        pstate->gsm.mode      = 0x51; // 1080i
     }
 
-    pstate->SetGsCrt = 1;
-    pstate->smode2 = GS_SET_SMODE2(interlace, ffmd, 0);
-    if (pstate->flags & (EECORE_FLAG_GSM_C_1 | EECORE_FLAG_GSM_C_2 | EECORE_FLAG_GSM_C_3)) {
+    update_scaling(pstate);
+
+    // Set GSM video mode (without triggering a breakpoint)
+    _ee_disable_bpc();
+    pstate->org_SetGsCrt(pstate->gsm.interlace, pstate->gsm.mode, pstate->gsm.ffmd);
+
+    // Enable breakpoints
+    if (pstate->GsmCompMode != EECORE_GSM_COMP_NONE) {
         // For FIELD flipping we need to also set a breakpoint for reading
         _ee_enable_bpc(EE_BPC_DRE | EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
     } else {
         _ee_enable_bpc(EE_BPC_DWE | EE_BPC_DUE | EE_BPC_DKE);
     }
-    pstate->org_SetGsCrt(interlace, mode, ffmd);
-    return;
-
-no_gsm:
-    _ee_disable_bpc();
-    pstate->org_SetGsCrt(interlace, mode, ffmd);
 }
 
 void EnableGSM(void)
 {
+    struct gsm_state *pstate = &state;
     vu32 *v_debug = (vu32 *)0x80000100;
 
-    state.flags = eec.flags;
+    pstate->GsmVideoMode = eec.GsmVideoMode;
+    pstate->GsmCompMode  = eec.GsmCompMode;
+    pstate->flags        = eec.flags;
 
     // Hook SetGsCrt
-    state.org_SetGsCrt = GetSyscallHandler(__NR_SetGsCrt);
+    pstate->org_SetGsCrt = GetSyscallHandler(__NR_SetGsCrt);
     SetSyscall(__NR_SetGsCrt, (void *)(((u32)(hook_SetGsCrt) & ~0xE0000000) | 0x80000000));
 
     // Make sure no exceptions are generated
@@ -523,7 +679,7 @@ void EnableGSM(void)
     //   0x1fffff5f = mask
     //   0x1fffef5f = mask + CSR
     _ee_mtdab(0x12000000);
-    if (eec.flags & (EECORE_FLAG_GSM_C_1 | EECORE_FLAG_GSM_C_2 | EECORE_FLAG_GSM_C_3)) {
+    if (eec.GsmCompMode != EECORE_GSM_COMP_NONE) {
         // For FIELD flipping we need to also set a breakpoint for CSR register
         _ee_mtdabm(0x1fffef5f);
     } else {
@@ -533,8 +689,10 @@ void EnableGSM(void)
 
 void DisableGSM(void)
 {
+    struct gsm_state *pstate = &state;
+
     // Make sure no exceptions are generated
     _ee_disable_bpc();
     // Restore syscalls
-    SetSyscall(__NR_SetGsCrt, state.org_SetGsCrt);
+    SetSyscall(__NR_SetGsCrt, pstate->org_SetGsCrt);
 }

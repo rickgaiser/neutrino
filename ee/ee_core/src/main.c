@@ -70,7 +70,7 @@ int main(int argc, char **argv)
         }
 
         // Enable GSM, only possible when kernel hooks are allowed
-        if (((eec.flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) != 0) && ((eec.flags & EECORE_FLAG_UNHOOK) == 0)) {
+        if ((eec.GsmVideoMode != EECORE_GSM_VMODE_NONE) && ((eec.flags & EECORE_FLAG_UNHOOK) == 0)) {
             DPRINTF("Enabling GSM\n");
             EnableGSM();
         }

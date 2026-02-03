@@ -57,7 +57,7 @@ all: $(EE_BIN_PACKED) version.txt
 
 # ALL  : BSOD when returning back to menu
 # Game uses different ELF files for menu and game
-#GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso' # interlaced frame mode
+#GAME = 'CD/Densha de Go! 3 - Tsuukin-hen (J).iso' # -gsm=1080ix1 # interlaced frame mode (480i)
 
 # CD "MODE2" based games, with multiple tracks
 # not supported
@@ -89,8 +89,8 @@ all: $(EE_BIN_PACKED) version.txt
 #GAME = 'DVD/Ratchet Clank 3 (E).iso' -elf='cdrom0:\SCES_524.56;1' -gsm=fp::1
 
 # Tested, working
-#GAME = 'CD/ICO (U).iso' # 240p game
-GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp
+#GAME = 'CD/ICO (U).iso' -gc=0 -gsm=1080ix1 # 240p game (FMV: 240p AND 480i interlaced frame mode)
+GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gc=0 -gsm=1080ix3
 #GAME = 'DVD/PES 2023 (E).iso'
 #GAME = 'DVD/Sonic Unleashed (E).iso'
 #GAME = 'DVD/007 - Agent Under Fire (E).iso'
@@ -161,10 +161,11 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gsm=fp
 #GAME = 'DVD/Hot Shots Tennis (U).iso'
 #GAME = 'DVD/Hokuto no Ken - Shinpan no Sousousei - Kengou Retsuden (J).iso'
 #GAME = "DVD/Shijou Saikyou no Deshi Ken'ichi - Gekitou! Ragnarok Hachikengou (J).iso"
-
 #GAME = 'DVD/Test Drive (U).iso' -elf='cdrom0:\SLUS_202.13;1'
 #GAME = 'CD/Twisted Metal - Black Online (U).iso'
 #GAME = 'CD/Steel Dragon EX (E).iso' -elf='cdrom0:\SLES_524.82;1'
+#GAME = 'DVD/Dragon Quest VIII Journey of the Cursed King (U).iso' -gsm=1080ix3
+#GAME = 'DVD/Shin Megami Tensei - Persona 3 FES (U).iso' -gsm=fp2
 
 # To test:
 #GAME = 'DVD/Battlefield 2 Modern Combat (E).iso'

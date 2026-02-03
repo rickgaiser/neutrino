@@ -26,15 +26,27 @@ typedef struct
 #define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
 
 // Compatibility flags
-#define EECORE_FLAG_UNHOOK      (1<< 0) // Unhook syscalls, keep value the same as in asm.S!
-#define EECORE_FLAG_DBC         (1<< 1) // Debug colors
-#define EECORE_FLAG_GSM_FLD_FP  (1<<10) // GSM: Field Mode: Force Progressive
-#define EECORE_FLAG_GSM_FRM_FP1 (1<<11) // GSM: Frame Mode: Force Progressive (240p)
-#define EECORE_FLAG_GSM_FRM_FP2 (1<<12) // GSM: Frame Mode: Force Progressive (line-double)
-#define EECORE_FLAG_GSM_NO_576P (1<<13) // GSM: Disable GSM 576p mode
-#define EECORE_FLAG_GSM_C_1     (1<<14) // GSM: Enable FIELD flip type 1
-#define EECORE_FLAG_GSM_C_2     (1<<15) // GSM: Enable FIELD flip type 2
-#define EECORE_FLAG_GSM_C_3     (1<<16) // GSM: Enable FIELD flip type 3
+#define EECORE_FLAG_UNHOOK      (1<<0) // Unhook syscalls, keep value the same as in asm.S!
+#define EECORE_FLAG_DBC         (1<<1) // Debug colors
+#define EECORE_FLAG_GSM_NO_576P (1<<2) // GSM: Disable GSM 576p mode
+
+enum EECORE_GSM_VMODE
+{
+    EECORE_GSM_VMODE_NONE = 0,
+    EECORE_GSM_VMODE_FP1, // 240p/288p
+    EECORE_GSM_VMODE_FP2, // 480p/576p
+    EECORE_GSM_VMODE_1080I_X1, // 1080i x1
+    EECORE_GSM_VMODE_1080I_X2, // 1080i x2
+    EECORE_GSM_VMODE_1080I_X3, // 1080i x3
+};
+
+enum EECORE_GSM_COMP_MODE
+{
+    EECORE_GSM_COMP_NONE = 0,
+    EECORE_GSM_COMP_1, // Compatibility mode 1
+    EECORE_GSM_COMP_2, // Compatibility mode 2
+    EECORE_GSM_COMP_3, // Compatibility mode 3
+};
 
 // Interface to loader
 #define EEC_MOD_CHECKSUM_COUNT 32
@@ -46,6 +58,9 @@ struct ee_core_data
     uint32_t flags;
     uint32_t iop_rm[3];
     char GameID[12];
+
+    enum EECORE_GSM_VMODE GsmVideoMode;
+    enum EECORE_GSM_COMP_MODE GsmCompMode;
 
     int *CheatList;
 

@@ -110,29 +110,26 @@ void print_usage()
     printf("                    - 7: IOP: Fix game buffer overrun\n");
     printf("                    Multiple options possible, for example -gc=23\n");
     printf("\n");
-    printf("  -gsm=x:y:z        GS video mode\n");
+    printf("  -gsm=v:c          GS video mode\n");
     printf("\n");
-    printf("                    Parameter x = Interlaced field mode\n");
-    printf("                    A full height buffer is used by the game for displaying. Force video output to:\n");
-    printf("                    -      : don't force (default)  (480i/576i)\n");
-    printf("                    - fp   : force progressive scan (480p/576p)\n");
+    printf("                    Parameter v = Force video mode to:\n");
+    printf("                    -         : don't force (default)  (480i/576i)\n");
+    printf("                    - fp1     : force 240p/288p - auto PAL/NTSC\n");
+    printf("                    - fp2     : force 480p/576p - auto PAL/NTSC\n");
+    printf("                    - 1080ix1 : force 1080i width x1, height x1 (very small!)\n");
+    printf("                    - 1080ix2 : force 1080i width x2, height x2\n");
+    printf("                    - 1080ix3 : force 1080i width x3, height x3\n");
     printf("\n");
-    printf("                    Parameter y = Interlaced frame mode\n");
-    printf("                    A half height buffer is used by the game for displaying. Force video output to:\n");
-    printf("                    -      : don't force (default)  (480i/576i)\n");
-    printf("                    - fp1  : force progressive scan (240p/288p)\n");
-    printf("                    - fp2  : force progressive scan (480p/576p line doubling)\n");
-    printf("\n");
-    printf("                    Parameter z = Compatibility mode\n");
+    printf("                    Parameter c = Compatibility mode\n");
     printf("                    -      : no compatibility mode (default)\n");
     printf("                    - 1    : field flipping type 1 (GSM/OPL)\n");
     printf("                    - 2    : field flipping type 2\n");
     printf("                    - 3    : field flipping type 3\n");
     printf("\n");
     printf("                    Examples:\n");
-    printf("                    -gsm=fp       - recommended mode\n");
-    printf("                    -gsm=fp::1    - recommended mode, with compatibility 1\n");
-    printf("                    -gsm=fp:fp1:2 - all parameters\n");
+    printf("                    -gsm=fp2      - recommended mode\n");
+    printf("                    -gsm=fp2:1    - recommended mode, with compatibility 1\n");
+    printf("                    -gsm=1080ix2\n");
     printf("\n");
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
@@ -215,13 +212,8 @@ struct SSystemSettings {
         };
     } cdvdman;
 
-    struct {
-        // EECORE settings
-        uint32_t flags;
-        int iop_reboot_mode[3];
-        char *elf;
-        int mod_base;
-    } eecore;
+    char *eecore_elf;
+    struct ee_core_data eecore;
 } sys;
 
 struct SDriver {
@@ -719,8 +711,10 @@ int load_config_eecore(toml_datum_t t)
     toml_datum_t arr;
     toml_datum_t v;
 
-    toml_string_in_overwrite(t, "elf",      &sys.eecore.elf);
-    toml_int_in_overwrite   (t, "mod_base", &sys.eecore.mod_base);
+    toml_string_in_overwrite(t, "elf",      &sys.eecore_elf);
+    v = toml_get(t, "mod_base");
+    if (v.type == TOML_INT64)
+        sys.eecore.ModStorageStart = (void *)(int)v.u.int64;
 
     arr = toml_get(t, "irm");
     if (arr.type == TOML_ARRAY && arr.u.arr.size == 3) {
@@ -728,7 +722,7 @@ int load_config_eecore(toml_datum_t t)
         for (i=0; i < arr.u.arr.size; i++) {
             v = arr.u.arr.elem[i];
             if (v.type == TOML_INT64)
-                sys.eecore.iop_reboot_mode[i] = v.u.int64;
+                sys.eecore.iop_rm[i] = v.u.int64;
         }
     }
 
@@ -1236,58 +1230,26 @@ int main(int argc, char *argv[])
         goto gsm_done;
     } else if (pgsm[0] != ':') {
         // Interlaced field mode
-        if (!strncmp(pgsm, "fp", 2)) {
-            printf("GSM: Interlaced Field Mode = Force Progressive\n");
-            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP;
-            pgsm += 2;
-        }
-
-        //
-        // Start: support for deprecated GSM modes
-        //
-        else if (!strncmp(pgsm, "1F", 2)) {
-            printf("GSM: Deprecated mode 1F\n");
-            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_C_1;
-            goto gsm_done;
-        } else if (!strncmp(pgsm, "1", 1)) {
-            printf("GSM: Deprecated mode 1\n");
-            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP;
-            goto gsm_done;
-        } else if (!strncmp(pgsm, "2F", 2)) {
-            printf("GSM: Deprecated mode 2F\n");
-            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2 | EECORE_FLAG_GSM_C_1;
-            goto gsm_done;
-        } else if (!strncmp(pgsm, "2", 1)) {
-            printf("GSM: Deprecated mode 2\n");
-            sys.eecore.flags |= EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP2;
-            goto gsm_done;
-        }
-        //
-        // End: support for deprecated GSM modes
-        //
-
-        else {
-            goto gsm_error;
-        }
-    }
-
-    if (pgsm[0] == 0) {
-        goto gsm_done;
-    } else if (pgsm[0] == ':') {
-        pgsm++; // this argument
-        if (pgsm[0] != ':') {
-            // Interlaced frame mode
-            if (!strncmp(pgsm, "fp1", 3)) {
-                printf("GSM: Interlaced Frame Mode = Force Progressive 1\n");
-                sys.eecore.flags |= EECORE_FLAG_GSM_FRM_FP1;
-                pgsm += 3;
-            } else if (!strncmp(pgsm, "fp2", 3)) {
-                printf("GSM: Interlaced Frame Mode = Force Progressive 2\n");
-                sys.eecore.flags |= EECORE_FLAG_GSM_FRM_FP2;
-                pgsm += 3;
-            } else {
-                goto gsm_error;
-            }
+        if (!strncmp(pgsm, "fp1", 3)) {
+            printf("GSM: Force 480p/576p\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_FP1;
+            pgsm += 3;
+        }else if (!strncmp(pgsm, "fp2", 3)) {
+            printf("GSM: Force 480p/576p\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_FP2;
+            pgsm += 3;
+        } else if (!strncmp(pgsm, "1080ix1", 7)) {
+            printf("GSM: Force 1080i x1 (width x1, height x1)\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X1;
+            pgsm += 7;
+        } else if (!strncmp(pgsm, "1080ix2", 7)) {
+            printf("GSM: Force 1080i x2 (width x2, height x2)\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X2;
+            pgsm += 7;
+        } else if (!strncmp(pgsm, "1080ix3", 7)) {
+            printf("GSM: Force 1080i x3 (width x3, height x2)\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X3;
+            pgsm += 7;
         }
     }
 
@@ -1299,15 +1261,15 @@ int main(int argc, char *argv[])
             // Compatibility mode
             if (!strncmp(pgsm, "1", 1)) {
                 printf("GSM: Compatibility Mode = 1\n");
-                sys.eecore.flags |= EECORE_FLAG_GSM_C_1;
+                sys.eecore.GsmCompMode = EECORE_GSM_COMP_1;
                 pgsm += 1;
             } else if (!strncmp(pgsm, "2", 1)) {
                 printf("GSM: Compatibility Mode = 2\n");
-                sys.eecore.flags |= EECORE_FLAG_GSM_C_2;
+                sys.eecore.GsmCompMode = EECORE_GSM_COMP_2;
                 pgsm += 1;
             } else if (!strncmp(pgsm, "3", 1)) {
                 printf("GSM: Compatibility Mode = 3\n");
-                sys.eecore.flags |= EECORE_FLAG_GSM_C_3;
+                sys.eecore.GsmCompMode = EECORE_GSM_COMP_3;
                 pgsm += 1;
             } else {
                 goto gsm_error;
@@ -1325,7 +1287,7 @@ gsm_done:
     /*
      * GSM: check for 576p capability
      */
-    if (sys.eecore.flags & (EECORE_FLAG_GSM_FLD_FP | EECORE_FLAG_GSM_FRM_FP1 | EECORE_FLAG_GSM_FRM_FP2)) {
+    if (sys.eecore.GsmVideoMode == EECORE_GSM_VMODE_FP2) {
         int fd_ROMVER;
         if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) >= 0) {
             char romver[16], romverNum[5];
@@ -1398,7 +1360,7 @@ gsm_done:
     /*
      * Load all needed files before rebooting the IOP
      */
-    mod_ee_core.sFileName = sys.eecore.elf;
+    mod_ee_core.sFileName = sys.eecore_elf;
     if (module_load(&mod_ee_core) < 0) {
         printf("ERROR: failed to load ee_core\n");
         return -1;
@@ -1812,7 +1774,8 @@ gsm_done:
         modcount++;
     }
 
-    irxtable = (irxtab_t *)sys.eecore.mod_base;
+    printf("modstart %p\n", sys.eecore.ModStorageStart);
+    irxtable = (irxtab_t *)sys.eecore.ModStorageStart;
     irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
     irxptr = (uint8_t *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
 
@@ -1882,15 +1845,9 @@ gsm_done:
     //
     // Set EE_CORE settings before loading into place
     //
-    strncpy(set_ee_core->GameID, sGameID, 12);
-    set_ee_core->CheatList       = NULL;
-    set_ee_core->ModStorageStart = irxtable;
-    set_ee_core->ModStorageEnd   = irxptr;
-    set_ee_core->flags           = sys.eecore.flags;
-    set_ee_core->iop_rm[0]       = sys.eecore.iop_reboot_mode[0];
-    set_ee_core->iop_rm[1]       = sys.eecore.iop_reboot_mode[1];
-    set_ee_core->iop_rm[2]       = sys.eecore.iop_reboot_mode[2];
-
+    strncpy(sys.eecore.GameID, sGameID, 12);
+    sys.eecore.CheatList       = NULL;
+    sys.eecore.ModStorageEnd   = irxptr;
     // Add simple checksum
     uint32_t *pms = (uint32_t *)irxtable;
 #ifdef DEBUG
@@ -1907,9 +1864,11 @@ gsm_done:
 #ifdef DEBUG
         printf("- 0x%08lx = 0x%08lx\n", (uint32_t)pms, ssv);
 #endif
-        set_ee_core->mod_checksum_4k[j] = ssv;
+        sys.eecore.mod_checksum_4k[j] = ssv;
         pms += 1024;
     }
+    // Copy settings to module memory
+    *set_ee_core = sys.eecore;
 
     //
     // Load EECORE ELF sections

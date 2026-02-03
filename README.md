@@ -117,29 +117,26 @@ Options:
                     - 7: IOP: Fix game buffer overrun
                     Multiple options possible, for example -gc=23
 
-  -gsm=x:y:z        GS video mode
+  -gsm=v:c          GS video mode
 
-                    Parameter x = Interlaced field mode
-                    A full height buffer is used by the game for displaying. Force video output to:
-                    -      : don't force (default)  (480i/576i)
-                    - fp   : force progressive scan (480p/576p)
+                    Parameter v = Force video mode to:
+                    -         : don't force (default)  (480i/576i)
+                    - fp1     : force 240p/288p - auto PAL/NTSC
+                    - fp2     : force 480p/576p - auto PAL/NTSC
+                    - 1080ix1 : force 1080i width x1, height x1 (very small!)
+                    - 1080ix2 : force 1080i width x2, height x2
+                    - 1080ix3 : force 1080i width x3, height x3
 
-                    Parameter y = Interlaced frame mode
-                    A half height buffer is used by the game for displaying. Force video output to:
-                    -      : don't force (default)  (480i/576i)
-                    - fp1  : force progressive scan (240p/288p)
-                    - fp2  : force progressive scan (480p/576p line doubling)
-
-                    Parameter z = Compatibility mode
+                    Parameter c = Compatibility mode:
                     -      : no compatibility mode (default)
                     - 1    : field flipping type 1 (GSM/OPL)
                     - 2    : field flipping type 2
                     - 3    : field flipping type 3
 
                     Examples:
-                    -gsm=fp       - recommended mode
-                    -gsm=fp::1    - recommended mode, with compatibility 1
-                    -gsm=fp:fp2:2 - all parameters
+                    -gsm=fp2      - recommended mode
+                    -gsm=fp2:1    - recommended mode, with compatibility 1
+                    -gsm=1080ix2
 
   -cwd=<path>       Change working directory
 
