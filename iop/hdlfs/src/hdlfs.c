@@ -93,14 +93,13 @@ int hdl_open(iomanX_iop_file_t *f, const char *name, int mode, int unk)
         name++;
     }
 
-    unsigned int acc_lba = 0; // accumulate LBA to work around ps2hdd not setting dirent.stat.private_5
     while (iomanX_dread(fd, &dirent) > 0) {
         M_DEBUG("  %s, mode=0x%x, attr=0x%x, size=%d\n", dirent.name, dirent.stat.mode, dirent.stat.attr, dirent.stat.size);
         if (dirent.stat.mode == HDL_FS_MAGIC && (dirent.stat.attr & APA_FLAG_SUB) == 0) {
             int i;
 
             // Note: The APA specification states that there is a 4KB area used for storing the partition's information, before the extended attribute area.
-            unsigned int lba = acc_lba + (HDL_GAME_DATA_OFFSET + 4096) / 512;
+            unsigned int lba = dirent.stat.private_5 + (HDL_GAME_DATA_OFFSET + 4096) / 512;
             unsigned int nsectors = 2; // 2 * 512 = 1024 byte
 
             // Read HDLoader header
@@ -111,7 +110,7 @@ int hdl_open(iomanX_iop_file_t *f, const char *name, int mode, int unk)
                 return -EIO;
 
             if (file_hdl.checksum != 0xdeadfeed) {
-                M_DEBUG("- HDL checksum invalid (0x%X, p5=0x%X)\n", file_hdl.checksum, acc_lba);
+                M_DEBUG("- HDL checksum invalid (0x%X, p5=0x%X)\n", file_hdl.checksum, dirent.stat.private_5);
                 continue;
             }
 
@@ -138,7 +137,6 @@ int hdl_open(iomanX_iop_file_t *f, const char *name, int mode, int unk)
                 return 1; // the 1 and only file descriptor, for now...
             }
         }
-        acc_lba += dirent.stat.size; // dirent.size essentially contains number of LBAs until the next partition
     }
 
     iomanX_dclose(fd);
