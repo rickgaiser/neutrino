@@ -13,7 +13,6 @@ clean:
 	$(MAKE) -C iop/fakemod       clean
 	$(MAKE) -C iop/fhi_bd        clean
 	$(MAKE) -C iop/fhi_bd_defrag clean
-	$(MAKE) -C iop/fhi_file      clean
 	$(MAKE) -C iop/gapfill       clean
 	$(MAKE) -C iop/hdlfs         clean
 	$(MAKE) -C iop/imgdrv        clean
@@ -40,7 +39,6 @@ all:
 	$(MAKE) -C iop/fakemod       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_bd        all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/fhi_bd_defrag all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/fhi_file      all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/gapfill       all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/hdlfs         all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/imgdrv        all DEBUG=$(IOPCORE_DEBUG)
@@ -96,7 +94,6 @@ copy:
 	cp $(PS2SDK)/iop/irx/mmcefhi.irx           ee/loader/modules
 
 copy_extra:
-	cp iop/fhi_file/irx/fhi_file.irx           ee/loader/modules
 	cp iop/gapfill/irx/gapfill.irx             ee/loader/modules
 	cp iop/memcheck/irx/memcheck.irx           ee/loader/modules
 	cp iop/usbd_null/irx/usbd_null.irx         ee/loader/modules
