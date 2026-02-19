@@ -1,0 +1,23 @@
+# Name of loaded config, to show to user
+name = "UDPFS driver"
+
+# Drivers this driver depends on (config file must exist)
+depends = ["i_dev9_hidden"]
+
+# Modules to load
+[[module]]
+file = "iomanX.irx"
+env = ["LE"]
+[[module]]
+file = "fileXio.irx"
+env = ["LE"]
+[[module]]
+file = "smap_udpfs_ioman.irx"
+args = ["ip=192.168.1.10"]
+env = ["LE"]
+
+[[module]]
+file = "smap_udpfs_fhi.irx"
+args = ["ip=192.168.1.10"]
+func = "FHI_FILEID"
+env = ["EE"]

@@ -189,7 +189,8 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gc=0 -gsm=1080ix3
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
-ARGS = -bsd=udpbd -dvd=mass:$(GAME)
+ARGS = -bsd=udpfs -dvd=udpfs:$(GAME)
+#ARGS = -bsd=udpbd -dvd=mass:$(GAME)
 #ARGS = -bsd=mmce -dvd=mmce1:$(GAME)
 #ARGS = -bsd=mmce -dvd=mmce1:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mmce1:'HDD/SOCOM II HDD.raw' -gc=0
 #ARGS = -bsd=usb -dvd=mass:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mass:'HDD/SOCOM II HDD.raw' -gc=0

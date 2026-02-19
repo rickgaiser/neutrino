@@ -27,6 +27,7 @@ MX4SIO             | FAT + 70k  |![x](https://progress-bar.xyz/1500?scale=2200&s
 MMCE               | FAT + 70k  |![x](https://progress-bar.xyz/1700?scale=2200&suffix=KB/s)                        | ![x](https://progress-bar.xyz/100) | File System  | `mmce`   | -
 iLink / IEEE1394   | FAT        |![x](https://progress-bar.xyz/6?scale=2&suffix=MB/s)                              | ![x](https://progress-bar.xyz/10)  | Block Device | `ilink`  | `sd`
 UDPBD              | ALL        |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)                             | ![x](https://progress-bar.xyz/100) | Block Device | `udpbd`  | `udp`
+UDPFS              | ALL        |![x](https://progress-bar.xyz/10?scale=2&suffix=MB/s)                             | ![x](https://progress-bar.xyz/100) | File System  | `udpfs`  | -
 ATA (internal HDD) | FAT        |![x](https://progress-bar.xyz/30?scale=2&suffix=MB/s)                             | ![x](https://progress-bar.xyz/100) | Block Device | `ata`    | `ata`
 
 PS2 model: The older FAT PS2 models and the first slim PS2 model (70k) have the original PS1 MIPS R3000 CPU. Later slim PS2 models have a new CPU with 'DECKARD' emulating the MIPS R3000. This is why there is a speed difference between those two groups of PS2 models.
@@ -74,6 +75,7 @@ Options:
                     - usb    (block device)
                     - mx4sio (block device)
                     - udpbd  (block device)
+                    - udpfs  (file system)
                     - ilink  (block device)
                     - mmce   (file system)
 
@@ -154,6 +156,7 @@ Usage examples:
   neutrino.elf -bsd=mmce   -dvd=mmce:path/to/filename.iso
   neutrino.elf -bsd=ilink  -dvd=mass:path/to/filename.iso
   neutrino.elf -bsd=udpbd  -dvd=mass:path/to/filename.iso
+  neutrino.elf -bsd=udpfs  -dvd=udpfs:path/to/filename.iso
   neutrino.elf -bsd=ata    -dvd=mass:path/to/filename.iso
   neutrino.elf -bsd=ata    -dvd=hdl:filename.iso -bsdfs=hdl
   neutrino.elf -bsd=udpbd  -dvd=bdfs:udp0p0      -bsdfs=bd

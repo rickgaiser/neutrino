@@ -26,7 +26,6 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "../../../iop/common/fakemod.h"
 #include "../../../iop/common/fhi_bd.h"
 #include "../../../iop/common/fhi_bd_defrag.h"
-#include "../../../iop/common/fhi_file.h"
 #include "../../../iop/common/fhi_fileid.h"
 #include "../../../iop/common/fhi.h"
 
@@ -67,6 +66,7 @@ void print_usage()
     printf("                    - usb    (block device)\n");
     printf("                    - mx4sio (block device)\n");
     printf("                    - udpbd  (block device)\n");
+    printf("                    - udpfs  (file system)\n");
     printf("                    - ilink  (block device)\n");
     printf("                    - mmce   (file system)\n");
     printf("\n");
@@ -147,6 +147,7 @@ void print_usage()
     printf("  neutrino.elf -bsd=mmce   -dvd=mmce:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=ilink  -dvd=mass:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=udpbd  -dvd=mass:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=udpfs  -dvd=udpfs:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=ata    -dvd=mass:path/to/filename.iso\n");
     printf("  neutrino.elf -bsd=ata    -dvd=hdl:filename.iso -bsdfs=hdl\n");
     printf("  neutrino.elf -bsd=udpbd  -dvd=bdfs:udp0p0      -bsdfs=bd\n");
@@ -157,7 +158,7 @@ void print_usage()
 struct SModule
 {
     char *sFileName;
-    char *sUDNL;
+    char *sIOPRP;
     char *sFunc;
 
     off_t iSize;
@@ -320,8 +321,8 @@ struct SModule *modlist_get_by_udnlname(struct SModList *ml, const char *name)
 
     for (i = 0; i < ml->count; i++) {
         struct SModule *m = &ml->mod[i];
-        if (m->sUDNL != NULL) {
-            if (strcmp(m->sUDNL, name) == 0)
+        if (m->sIOPRP != NULL) {
+            if (strcmp(m->sIOPRP, name) == 0)
                 return m;
         }
     }
@@ -553,8 +554,8 @@ int modlist_add(struct SModList *ml, toml_datum_t t)
         // Free dynamic memory
         if (m->sFileName)
             free(m->sFileName);
-        if (m->sUDNL)
-            free(m->sUDNL);
+        if (m->sIOPRP)
+            free(m->sIOPRP);
         if (m->sFunc)
             free(m->sFunc);
         if (m->args)
@@ -574,7 +575,7 @@ int modlist_add(struct SModList *ml, toml_datum_t t)
 
     toml_string_move(v, &m->sFileName);
 
-    toml_string_in_overwrite(t, "ioprp", &m->sUDNL);
+    toml_string_in_overwrite(t, "ioprp", &m->sIOPRP);
     toml_string_in_overwrite(t, "func",  &m->sFunc);
     arr = toml_get(t, "args");
     if (arr.type == TOML_ARRAY) {
@@ -1316,9 +1317,11 @@ gsm_done:
             printf("ERROR: driver %s failed\n", sys.sBSD);
             return -1;
         }
+        
         // mmce devices don't have a filesystem
-        if (!strcmp(sys.sBSD, "mmce"))
+        if ((!strcmp(sys.sBSD, "mmce")) || (!strcmp(sys.sBSD, "udpfs")))
             sys.sBSDFS = "no";
+        
         if (!strcmp(sys.sBSDFS, "no")) {
             // Load nothing
         } else if (load_config_file("bsdfs", sys.sBSDFS) < 0) {
@@ -1763,11 +1766,13 @@ gsm_done:
 #pragma GCC diagnostic pop
 
     // Count the number of modules to pass to the ee_core
-    int modcount = 4; // IOPRP, IMGDRV, UDNL and FHI
+    int modcount = 1; // IOPRP.img is always present
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];
-        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm->sFunc == NULL))
+        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL)) {
+            printf("Module to load: %s\n", pm->sFileName);
             modcount++;
+        }
     }
     if (drv.fake.count > 0) {
         // FAKEMOD
@@ -1822,16 +1827,26 @@ gsm_done:
         irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"), irxptr, irxptr_tab++);
         irxtable->count++;
     }
-    else if (modlist_get_by_func(&drv.mod, "FHI_FILEID") != NULL) {
-        // FHI FILEID
-        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_FILEID"), irxptr, irxptr_tab++);
-        irxtable->count++;
-    }
+    //else if (modlist_get_by_func(&drv.mod, "FHI_FILEID") != NULL) {
+    //    // FHI FILEID
+    //    irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_FILEID"), irxptr, irxptr_tab++);
+    //    irxtable->count++;
+    //}
     // All other modules
+    //printf("Other modules(%d):\n", drv.mod.count);
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];
+        //printf("Module: %s, func: %s, env: 0x%x, ioprp: %s\n", pm->sFileName, (pm->sFunc == NULL) ? "NULL" : pm->sFunc, pm->env, (pm->sIOPRP != NULL) ? "yes" : "no");
         // Load only the modules that are not part of IOPRP and don't have a special function
-        if ((pm->env & MOD_ENV_EE) && (pm->sUDNL == NULL) && (pm->sFunc == NULL)) {
+        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL) && ((pm->sFunc == NULL) || (
+               strcmp(pm->sFunc, "FAKEMOD") != 0
+            && strcmp(pm->sFunc, "IMGDRV") != 0
+            && strcmp(pm->sFunc, "UDNL") != 0
+            && strcmp(pm->sFunc, "FHI_BD") != 0
+            && strcmp(pm->sFunc, "FHI_BD_DEFRAG") != 0
+            //&& strcmp(pm->sFunc, "FHI_FILEID") != 0
+            )))
+        {
             irxptr = module_install(pm, irxptr, irxptr_tab++);
             irxtable->count++;
         }
