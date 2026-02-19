@@ -226,6 +226,10 @@ struct SDriver {
 
 struct SModule mod_ee_core;
 
+/* Folder prefixes — overwritten with "" in SAS flat-folder mode */
+static const char *g_config_prefix = "config/";
+static const char *g_modules_prefix = "modules/";
+
 #define MAX_FILENAME 128
 int module_load(struct SModule *mod)
 {
@@ -243,7 +247,7 @@ int module_load(struct SModule *mod)
     }
 
     // Open module on default location
-    snprintf(sFilePath, MAX_FILENAME, "modules/%s", mod->sFileName);
+    snprintf(sFilePath, MAX_FILENAME, "%s%s", g_modules_prefix, mod->sFileName);
     int fd = open(sFilePath, O_RDONLY);
     if (fd < 0) {
         printf("ERROR: Unable to open %s\n", mod->sFileName);
@@ -845,9 +849,9 @@ toml_result_t load_config_file_toml(const char * type, const char * subtype)
 
     // Open and parse file
     if (subtype != NULL)
-        snprintf(filename, 256, "config/%s-%s.toml", type, subtype);
+        snprintf(filename, 256, "%s%s-%s.toml", g_config_prefix, type, subtype);
     else
-        snprintf(filename, 256, "config/%s.toml", type);
+        snprintf(filename, 256, "%s%s.toml", g_config_prefix, type);
 
     res = toml_parse_file_ex(filename);
     if (!res.ok)
@@ -1043,6 +1047,21 @@ int main(int argc, char *argv[])
                 printf("ERROR: failed to change working directory to %s\n", &argv[i][5]);
                 return -1;
             }
+        }
+    }
+
+    /*
+     * Detect folder layout: if config/system.toml does not exist, fall back
+     * to a flat folder structure compatible with SAS (Save Application System).
+     */
+    {
+        int fd = open("config/system.toml", O_RDONLY);
+        if (fd < 0) {
+            g_config_prefix  = "";
+            g_modules_prefix = "";
+            printf("INFO: config/system.toml not found, using flat folder layout (SAS mode)\n");
+        } else {
+            close(fd);
         }
     }
 
