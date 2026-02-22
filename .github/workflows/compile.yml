@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ps2max/dev:v20250725-2
+    container: ps2max/dev:v20260222
     steps:
       - uses: actions/checkout@v4
         with:
