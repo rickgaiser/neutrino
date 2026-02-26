@@ -352,7 +352,7 @@ class UdpfsServer:
         resolved = os.path.realpath(os.path.join(self.root_dir, client_path))
 
         # Ensure within root
-        if not resolved.startswith(self.root_dir + os.sep) and resolved != self.root_dir:
+        if not resolved.startswith((self.root_dir + os.sep).replace('\\\\', '\\')) and resolved != self.root_dir:
             return None
 
         return resolved
