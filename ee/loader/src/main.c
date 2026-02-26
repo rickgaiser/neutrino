@@ -55,13 +55,46 @@ void toml_int_in_overwrite(toml_datum_t t, const char *name, int *dest);
 
 int load_config_file(const char * type, const char * subtype);
 
+// Map an iomanX path prefix (e.g. "usb0", "mx4sio0", "ata0") to a -bsd config name.
+// Strips trailing digits so both "usb0:" and "usb:" match "usb".
+// Returns NULL when the prefix is ambiguous or unknown.
+static const char *bsd_from_path(const char *path)
+{
+    const char *colon;
+    char prefix[16];
+    int len;
+
+    if (path == NULL)
+        return NULL;
+    colon = strchr(path, ':');
+    if (colon == NULL)
+        return NULL;
+
+    len = colon - path;
+    while (len > 0 && path[len - 1] >= '0' && path[len - 1] <= '9')
+        len--;
+    if (len == 0 || len >= (int)sizeof(prefix))
+        return NULL;
+    memcpy(prefix, path, len);
+    prefix[len] = '\0';
+
+    if (strcmp(prefix, "usb") == 0)    return "usb";
+    if (strcmp(prefix, "mx4sio") == 0) return "mx4sio";
+    if (strcmp(prefix, "ilink") == 0)  return "ilink";
+    if (strcmp(prefix, "ata") == 0)    return "ata";
+    if (strcmp(prefix, "udpbd") == 0)  return "udpbd";
+    if (strcmp(prefix, "mmce") == 0)   return "mmce";
+    if (strcmp(prefix, "udpfs") == 0)  return "udpfs";
+    return NULL;
+}
+
 void print_usage()
 {
     printf("Usage: neutrino.elf options\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -bsd=<driver>     Backing store drivers, supported are:\n");
-    printf("                    - no     (uses cdvd, default)\n");
+    printf("  -bsd=<driver>     Backing store drivers (optional, auto-detected from path prefix), supported are:\n");
+    printf("                    - no     (uses cdvd)\n");
     printf("                    - ata    (block device)\n");
     printf("                    - usb    (block device)\n");
     printf("                    - mx4sio (block device)\n");
@@ -142,15 +175,15 @@ void print_usage()
     printf("  --b               Break, all following parameters are passed to the ELF\n");
     printf("\n");
     printf("Usage examples:\n");
-    printf("  neutrino.elf -bsd=usb    -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=mx4sio -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=mmce   -dvd=mmce:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=ilink  -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=udpbd  -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=udpfs  -dvd=udpfs:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=ata    -dvd=mass:path/to/filename.iso\n");
-    printf("  neutrino.elf -bsd=ata    -dvd=hdl:filename.iso -bsdfs=hdl\n");
-    printf("  neutrino.elf -bsd=udpbd  -dvd=bdfs:udp0p0      -bsdfs=bd\n");
+    printf("  neutrino.elf -dvd=usb:path/to/filename.iso\n");
+    printf("  neutrino.elf -dvd=mx4sio:path/to/filename.iso\n");
+    printf("  neutrino.elf -dvd=mmce:path/to/filename.iso\n");
+    printf("  neutrino.elf -dvd=ilink:path/to/filename.iso\n");
+    printf("  neutrino.elf -dvd=udpbd:path/to/filename.iso\n");
+    printf("  neutrino.elf -dvd=udpfs:path/to/filename.iso\n");
+    printf("  neutrino.elf -dvd=ata:path/to/filename.iso\n");
+    printf("  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso\n");
+    printf("  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0\n");
 }
 
 #define MOD_ENV_LE (1<<0)
@@ -1175,6 +1208,20 @@ int main(int argc, char *argv[])
     // Check for "file" mode of mc emulation
     if (sys.sMC0File != NULL || sys.sMC1File != NULL) {
         sMCMode = "file";
+    }
+
+    // Auto-detect BSD driver from path prefix when not explicitly set
+    if (!strcmp(sys.sBSD, "no")) {
+        const char *detected = NULL;
+        if (detected == NULL) detected = bsd_from_path(sDVDFile);
+        if (detected == NULL) detected = bsd_from_path(sys.sATA0File);
+        if (detected == NULL) detected = bsd_from_path(sys.sATA1File);
+        if (detected == NULL) detected = bsd_from_path(sys.sMC0File);
+        if (detected == NULL) detected = bsd_from_path(sys.sMC1File);
+        if (detected != NULL) {
+            sys.sBSD = (char *)detected;
+            printf("INFO: auto-detected -bsd=%s from path\n", sys.sBSD);
+        }
     }
 
     // Process command line game compatibility modes

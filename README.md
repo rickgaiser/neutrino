@@ -83,8 +83,8 @@ Command line usage instructions:
 Usage: neutrino.elf options
 
 Options:
-  -bsd=<driver>     Backing store drivers, supported are:
-                    - no     (uses cdvd, default)
+  -bsd=<driver>     Backing store drivers (optional, auto-detected from path prefix), supported are:
+                    - no     (uses cdvd)
                     - ata    (block device)
                     - usb    (block device)
                     - mx4sio (block device)
@@ -165,15 +165,15 @@ Options:
   --b               Break, all following parameters are passed to the ELF
 
 Usage examples:
-  neutrino.elf -bsd=usb    -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=mx4sio -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=mmce   -dvd=mmce:path/to/filename.iso
-  neutrino.elf -bsd=ilink  -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=udpbd  -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=udpfs  -dvd=udpfs:path/to/filename.iso
-  neutrino.elf -bsd=ata    -dvd=mass:path/to/filename.iso
-  neutrino.elf -bsd=ata    -dvd=hdl:filename.iso -bsdfs=hdl
-  neutrino.elf -bsd=udpbd  -dvd=bdfs:udp0p0      -bsdfs=bd
+  neutrino.elf -dvd=usb:path/to/filename.iso
+  neutrino.elf -dvd=mx4sio:path/to/filename.iso
+  neutrino.elf -dvd=mmce:path/to/filename.iso
+  neutrino.elf -dvd=ilink:path/to/filename.iso
+  neutrino.elf -dvd=udpbd:path/to/filename.iso
+  neutrino.elf -dvd=udpfs:path/to/filename.iso
+  neutrino.elf -dvd=ata:path/to/filename.iso
+  neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso
+  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 ```
 
 ## Third-Party Loaders

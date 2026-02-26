@@ -179,23 +179,24 @@ GAME = 'DVD/DragonBall Z Budokai Tenkaichi 3 (E).iso' -gc=0 -gsm=1080ix3
 
 
 # Example arguments
-#-bsd=udpbd -dvd=mass:$(GAME)
-#-bsd=udpbd -dvd=mass:$(GAME) -mc0=mass:VMC/mymc.bin
-#-bsd=udpbd-hdd -dvd=mass:$(GAME) -ata0=mass:$(ATA0)
-#-bsd=udpbd-hdd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -mc0=mass:VMC/mymc.bin
-#-bsd=udpbd -dvd=mass:"DVD/Splinter Cell (E).iso" -elf="cdrom0:\\LOADER.PS2;1" --b 0_0_2 -wantload -ll -diskimage -restart -l=1 -v=13117
+#-dvd=udpbd:$(GAME)
+#-dvd=udpbd:$(GAME) -mc0=udpbd:VMC/mymc.bin
+#-bsd=udpbd-hdd -dvd=udpbd:$(GAME) -ata0=udpbd:$(ATA0)
+#-bsd=udpbd-hdd -dvd=udpbd:$(GAME) -ata0=udpbd:$(ATA0) -mc0=udpbd:VMC/mymc.bin
+#-dvd=udpbd:"DVD/Splinter Cell (E).iso" -elf="cdrom0:\\LOADER.PS2;1" --b 0_0_2 -wantload -ll -diskimage -restart -l=1 -v=13117
 #-bsd=ata -bsdfs=hdl -dvd=hdl:$(GAME)
 
 # Exmaple arguments (not working yet)
 #-bsd=udpbd -mc0=mass:VMC/mymc.bin -elf=rom0:OSDSYS --b SkipMc SkipHdd BootBrowser
 
-ARGS = -bsd=udpfs -dvd=udpfs:$(GAME)
-#ARGS = -bsd=udpbd -dvd=mass:$(GAME)
-#ARGS = -bsd=mmce -dvd=mmce1:$(GAME)
-#ARGS = -bsd=mmce -dvd=mmce1:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mmce1:'HDD/SOCOM II HDD.raw' -gc=0
-#ARGS = -bsd=usb -dvd=mass:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mass:'HDD/SOCOM II HDD.raw' -gc=0
+#ARGS = -dvd=udpfs:$(GAME)
+#ARGS = -dvd=udpbd:$(GAME)
+ARGS = -dvd=mx4sio:$(GAME)
+#ARGS = -dvd=mmce1:$(GAME)
+#ARGS = -dvd=mmce1:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=mmce1:'HDD/SOCOM II HDD.raw' -gc=0
+#ARGS = -dvd=usb:'DVD/SOCOM II - U.S. Navy SEALs (E).iso' -ata0=usb:'HDD/SOCOM II HDD.raw' -gc=0
 #ARGS = -bsd=udpbd-hdd -dvd=mass:$(GAME) -ata0=mass:$(ATA0) -gc=0
-#ARGS = -bsd=udpbd -dvd=bdfs:udp0p0 -bsdfs=bd
+#ARGS = -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 
 run: all
 	ps2client -h 192.168.1.10 execee host:$(EE_BIN_PACKED) $(ARGS)
