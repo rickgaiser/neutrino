@@ -22,10 +22,11 @@ clean:
 	$(MAKE) -C iop/patch_membo   clean
 	$(MAKE) -C iop/patch_rc_uya  clean
 	$(MAKE) -C iop/smap_udpbd    clean
-	$(MAKE) -C iop/smap_udpfs    clean SMAP_UDPTTY=1
-	$(MAKE) -C iop/smap_udpfs    clean SMAP_UDPFS_BD=1
-	$(MAKE) -C iop/smap_udpfs    clean SMAP_UDPFS_IOMAN=1
-	$(MAKE) -C iop/smap_udpfs    clean SMAP_UDPFS_FHI=1
+	$(MAKE) -C iop/smap          clean
+	$(MAKE) -C iop/udpfs         clean UDPFS_UDPTTY=1
+	$(MAKE) -C iop/udpfs         clean UDPFS_BD=1
+	$(MAKE) -C iop/udpfs         clean UDPFS_IOMAN=1
+	$(MAKE) -C iop/udpfs         clean UDPFS_FHI=1
 	$(MAKE) -C iop/usbd_null     clean
 	$(MAKE) -C ee/ee_core        clean
 	$(MAKE) -C ee/loader         clean
@@ -51,10 +52,11 @@ all:
 	$(MAKE) -C iop/patch_membo   all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/patch_rc_uya  all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C iop/smap_udpbd    all DEBUG=$(IOPCORE_DEBUG)
-	$(MAKE) -C iop/smap_udpfs    all DEBUG=$(IOPCORE_DEBUG) SMAP_UDPTTY=1
-	$(MAKE) -C iop/smap_udpfs    all DEBUG=$(IOPCORE_DEBUG) SMAP_UDPFS_BD=1
-	$(MAKE) -C iop/smap_udpfs    all DEBUG=$(IOPCORE_DEBUG) SMAP_UDPFS_IOMAN=1
-	$(MAKE) -C iop/smap_udpfs    all DEBUG=$(IOPCORE_DEBUG) SMAP_UDPFS_FHI=1
+	$(MAKE) -C iop/smap          all DEBUG=$(IOPCORE_DEBUG)
+	$(MAKE) -C iop/udpfs         all DEBUG=$(IOPCORE_DEBUG) UDPFS_UDPTTY=1
+	$(MAKE) -C iop/udpfs         all DEBUG=$(IOPCORE_DEBUG) UDPFS_BD=1
+	$(MAKE) -C iop/udpfs         all DEBUG=$(IOPCORE_DEBUG) UDPFS_IOMAN=1
+	$(MAKE) -C iop/udpfs         all DEBUG=$(IOPCORE_DEBUG) UDPFS_FHI=1
 	$(MAKE) -C iop/usbd_null     all DEBUG=$(IOPCORE_DEBUG)
 	$(MAKE) -C ee/ee_core        all EESIO_DEBUG=$(EESIO_DEBUG)
 	$(MAKE) -C ee/loader         all DEBUG=0
@@ -80,10 +82,11 @@ copy:
 	cp iop/patch_membo/irx/patch_membo.irx     ee/loader/modules
 	cp iop/patch_rc_uya/irx/patch_rc_uya.irx   ee/loader/modules
 	cp iop/smap_udpbd/irx/smap_udpbd.irx       ee/loader/modules
-	cp iop/smap_udpfs/irx/smap_udptty.irx      ee/loader/modules
-	cp iop/smap_udpfs/irx/smap_udpfs_bd.irx    ee/loader/modules
-	cp iop/smap_udpfs/irx/smap_udpfs_ioman.irx ee/loader/modules
-	cp iop/smap_udpfs/irx/smap_udpfs_fhi.irx   ee/loader/modules
+	cp iop/smap/irx/smap.irx                   ee/loader/modules
+	cp iop/udpfs/irx/udpfs_udptty.irx          ee/loader/modules
+	cp iop/udpfs/irx/udpfs_bd.irx              ee/loader/modules
+	cp iop/udpfs/irx/udpfs_ioman.irx           ee/loader/modules
+	cp iop/udpfs/irx/udpfs_fhi.irx             ee/loader/modules
 	cp ee/ee_core/ee_core.elf                  ee/loader/modules
 	cp $(PS2SDK)/iop/irx/udnl.irx              ee/loader/modules
 	cp $(PS2SDK)/iop/irx/udnl-t300.irx         ee/loader/modules
