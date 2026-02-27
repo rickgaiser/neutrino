@@ -1,7 +1,10 @@
+mstack_IMPORTS_start
+I_udp_bind
+I_udp_packet_init
+I_udp_packet_send_ll
+mstack_IMPORTS_end
+
 smap_IMPORTS_start
-I_SMAPGetMACAddress
-I_smap_transmit
-I_smap_register_rx_callback
 I_smap_fifo_read
 smap_IMPORTS_end
 
@@ -23,7 +26,7 @@ I_memset
 I_memcpy
 sysclib_IMPORTS_end
 
-#if defined(FEATURE_UDPTTY) || defined(FEATURE_UDPFS_IOMAN)
+#ifdef FEATURE_UDPFS_IOMAN
 ioman_IMPORTS_start
 I_open
 I_close

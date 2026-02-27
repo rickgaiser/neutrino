@@ -15,12 +15,13 @@ env = ["LE"]
 file = "smap.irx"
 env = ["LE", "EE"]
 [[module]]
-file = "udpfs_ioman.irx"
+file = "ministack.irx"
 args = ["ip=192.168.1.10"]
+env = ["LE", "EE"]
+[[module]]
+file = "udpfs_ioman.irx"
 env = ["LE"]
-
 [[module]]
 file = "udpfs_fhi.irx"
-args = ["ip=192.168.1.10"]
 func = "FHI_FILEID"
 env = ["EE"]

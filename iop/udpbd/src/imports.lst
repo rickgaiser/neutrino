@@ -1,7 +1,10 @@
+mstack_IMPORTS_start
+I_udp_bind
+I_udp_packet_init
+I_udp_packet_send_ll
+mstack_IMPORTS_end
+
 smap_IMPORTS_start
-I_SMAPGetMACAddress
-I_smap_transmit
-I_smap_register_rx_callback
 I_smap_fifo_read
 smap_IMPORTS_end
 
@@ -16,17 +19,6 @@ stdio_IMPORTS_start
 I_printf
 stdio_IMPORTS_end
 
-sysclib_IMPORTS_start
-I_strncmp
-sysclib_IMPORTS_end
-
-ioman_IMPORTS_start
-I_open
-I_close
-I_AddDrv
-I_DelDrv
-ioman_IMPORTS_end
-
 bdm_IMPORTS_start
 I_bdm_connect_bd
 I_bdm_disconnect_bd
@@ -39,9 +31,3 @@ I_SetEventFlag
 I_iSetEventFlag
 I_DeleteEventFlag
 thevent_IMPORTS_end
-
-thsemap_IMPORTS_start
-I_CreateSema
-I_SignalSema
-I_WaitSema
-thsemap_IMPORTS_end

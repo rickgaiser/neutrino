@@ -9,7 +9,10 @@ depends = ["i_bdm", "i_dev9_hidden"]
 file = "smap.irx"
 env = ["LE", "EE"]
 [[module]]
+file = "ministack.irx"
+args = ["ip=192.168.1.10"]
+env = ["LE", "EE"]
+[[module]]
 file = "udpbd.irx"
 #file = "udpfs_bd.irx" # Alternative driver based on UDPRDMA
-args = ["ip=192.168.1.10"]
 env = ["LE", "EE"]

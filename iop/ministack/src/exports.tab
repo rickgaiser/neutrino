@@ -1,0 +1,12 @@
+void _retonly(){};
+DECLARE_EXPORT_TABLE(mstack, 1, 0)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(_retonly)
+    DECLARE_EXPORT(udp_bind)
+    DECLARE_EXPORT(udp_packet_init)
+    DECLARE_EXPORT(udp_packet_send_ll)
+    DECLARE_EXPORT(ms_ip_set_ip)
+    DECLARE_EXPORT(ms_ip_get_ip)
+END_EXPORT_TABLE
