@@ -111,6 +111,7 @@ int udpfs_bd_init(void)
 
     /* Setup block device with fixed 512-byte sectors */
     g_udpbd.name = "udp";
+    g_udpbd.path = "udpbd";
     g_udpbd.devNr = 0;
     g_udpbd.parNr = 0;
     g_udpbd.sectorOffset = 0;

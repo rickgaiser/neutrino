@@ -646,8 +646,8 @@ int udpfs_core_bread(int32_t handle, uint64_t sector, void *buffer, uint32_t cou
 {
     uint32_t sectors_left = count;
 
-    M_DEBUG("udpfs_core_bread(handle=%d, sector=%llu, count=%u)\n",
-        handle, (unsigned long long)sector, count);
+    M_DEBUG("udpfs_core_bread(handle=%d, sector=%u, count=%u)\n",
+        handle, (unsigned int)sector, count);
 
     if (!udprdma_is_connected(g_socket))
         return -EIO;
@@ -693,8 +693,8 @@ int udpfs_core_bwrite(int32_t handle, uint64_t sector, const void *buffer, uint3
     uint32_t total_size = count * sector_size;
     int ret;
 
-    M_DEBUG("udpfs_core_bwrite(handle=%d, sector=%llu, count=%u)\n",
-        handle, (unsigned long long)sector, count);
+    M_DEBUG("udpfs_core_bwrite(handle=%d, sector=%u, count=%u)\n",
+        handle, (unsigned int)sector, count);
 
     if (!udprdma_is_connected(g_socket))
         return -EIO;
@@ -771,7 +771,7 @@ int udpfs_core_get_sector_count(int32_t handle)
     uint64_t total_bytes = (uint64_t)reply.size | ((uint64_t)reply.hisize << 32);
     uint32_t sector_count = (uint32_t)(total_bytes >> 9);  /* Divide by 512 */
 
-    M_DEBUG("udpfs: block device: %llu bytes, %u sectors\n", (unsigned long long)total_bytes, sector_count);
+    M_DEBUG("udpfs: block device: %u bytes, %u sectors\n", (unsigned int)total_bytes, sector_count);
 
     return sector_count;
 }

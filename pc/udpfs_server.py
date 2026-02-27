@@ -70,8 +70,6 @@ class MsgType(IntEnum):
     # Block I/O operations (UDPBD subset)
     BREAD_REQ     = 0x28
     BWRITE_REQ    = 0x2A
-    INFO_REQ      = 0x2C
-    INFO_REPLY    = 0x2D
 
 # PS2 file mode flags
 FIO_S_IFREG = 0x2000
@@ -235,7 +233,6 @@ class UdpfsServer:
             'write': 0,
             'bread': 0,
             'bwrite': 0,
-            'info': 0,
             'lseek': 0,
             'dread': 0,
             'getstat': 0,
@@ -438,24 +435,6 @@ class UdpfsServer:
                 return 'r+b'
         return 'rb'
 
-    def _get_handle_sector_info(self, handle: int) -> Tuple[int, int]:
-        """Get sector_size and sector_count for a handle"""
-        if handle == BLOCK_DEVICE_HANDLE:
-            return self.bd_sector_size, self.bd_sector_count
-
-        fh = self.handles.get(handle)
-        if fh is None or fh.is_dir:
-            return 0, 0
-
-        # For regular files, compute from file size
-        pos = fh.obj.tell()
-        fh.obj.seek(0, os.SEEK_END)
-        file_size = fh.obj.tell()
-        fh.obj.seek(pos)
-        sector_size = 512
-        sector_count = file_size // sector_size
-        return sector_size, sector_count
-
     # --- UDPRDMA packet handling ---
 
     def _handle_packet(self, data: bytes, addr: Tuple[str, int]):
@@ -578,8 +557,6 @@ class UdpfsServer:
             self._handle_bread(addr, actual_payload)
         elif msg_type == MsgType.BWRITE_REQ:
             self._handle_bwrite_req(addr, actual_payload)
-        elif msg_type == MsgType.INFO_REQ:
-            self._handle_info(addr, actual_payload)
         else:
             self._print_event(f"[{addr[0]}:{addr[1]}] Unknown message type: 0x{msg_type:02x}")
             self._send_ack(addr, is_ack=True)
@@ -886,6 +863,20 @@ class UdpfsServer:
 
         self.stats['getstat'] += 1
 
+        # Empty path = block device capacity query (BD variant sends no path)
+        if path == '' and BLOCK_DEVICE_HANDLE in self.handles:
+            total_bytes = self.bd_sector_size * self.bd_sector_count
+            stat_info = {
+                'mode': 0, 'attr': 0,
+                'size': total_bytes & 0xFFFFFFFF,
+                'hisize': (total_bytes >> 32) & 0xFFFFFFFF,
+                'ctime': b'\x00' * 8, 'atime': b'\x00' * 8, 'mtime': b'\x00' * 8,
+            }
+            if self.verbose:
+                self._print_event(f"[{addr[0]}:{addr[1]}] GETSTAT '' -> block device {total_bytes} bytes")
+            self._send_getstat_reply(addr, result=0, stat_info=stat_info)
+            return
+
         resolved = self._resolve_path(path)
         if resolved is None:
             self._send_getstat_reply(addr, result=-errno.EACCES)
@@ -1068,30 +1059,6 @@ class UdpfsServer:
             self._handle_write_data(addr, payload[16:])
         else:
             self._send_ack(addr, is_ack=True)
-
-    def _handle_info(self, addr: Tuple[str, int], payload: bytes):
-        """Handle INFO_REQ - return block device info for a handle"""
-        if len(payload) < 8:
-            self._send_ack(addr, is_ack=True)
-            return
-
-        _, _, _, _, handle = struct.unpack('<BBBBi', payload[:8])
-
-        self.stats['info'] += 1
-
-        fh = self.handles.get(handle)
-        if fh is None or fh.is_dir:
-            self._send_ack(addr, is_ack=True)
-            return
-
-        sector_size, sector_count = self._get_handle_sector_info(handle)
-
-        self._print_event(f"[{addr[0]}:{addr[1]}] INFO handle={handle} -> sectors={sector_count}, size={sector_size}")
-
-        reply = struct.pack('<BBBBII',
-            MsgType.INFO_REPLY, 0, 0, 0,
-            sector_size, sector_count)
-        self._send_data(addr, reply)
 
     # --- Send helpers ---
 
