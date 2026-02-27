@@ -71,7 +71,7 @@ void ms_ip_set_ip(uint32_t ip);
 uint32_t ms_ip_get_ip(void);
 
 
-int handle_rx_ipv4(void);
+int handle_rx_ipv4(const uint8_t *hdr, uint16_t hdr_len);
 
 
 #endif

@@ -613,7 +613,7 @@ int smap_init(int argc, char *argv[])
     return SetupNetDev();
 }
 
-int SMAPGetMACAddress(u8 *buffer)
+int SMAPGetMACAddress(uint8_t *buffer)
 {
     u32 mac_address_lo, mac_address_hi;
     volatile u8 *emac3_regbase;

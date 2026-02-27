@@ -99,53 +99,44 @@ static unsigned int _timeout_cb(void *arg)
  * Reads packet header from SMAP FIFO via smap_fifo_read and sets event flags.
  * For DATA packets, transfers payload to receive buffer via smap_fifo_read (DMA for large).
  */
-static int _ist(udp_socket_t *udp_socket, void *arg)
+static int _ist(udp_socket_t *udp_socket, void *arg, const uint8_t *hdr, uint16_t hdr_len)
 {
     struct udprdma_socket *s = (struct udprdma_socket *)arg;
-    uint32_t hdr_raw;
-    udprdma_hdr_t hdr;
+    const udprdma_pkt_disc_t *disc_pkt = (const udprdma_pkt_disc_t *)hdr;
+    udprdma_hdr_t base_hdr = disc_pkt->hdr;  /* offset 42-43: within 44-byte pre-read */
 
-    /* Read UDPRDMA header at frame offset 0x28 (aligned read; header in upper 16 bits) */
-    smap_fifo_read(0x28, &hdr_raw, 4);
-    hdr.raw = (uint16_t)(hdr_raw >> 16);
+    //M_DEBUG("_ist: type=%d seq=%d\n", base_hdr.packet_type, base_hdr.seq_nr);
 
-    //M_DEBUG("_ist: type=%d seq=%d\n", hdr.packet_type, hdr.seq_nr);
-
-    switch (hdr.packet_type) {
+    switch (base_hdr.packet_type) {
         case UDPRDMA_PT_DISCOVERY: {
-            uint32_t disc_raw;
-            uint16_t service_id;
-            smap_fifo_read(0x2C, &disc_raw, 4);
-            service_id = disc_raw & 0xFFFF;
+            udprdma_hdr_disc_t disc;
+            smap_fifo_read(0x2C, &disc, sizeof(udprdma_hdr_disc_t));
+            uint16_t service_id = disc.service_id;
             M_DEBUG("_ist: DISCOVERY svc=0x%04X\n", service_id);
 
             if (service_id == s->service_id) {
-                /* Read src IP from IP header (csum+srcip at offset 0x18, two u32 reads) */
-                uint32_t ipa, ipb;
-                smap_fifo_read(0x18, &ipa, 4);
-                smap_fifo_read(0x1C, &ipb, 4);
-                s->peer_ip = (ipb << 16) | (ipa >> 16);
-                s->peer_ip = ntohl(s->peer_ip);
+                s->peer_ip = IP_ADDR(disc_pkt->ip.addr_src.addr[0],
+                                     disc_pkt->ip.addr_src.addr[1],
+                                     disc_pkt->ip.addr_src.addr[2],
+                                     disc_pkt->ip.addr_src.addr[3]);
                 SetEventFlag(s->event_flag, EF_RX_DISC);
             }
             break;
         }
 
         case UDPRDMA_PT_INFORM: {
-            uint32_t info_raw;
-            uint16_t service_id;
-            smap_fifo_read(0x2C, &info_raw, 4);
-            service_id = info_raw & 0xFFFF;
+            udprdma_hdr_disc_t disc;
+            smap_fifo_read(0x2C, &disc, sizeof(udprdma_hdr_disc_t));
+            uint16_t service_id = disc.service_id;
             M_DEBUG("_ist: INFORM svc=0x%04X\n", service_id);
 
             if (service_id == s->service_id) {
-                uint32_t ipa, ipb;
-                smap_fifo_read(0x18, &ipa, 4);
-                smap_fifo_read(0x1C, &ipb, 4);
-                s->peer_ip = (ipb << 16) | (ipa >> 16);
-                s->peer_ip = ntohl(s->peer_ip);
+                s->peer_ip = IP_ADDR(disc_pkt->ip.addr_src.addr[0],
+                                     disc_pkt->ip.addr_src.addr[1],
+                                     disc_pkt->ip.addr_src.addr[2],
+                                     disc_pkt->ip.addr_src.addr[3]);
                 /* Next expected seq is INFORM's seq + 1 */
-                s->rx_seq_nr_expected = (hdr.seq_nr + 1) & 0xFFF;
+                s->rx_seq_nr_expected = (base_hdr.seq_nr + 1) & 0xFFF;
                 SetEventFlag(s->event_flag, EF_RX_INFO);
             }
             break;
@@ -153,7 +144,7 @@ static int _ist(udp_socket_t *udp_socket, void *arg)
 
         case UDPRDMA_PT_DATA: {
             udprdma_hdr_data_t data_hdr;
-            smap_fifo_read(0x2C, &data_hdr.raw, 4);
+            smap_fifo_read(0x2C, &data_hdr.raw, sizeof(udprdma_hdr_data_t));
             //M_DEBUG("_ist: DATA seq=%d flags=0x%02X bytes=%d\n",
             //    data_hdr.seq_nr_ack, data_hdr.flags, data_hdr.data_byte_count);
 
@@ -169,7 +160,7 @@ static int _ist(udp_socket_t *udp_socket, void *arg)
                 uint32_t payload_size = hdr_size + data_hdr.data_byte_count;
 
                 if (payload_size > 0 && s->rx_buffer != NULL) {
-                    if (hdr.seq_nr == s->rx_seq_nr_expected) {
+                    if (base_hdr.seq_nr == s->rx_seq_nr_expected) {
                         /* Extract app header via smap_fifo_read PIO (first packet only) */
                         if (hdr_size > 0) {
                             if (s->rx_hdr_buffer != NULL && s->rx_hdr_received == 0) {
@@ -194,7 +185,7 @@ static int _ist(udp_socket_t *udp_socket, void *arg)
                             s->rx_received += xfer_size;
                         }
 
-                        s->rx_seq_nr_expected = (hdr.seq_nr + 1) & 0xFFF;
+                        s->rx_seq_nr_expected = (base_hdr.seq_nr + 1) & 0xFFF;
 
                         /* Complete when FIN received or buffer full */
                         if ((data_hdr.flags & UDPRDMA_DF_FIN) ||
@@ -215,7 +206,7 @@ static int _ist(udp_socket_t *udp_socket, void *arg)
         }
 
         default:
-            M_DEBUG("udprdma: unknown packet type %d\n", hdr.packet_type);
+            M_DEBUG("udprdma: unknown packet type %d\n", base_hdr.packet_type);
             break;
     }
 

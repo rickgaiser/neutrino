@@ -26,7 +26,7 @@ typedef struct
 
 
 int arp_add_entry(uint32_t ip, uint8_t mac[6]);
-int handle_rx_arp(void);
+int handle_rx_arp(const uint8_t *hdr);
 
 
 #endif

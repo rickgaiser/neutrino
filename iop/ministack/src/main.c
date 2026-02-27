@@ -43,8 +43,8 @@ int _start(int argc, char *argv[])
 {
     int i;
 
-    /* Register RX callback with the smap driver */
-    smap_register_rx_callback(handle_rx_eth);
+    /* Register RX callback with the smap driver, pre-reading 44 bytes (ETH+IP+UDP + app hdr) */
+    smap_register_rx_callback(handle_rx_eth, 44);
 
     /* Parse command line IP address */
     for (i=1; i<argc; i++) {

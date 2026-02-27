@@ -55,20 +55,15 @@ int ip_packet_send_ll(ip_packet_t *pkt, uint16_t pktdatasize, const void *data, 
     return eth_packet_send_ll((eth_packet_t *)pkt, sizeof(ip_header_t) + pktdatasize, data, datasize);
 }
 
-int handle_rx_ipv4(void)
+int handle_rx_ipv4(const uint8_t *hdr, uint16_t hdr_len)
 {
-    uint32_t iph;
-    uint8_t protocol;
+    const ip_packet_t *pkt = (const ip_packet_t *)hdr;
 
-    /* IP protocol byte is at frame offset 0x17 (flags+frag+ttl+proto word at 0x14, proto is >> 24) */
-    smap_fifo_read(0x14, &iph, 4);
-    protocol = iph >> 24;
-
-    switch (protocol) {
+    switch (pkt->ip.proto) {
         case IP_PROTOCOL_UDP:
-            return handle_rx_udp();
+            return handle_rx_udp(hdr, hdr_len);
         default:
-            //M_DEBUG("ministack: ipv4: protocol 0x%X\n", protocol);
+            //M_DEBUG("ministack: ipv4: protocol 0x%X\n", pkt->ip.proto);
             return -1;
     }
 }

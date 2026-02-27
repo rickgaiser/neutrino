@@ -41,18 +41,17 @@ int udp_packet_send_ll(udp_socket_t *socket, udp_packet_t *pkt, uint16_t pktdata
     return ip_packet_send_ll((ip_packet_t *)pkt, sizeof(udp_header_t) + pktdatasize, data, datasize);
 }
 
-int handle_rx_udp(void)
+int handle_rx_udp(const uint8_t *hdr, uint16_t hdr_len)
 {
-    uint16_t dport_raw, dport;
+    const udp_packet_t *pkt = (const udp_packet_t *)hdr;
+    uint16_t dport;
     int i;
 
-    /* UDP dst port is at frame offset 0x24 (2 bytes) */
-    smap_fifo_read(0x24, &dport_raw, 2);
-    dport = ntohs(dport_raw);
+    dport = ntohs(pkt->udp.port_dst);
 
     for (i=0; i<UDP_MAX_PORTS; i++) {
         if (dport == udp_ports[i].port_src)
-            return udp_ports[i].handler(&udp_ports[i], udp_ports[i].handler_arg);
+            return udp_ports[i].handler(&udp_ports[i], udp_ports[i].handler_arg, hdr, hdr_len);
     }
 
     //M_DEBUG("ministack: udp: dport 0x%X\n", dport);

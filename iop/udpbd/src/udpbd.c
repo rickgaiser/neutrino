@@ -374,31 +374,28 @@ static inline void _cmd_write_done(struct SUDPBDv2_Header *hdr)
     return;
 }
 
-static int udpbd_isr(udp_socket_t *socket, void *arg)
+static int udpbd_isr(udp_socket_t *socket, void *arg, const uint8_t *hdr, uint16_t hdr_len)
 {
-    struct SUDPBDv2_Header_Padded32 hdr32;
+    const udpbd_pkt_t *pkt = (const udpbd_pkt_t *)hdr;
 
-    // Read padded u32 at offset 0x28: 2 bytes UDP checksum (padding) + 2 bytes UDPBD header
-    smap_fifo_read(0x28, &hdr32.cmd32, 4);
-
-    if (hdr32.hdr.cmdid != g_cmdid) {
-        M_DEBUG("%s: unexpected packet (cmd %d, cmdid %d, cmdpkt %d)\n", __func__, hdr32.hdr.cmd, hdr32.hdr.cmdid, hdr32.hdr.cmdpkt);
+    if (pkt->bd.cmdid != g_cmdid) {
+        M_DEBUG("%s: unexpected packet (cmd %d, cmdid %d, cmdpkt %d)\n", __func__, pkt->bd.cmd, pkt->bd.cmdid, pkt->bd.cmdpkt);
         return 0;
     }
 
-    switch (hdr32.hdr.cmd)
+    switch (pkt->bd.cmd)
     {
         case UDPBD_CMD_INFO_REPLY:
-            _cmd_info_reply(&hdr32.hdr);
+            _cmd_info_reply((struct SUDPBDv2_Header *)&pkt->bd);
             break;
         case UDPBD_CMD_READ_RDMA:
-            _cmd_read_rdma(&hdr32.hdr);
+            _cmd_read_rdma((struct SUDPBDv2_Header *)&pkt->bd);
             break;
         case UDPBD_CMD_WRITE_DONE:
-            _cmd_write_done(&hdr32.hdr);
+            _cmd_write_done((struct SUDPBDv2_Header *)&pkt->bd);
             break;
         default:
-            M_DEBUG("%s: invalid (cmd %d, cmdid %d, cmdpkt %d)\n", __func__, hdr32.hdr.cmd, hdr32.hdr.cmdid, hdr32.hdr.cmdpkt);
+            M_DEBUG("%s: invalid (cmd %d, cmdid %d, cmdpkt %d)\n", __func__, pkt->bd.cmd, pkt->bd.cmdid, pkt->bd.cmdpkt);
     };
 
     return 0;

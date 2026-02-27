@@ -69,7 +69,7 @@ static inline int eth_packet_send(eth_packet_t *pkt, uint16_t size)
     return eth_packet_send_ll(pkt, size, NULL, 0);
 }
 
-int handle_rx_eth(uint16_t len);
+int handle_rx_eth(uint16_t len, const uint8_t *hdr, uint16_t hdr_len);
 
 
 #endif

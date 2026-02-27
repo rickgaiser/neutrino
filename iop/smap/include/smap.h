@@ -13,8 +13,11 @@ void smap_fifo_read(uint16_t offset, void *dst, uint32_t bytes);
 
 /**
  * Register a callback for received Ethernet frames.
+ * SMAP will pre-read n_bytes from the start of each frame into a buffer and pass it to cb.
+ * @param cb       Callback invoked for each received frame (from interrupt context)
+ * @param n_bytes  Number of header bytes to pre-read (max 64); 0 = no pre-read
  */
-int smap_register_rx_callback(int (*cb)(uint16_t len));
+int smap_register_rx_callback(int (*cb)(uint16_t len, const uint8_t *hdr, uint16_t hdr_len), uint16_t n_bytes);
 
 /**
  * Read the hardware MAC address into a 6-byte buffer.

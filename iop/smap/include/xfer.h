@@ -22,7 +22,7 @@ int smap_transmit(void *header, uint16_t headersize, const void *data, uint16_t 
  * @param cb Callback: receives frame length; returns 0 on success, -1 to drop
  * @return 0 on success
  */
-int smap_register_rx_callback(int (*cb)(uint16_t len));
+int smap_register_rx_callback(int (*cb)(uint16_t len, const uint8_t *hdr, uint16_t hdr_len), uint16_t n_bytes);
 
 /**
  * Read bytes from the current RX frame in the SMAP FIFO.

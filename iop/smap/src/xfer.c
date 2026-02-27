@@ -15,7 +15,9 @@ static int tx_done_ev = -1;
 
 /* RX callback state */
 static u16 g_current_frame_ptr = 0;
-static int (*g_rx_callback)(u16 len) = NULL;
+static uint8_t g_hdr_buf[64] __attribute__((aligned(4)));
+static uint16_t g_hdr_read_bytes = 0;
+static int (*g_rx_callback)(uint16_t len, const uint8_t *hdr, uint16_t hdr_len) = NULL;
 
 
 static void Dev9PreDmaCbHandler(int bcr, int dir)
@@ -96,9 +98,10 @@ static inline void CopyToFIFO(volatile u8 *smap_regbase, const void *buffer, uns
     }
 }
 
-int smap_register_rx_callback(int (*cb)(u16 len))
+int smap_register_rx_callback(int (*cb)(uint16_t len, const uint8_t *hdr, uint16_t hdr_len), uint16_t n_bytes)
 {
     g_rx_callback = cb;
+    g_hdr_read_bytes = (n_bytes > sizeof(g_hdr_buf)) ? sizeof(g_hdr_buf) : n_bytes;
     return 0;
 }
 
@@ -107,7 +110,7 @@ int smap_register_rx_callback(int (*cb)(u16 len))
  * Uses DMA for transfers >= 64 bytes, PIO otherwise.
  * Seeks to (g_current_frame_ptr + offset) before reading.
  */
-void smap_fifo_read(u16 offset, void *dst, u32 bytes)
+void smap_fifo_read(uint16_t offset, void *dst, uint32_t bytes)
 {
     volatile u8 *smap_regbase = SmapDriverData.smap_regbase;
     u32 dma_bytes = 0;
@@ -178,8 +181,14 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData)
                 SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
             } else {
                 g_current_frame_ptr = pointer;
-                if (g_rx_callback == NULL || g_rx_callback(length) < 0) {
-                    SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
+                if (g_hdr_read_bytes > 0) {
+                    uint16_t hdr_len = (g_hdr_read_bytes < length) ? g_hdr_read_bytes : length;
+                    smap_fifo_read(0, g_hdr_buf, hdr_len);
+                    if (g_rx_callback == NULL || g_rx_callback(length, g_hdr_buf, hdr_len) < 0)
+                        SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
+                } else {
+                    if (g_rx_callback == NULL || g_rx_callback(length, NULL, 0) < 0)
+                        SMAP_REG16(SMAP_R_RXFIFO_RD_PTR) = pointer + LengthRounded;
                 }
             }
 

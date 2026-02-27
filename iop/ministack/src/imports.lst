@@ -2,7 +2,6 @@ smap_IMPORTS_start
 I_SMAPGetMACAddress
 I_smap_transmit
 I_smap_register_rx_callback
-I_smap_fifo_read
 smap_IMPORTS_end
 
 ioman_IMPORTS_start

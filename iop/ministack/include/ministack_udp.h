@@ -26,7 +26,7 @@ typedef struct
 } __attribute__((packed, aligned(4))) udp_packet_t;
 
 struct udp_socket;
-typedef int (*udp_port_handler)(struct udp_socket *socket, void *arg);
+typedef int (*udp_port_handler)(struct udp_socket *socket, void *arg, const uint8_t *hdr, uint16_t hdr_len);
 typedef struct udp_socket
 {
     uint16_t port_src;
@@ -35,7 +35,7 @@ typedef struct udp_socket
 } udp_socket_t;
 
 /**
- * Bind to UDP port, and start receiving UDP messages
+ * Bind to UDP port, and start receiving UDP messages.
  */
 udp_socket_t *udp_bind(uint16_t port_src, udp_port_handler handler, void *handler_arg);
 
@@ -58,7 +58,7 @@ static inline int udp_packet_send(udp_socket_t *socket, udp_packet_t *pkt, uint1
 }
 
 
-int handle_rx_udp(void);
+int handle_rx_udp(const uint8_t *hdr, uint16_t hdr_len);
 
 
 #endif

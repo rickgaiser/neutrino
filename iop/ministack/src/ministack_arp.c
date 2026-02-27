@@ -1,6 +1,6 @@
 #include "ministack_arp.h"
 #include "ministack_ip.h"
-#include "smap.h"
+#include "smap.h" /* for SMAPGetMACAddress, smap_transmit (via eth_packet_send_ll) */
 
 #include <stdio.h>
 
@@ -47,22 +47,18 @@ int arp_add_entry(uint32_t ip, uint8_t mac[6])
     return -1;
 }
 
-int handle_rx_arp(void)
+int handle_rx_arp(const uint8_t *hdr)
 {
-    arp_packet_t req;
+    const arp_packet_t *req = (const arp_packet_t *)hdr;
     static arp_packet_t reply;
-    uint32_t *parp = (uint32_t*)&req;
 
-    /* Read ETH type + ARP header (32 bytes starting at frame offset 12) */
-    smap_fifo_read(12, &parp[3], 32);
-
-    if (ntohs(req.arp.oper) == 1 && ntohl(req.arp.target_ip) == ms_ip_get_ip()) {
-        reply.eth.addr_dst[0] = req.arp.sender_mac[0];
-        reply.eth.addr_dst[1] = req.arp.sender_mac[1];
-        reply.eth.addr_dst[2] = req.arp.sender_mac[2];
-        reply.eth.addr_dst[3] = req.arp.sender_mac[3];
-        reply.eth.addr_dst[4] = req.arp.sender_mac[4];
-        reply.eth.addr_dst[5] = req.arp.sender_mac[5];
+    if (ntohs(req->arp.oper) == 1 && ntohl(req->arp.target_ip) == ms_ip_get_ip()) {
+        reply.eth.addr_dst[0] = req->arp.sender_mac[0];
+        reply.eth.addr_dst[1] = req->arp.sender_mac[1];
+        reply.eth.addr_dst[2] = req->arp.sender_mac[2];
+        reply.eth.addr_dst[3] = req->arp.sender_mac[3];
+        reply.eth.addr_dst[4] = req->arp.sender_mac[4];
+        reply.eth.addr_dst[5] = req->arp.sender_mac[5];
         SMAPGetMACAddress(reply.eth.addr_src);
         reply.eth.type = htons(ETH_TYPE_ARP);
         reply.arp.htype = htons(1); // ethernet
@@ -71,14 +67,14 @@ int handle_rx_arp(void)
         reply.arp.plen = 4;
         reply.arp.oper = htons(2); // reply
         SMAPGetMACAddress(reply.arp.sender_mac);
-        reply.arp.sender_ip     = req.arp.target_ip;
-        reply.arp.target_mac[0] = req.arp.sender_mac[0];
-        reply.arp.target_mac[1] = req.arp.sender_mac[1];
-        reply.arp.target_mac[2] = req.arp.sender_mac[2];
-        reply.arp.target_mac[3] = req.arp.sender_mac[3];
-        reply.arp.target_mac[4] = req.arp.sender_mac[4];
-        reply.arp.target_mac[5] = req.arp.sender_mac[5];
-        reply.arp.target_ip     = req.arp.sender_ip;
+        reply.arp.sender_ip     = req->arp.target_ip;
+        reply.arp.target_mac[0] = req->arp.sender_mac[0];
+        reply.arp.target_mac[1] = req->arp.sender_mac[1];
+        reply.arp.target_mac[2] = req->arp.sender_mac[2];
+        reply.arp.target_mac[3] = req->arp.sender_mac[3];
+        reply.arp.target_mac[4] = req->arp.sender_mac[4];
+        reply.arp.target_mac[5] = req->arp.sender_mac[5];
+        reply.arp.target_ip     = req->arp.sender_ip;
         eth_packet_send_ll((eth_packet_t *)&reply, sizeof(arp_header_t), NULL, 0);
     }
 
