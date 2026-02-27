@@ -6,7 +6,10 @@ depends = ["i_bdm", "i_dev9_hidden"]
 
 # Modules to load
 [[module]]
-file = "smap_udpbd.irx"
-#file = "smap_udpfs_bd.irx" # Alternative driver based on UDPRDMA
+file = "smap.irx"
+env = ["LE", "EE"]
+[[module]]
+file = "udpbd.irx"
+#file = "udpfs_bd.irx" # Alternative driver based on UDPRDMA
 args = ["ip=192.168.1.10"]
 env = ["LE", "EE"]
