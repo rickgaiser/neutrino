@@ -4,6 +4,10 @@
 *.IRX
 *.map
 *_irx.c
+*.pyc
+*.raw
+*.yaml
+pcsx2*
 
 obj/
 obj.*/
