@@ -16,19 +16,38 @@ Examples:
     python udpfs_server.py -b game.iso -d /games        # Both block device and filesystem
     python udpfs_server.py -b game.iso --sector-size 2048  # Custom sector size
     python udpfs_server.py -b game.iso --read-only      # Read-only mode
+    python udpfs_server.py -d /games --enable-compression  # Transparent .zso/.cso decompression
+
+Compression Support:
+    With --enable-compression, the server transparently decompresses .zso (LZ4) and 
+    .cso (zlib) files. Compressed files appear as .iso in directory listings.
+    Requires 'lz4' package for ZSO support: pip install lz4
 """
 
 import argparse
 import errno
+import gzip
 import math
 import os
 import socket
 import struct
 import sys
 import time
+import zlib
+from collections import OrderedDict
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Dict, List, Optional, Tuple, Union
+
+# Compressed ISO support
+from compressed_iso import CompressedFileWrapper, ZsoFileWrapper, CsoFileWrapper
+
+# Check LZ4 availability for ZSO format
+try:
+    import lz4
+    LZ4_AVAILABLE = True
+except ImportError:
+    LZ4_AVAILABLE = False
 
 
 # UDPRDMA Protocol Constants
@@ -86,6 +105,65 @@ MAX_WINDOW_RETRIES = 4    # Max retries waiting for window ACK (matches IOP)
 
 # Fixed handle for block device
 BLOCK_DEVICE_HANDLE = 0
+
+# Compressed file format constants (for get_compressed_info)
+ZSO_MAGIC = b'ZSO\x00'
+CSO_MAGIC = 0x4F534943  # "CISO"
+
+
+def open_compressed(file_path: str, cache_size: int = None) -> Optional[CompressedFileWrapper]:
+    """Open a compressed file and return appropriate wrapper based on extension.
+    
+    Args:
+        file_path: Path to the file
+        cache_size: Number of blocks to cache (default: 32)
+        
+    Returns:
+        CompressedFileWrapper subclass instance, or None if unsupported format
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    
+    if ext == '.zso':
+        if not LZ4_AVAILABLE:
+            return None
+        return ZsoFileWrapper(file_path, cache_size)
+    elif ext == '.cso':
+        return CsoFileWrapper(file_path, cache_size)
+    
+    return None
+
+
+def get_compressed_info(file_path: str) -> Optional[Tuple[int, str]]:
+    """
+    Get info about a compressed file without fully opening it.
+    Returns (uncompressed_size, format_name) or None if not a supported compressed file.
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(24)
+            if len(header) < 16:
+                return None
+            
+            magic = header[0:4]
+            magic_int = struct.unpack('<I', magic)[0]
+            
+            if ext == '.zso':
+                if magic == ZSO_MAGIC:
+                    uncompressed_size = struct.unpack('<Q', header[8:16])[0]
+                    return (uncompressed_size, 'ZSO')
+                elif magic == b'ZISO':
+                    uncompressed_size = struct.unpack('<Q', header[8:16])[0]
+                    return (uncompressed_size, 'ZISO')
+            elif ext == '.cso':
+                if magic_int == CSO_MAGIC:
+                    uncompressed_size = struct.unpack('<Q', header[8:16])[0]
+                    return (uncompressed_size, 'CSO')
+    except (IOError, struct.error):
+        pass
+    
+    return None
 
 
 @dataclass
@@ -168,12 +246,16 @@ class UdpfsServer:
                  block_device: Optional[str] = None,
                  port: int = UDPFS_PORT,
                  sector_size: int = 512,
-                 read_only: bool = False, verbose: bool = False):
+                 read_only: bool = False, verbose: bool = False,
+                 enable_compression: bool = False,
+                 compression_cache_size: int = 32):
         self.root_dir = os.path.realpath(root_dir) if root_dir else None
         self.port = port
         self.sector_size = sector_size
         self.read_only = read_only
         self.verbose = verbose
+        self.enable_compression = enable_compression
+        self.compression_cache_size = compression_cache_size
 
         if self.root_dir and not os.path.isdir(self.root_dir):
             print(f"Error: '{root_dir}' is not a directory")
@@ -260,6 +342,12 @@ class UdpfsServer:
                   f"sector_size={self.bd_sector_size}")
         print(f"  Port: {self.port} (0x{self.port:04X})")
         print(f"  Mode: {'read-only' if self.read_only else 'read-write'}")
+        if self.enable_compression:
+            formats = []
+            if LZ4_AVAILABLE:
+                formats.append('ZSO')
+            formats.append('CSO')
+            print(f"  Compression: enabled ({', '.join(formats)})")
         print(f"  Listening...")
         print()
 
@@ -344,7 +432,54 @@ class UdpfsServer:
 
         # Normalize separators
         client_path = client_path.replace('\\', '/')
+        
+        # Resolve
+        resolved = os.path.realpath(os.path.join(self.root_dir, client_path))
 
+        # Ensure within root
+        if not resolved.startswith((self.root_dir + os.sep).replace('\\\\', '\\')) and resolved != self.root_dir:
+            return None
+
+        return resolved
+
+    def _transform_compressed_name(self, name: str) -> str:
+        """Transform .zso/.cso extensions to .iso for directory listing."""
+        if not self.enable_compression:
+            return name
+        lower_name = name.lower()
+        for ext in ['.zso', '.cso']:
+            if lower_name.endswith(ext):
+                return name[:-len(ext)] + '.iso'
+        return name
+
+    def _find_compressed_version(self, iso_path: str) -> Optional[str]:
+        """Check if a compressed version of the ISO exists."""
+        if not self.enable_compression:
+            return None
+        if not iso_path.lower().endswith('.iso'):
+            return None
+        for ext in ['.zso', '.cso']:
+            compressed = iso_path[:-4] + ext
+            if os.path.exists(compressed):
+                return compressed
+        return None
+
+    def _get_compressed_stat(self, file_path: str, original_stat) -> Optional[dict]:
+        """Get stat info for a compressed file, returning uncompressed size."""
+        info = get_compressed_info(file_path)
+        if info is None:
+            return None
+        
+        uncompressed_size, format_name = info
+        return {
+            'mode': FIO_S_IFREG,
+            'attr': 0,
+            'size': uncompressed_size & 0xFFFFFFFF,
+            'hisize': (uncompressed_size >> 32) & 0xFFFFFFFF,
+            'ctime': self._encode_time(original_stat.st_ctime),
+            'atime': self._encode_time(original_stat.st_atime),
+            'mtime': self._encode_time(original_stat.st_mtime),
+        }
         # Resolve
         resolved = os.path.realpath(os.path.join(self.root_dir, client_path))
 
@@ -576,7 +711,22 @@ class UdpfsServer:
         self.stats['open'] += 1
 
         resolved = self._resolve_path(path)
-        if resolved is None:
+        
+        # Check for compressed version when .iso is requested but file doesn't exist
+        compressed_resolved = None
+        if self.enable_compression and path.lower().endswith('.iso'):
+            # Check if the .iso file doesn't exist
+            if resolved is None or not os.path.exists(resolved):
+                base_path = path[:-4]  # Remove .iso
+                for ext in ['.zso', '.cso']:
+                    compressed_path = base_path + ext
+                    compressed_resolved = self._resolve_path(compressed_path)
+                    if compressed_resolved and os.path.exists(compressed_resolved):
+                        break
+                    else:
+                        compressed_resolved = None
+        
+        if resolved is None and compressed_resolved is None:
             self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> EACCES (path traversal or no root_dir)")
             self._send_open_reply(addr, -errno.EACCES)
             return
@@ -603,18 +753,70 @@ class UdpfsServer:
                 self._send_open_reply(addr, -errno.EACCES)
                 return
 
+            # Check if we should open compressed version
+            actual_resolved = compressed_resolved if compressed_resolved else resolved
+            
+            # Check if the file exists
+            if not os.path.exists(actual_resolved):
+                self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> ENOENT (file not found)")
+                self._send_open_reply(addr, -errno.ENOENT)
+                return
+            
+            # Check if the file is a compressed format
+            is_compressed = False
+            if self.enable_compression:
+                lower_path = actual_resolved.lower()
+                if lower_path.endswith('.zso') or lower_path.endswith('.cso'):
+                    is_compressed = True
+            
             py_mode = self._flags_to_mode(flags)
             try:
                 # Create parent directories if O_CREAT and they don't exist
-                if (flags & 0x0200) and not os.path.exists(os.path.dirname(resolved)):
-                    os.makedirs(os.path.dirname(resolved), exist_ok=True)
+                if (flags & 0x0200) and not os.path.exists(os.path.dirname(actual_resolved)):
+                    os.makedirs(os.path.dirname(actual_resolved), exist_ok=True)
 
-                f = open(resolved, py_mode)
-                st = os.fstat(f.fileno())
-                stat_info = self._stat_to_bytes(st)
-                handle = self._alloc_handle(f, is_dir=False)
+                if is_compressed:
+                    # Open compressed file with wrapper
+                    try:
+                        wrapper = open_compressed(actual_resolved, self.compression_cache_size)
+                        if wrapper is None:
+                            # Fall back to regular open if wrapper creation fails
+                            f = open(actual_resolved, py_mode)
+                            st = os.fstat(f.fileno())
+                            stat_info = self._stat_to_bytes(st)
+                            handle = self._alloc_handle(f, is_dir=False)
+                        else:
+                            # Use wrapper for handle
+                            st = os.stat(actual_resolved)
+                            stat_info = self._get_compressed_stat(actual_resolved, st)
+                            if stat_info is None:
+                                stat_info = self._stat_to_bytes(st)
+                            handle = self._alloc_handle(wrapper, is_dir=False)
+                            uncompressed_size = wrapper.uncompressed_size
+                            if handle < 0:
+                                wrapper.close()
+                                self._send_open_reply(addr, handle)
+                                return
+                            display_path = path if compressed_resolved else path
+                            self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{display_path}' -> handle={handle}, size={uncompressed_size} (compressed)")
+                            self._send_open_reply(addr, handle, stat_info=stat_info)
+                            return
+                    except (ImportError, ValueError) as e:
+                        # Fall back to regular open if compression fails
+                        self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> compression error: {e}, falling back")
+                        f = open(actual_resolved, py_mode)
+                        st = os.fstat(f.fileno())
+                        stat_info = self._stat_to_bytes(st)
+                        handle = self._alloc_handle(f, is_dir=False)
+                else:
+                    f = open(actual_resolved, py_mode)
+                    st = os.fstat(f.fileno())
+                    stat_info = self._stat_to_bytes(st)
+                    handle = self._alloc_handle(f, is_dir=False)
+                
                 if handle < 0:
-                    f.close()
+                    if 'f' in dir():
+                        f.close()
                     self._send_open_reply(addr, handle)
                     return
                 self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> handle={handle}, size={st.st_size}")
@@ -841,12 +1043,28 @@ class UdpfsServer:
 
         try:
             st = entry.stat(follow_symlinks=False)
+            
+            # Check if this is a compressed file and transform display
+            display_name = entry.name
             stat_info = self._stat_to_bytes(st)
+            
+            if self.enable_compression:
+                lower_name = entry.name.lower()
+                if lower_name.endswith('.zso') or lower_name.endswith('.cso'):
+                    # Transform name to .iso
+                    display_name = self._transform_compressed_name(entry.name)
+                    # Get uncompressed size
+                    compressed_stat = self._get_compressed_stat(entry.path, st)
+                    if compressed_stat:
+                        stat_info = compressed_stat
 
             if self.verbose:
-                self._print_event(f"[{addr[0]}:{addr[1]}] DREAD handle={handle} -> '{entry.name}'")
+                if display_name != entry.name:
+                    self._print_event(f"[{addr[0]}:{addr[1]}] DREAD handle={handle} -> '{display_name}' (from {entry.name})")
+                else:
+                    self._print_event(f"[{addr[0]}:{addr[1]}] DREAD handle={handle} -> '{entry.name}'")
 
-            self._send_dread_reply(addr, result=1, name=entry.name, stat_info=stat_info)
+            self._send_dread_reply(addr, result=1, name=display_name, stat_info=stat_info)
         except OSError as e:
             self._print_event(f"[{addr[0]}:{addr[1]}] DREAD stat error: {e}")
             # Skip this entry and return end-of-dir
@@ -879,15 +1097,41 @@ class UdpfsServer:
 
         resolved = self._resolve_path(path)
         if resolved is None:
+            # Check for compressed version when .iso is requested
+            if self.enable_compression and path.lower().endswith('.iso'):
+                # Try to find compressed version
+                base_path = path[:-4]  # Remove .iso
+                for ext in ['.zso', '.cso']:
+                    compressed_path = base_path + ext
+                    compressed_resolved = self._resolve_path(compressed_path)
+                    if compressed_resolved and os.path.exists(compressed_resolved):
+                        try:
+                            st = os.stat(compressed_resolved)
+                            compressed_stat = self._get_compressed_stat(compressed_resolved, st)
+                            if compressed_stat:
+                                if self.verbose:
+                                    self._print_event(f"[{addr[0]}:{addr[1]}] GETSTAT '{path}' -> compressed size={compressed_stat['size']} (from {compressed_path})")
+                                self._send_getstat_reply(addr, result=0, stat_info=compressed_stat)
+                                return
+                        except OSError:
+                            pass
             self._send_getstat_reply(addr, result=-errno.EACCES)
             return
 
         try:
             st = os.stat(resolved)
             stat_info = self._stat_to_bytes(st)
+            
+            # Check if this is a compressed file
+            if self.enable_compression:
+                lower_path = resolved.lower()
+                if lower_path.endswith('.zso') or lower_path.endswith('.cso'):
+                    compressed_stat = self._get_compressed_stat(resolved, st)
+                    if compressed_stat:
+                        stat_info = compressed_stat
 
             if self.verbose:
-                self._print_event(f"[{addr[0]}:{addr[1]}] GETSTAT '{path}' -> size={st.st_size}")
+                self._print_event(f"[{addr[0]}:{addr[1]}] GETSTAT '{path}' -> size={stat_info['size']}")
 
             self._send_getstat_reply(addr, result=0, stat_info=stat_info)
         except OSError as e:
@@ -1469,6 +1713,18 @@ def main():
         action='store_true',
         help='Verbose output'
     )
+    parser.add_argument(
+        '--enable-compression', '-c',
+        action='store_true',
+        help='Enable transparent decompression of .zso (LZ4) and .cso (zlib) files. '
+             'Compressed files appear as .iso in directory listings.'
+    )
+    parser.add_argument(
+        '--compression-cache-size',
+        type=int,
+        default=32,
+        help='Number of decompressed blocks to cache per file (default: 32)'
+    )
 
     args = parser.parse_args()
 
@@ -1483,13 +1739,20 @@ def main():
         print(f"Error: '{args.block_device}' not found")
         sys.exit(1)
 
+    # Check LZ4 availability if compression is enabled
+    if args.enable_compression and not LZ4_AVAILABLE:
+        print("Warning: LZ4 library not available. ZSO files will not be supported.")
+        print("Install with: pip install lz4")
+
     server = UdpfsServer(
         root_dir=args.root_dir,
         block_device=args.block_device,
         port=args.port,
         sector_size=args.sector_size,
         read_only=args.read_only,
-        verbose=args.verbose
+        verbose=args.verbose,
+        enable_compression=args.enable_compression,
+        compression_cache_size=args.compression_cache_size
     )
     server.run()
 
