@@ -24,10 +24,11 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 // Neutrino IOP modules
 #include "../../../iop/common/cdvd_config.h"
 #include "../../../iop/common/fakemod.h"
-#include "../../../iop/common/fhi_bd.h"
-#include "../../../iop/common/fhi_bd_defrag.h"
-#include "../../../iop/common/fhi_fileid.h"
 #include "../../../iop/common/fhi.h"
+
+// Neutrino EE loader
+#include "fhi_config.h"
+#include "module_utils.h"
 
 // Neutrino
 #include "elf.h"
@@ -925,126 +926,6 @@ void *module_get_settings(struct SModule *mod)
 }
 
 /*
- * FHI builder functions
- */
-int fhi_bd_defrag_add_file_by_fd(struct fhi_bd_defrag *bdm, int fhi_fid, int fd)
-{
-    int i, iop_fd;
-    off_t size;
-    unsigned int frag_start = 0;
-    struct fhi_bd_defrag_info *frag = &bdm->file[fhi_fid];
-
-    // Get actual IOP fd
-    iop_fd = ps2sdk_get_iop_fd(fd);
-
-    // Get file size
-    size = lseek64(fd, 0, SEEK_END);
-
-    // Get current frag use count
-    for (i = 0; i < FHI_MAX_FILES; i++)
-        frag_start += bdm->file[i].frag_count;
-
-    // Set fragment file
-    frag->frag_start = frag_start;
-    frag->frag_count = fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_FRAGLIST, NULL, 0, (void *)&bdm->frags[frag->frag_start], sizeof(bd_fragment_t) * (BDM_MAX_FRAGS - frag->frag_start));
-    frag->size = size;
-
-    // Check for max fragments
-    if ((frag->frag_start + frag->frag_count) > BDM_MAX_FRAGS) {
-        printf("Too many fragments (%d)\n", frag->frag_start + frag->frag_count);
-        return -1;
-    }
-
-    // Debug info
-    printf("file[%d] fragments: start=%u, count=%u\n", fhi_fid, frag->frag_start, frag->frag_count);
-    for (i=0; i<frag->frag_count; i++)
-        printf("- frag[%d] start=%u, count=%u\n", i, (unsigned int)bdm->frags[frag->frag_start+i].sector, bdm->frags[frag->frag_start+i].count);
-
-    // Set BDM driver name and number
-    // NOTE: can be set only once! Check?
-    bdm->drvName = (uint32_t)fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-    fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
-    char *drvName = (char *)&bdm->drvName;
-    printf("Using BDM device: %s%d\n", drvName, (int)bdm->devNr);
-
-    return 0;
-}
-
-int fhi_bd_defrag_add_file(struct fhi_bd_defrag *bdm, int fhi_fid, const char *name)
-{
-    int i, fd, rv;
-
-    // Open file
-    printf("Loading %s...\n", name);
-    for (i = 0; i < 1000; i++) {
-        fd = open(name, O_RDONLY);
-        if (fd >= 0)
-            break;
-
-        // Give low level drivers some time to init
-        nopdelay();
-    }
-    if (fd < 0) {
-        printf("Unable to open %s\n", name);
-        return -1;
-    }
-
-    rv = fhi_bd_defrag_add_file_by_fd(bdm, fhi_fid, fd);
-    close(fd);
-    return rv;
-}
-
-int fhi_bd_add_file_by_fd(struct fhi_bd *bdm, int fhi_fid, int fd)
-{
-    int iop_fd = ps2sdk_get_iop_fd(fd);
-
-    // Set BDM driver name and number
-    bdm->drvName = (uint32_t)fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, NULL, 0);
-    fileXioIoctl2(iop_fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &bdm->devNr, 4);
-    char *drvName = (char *)&bdm->drvName;
-    printf("Using BDM device: %s%d\n", drvName, (int)bdm->devNr);
-
-    return 0;
-}
-
-int fhi_fileid_add_file_by_fd(struct fhi_fileid *ffid, int fhi_fid, int fd)
-{
-    int iop_fd = ps2sdk_get_iop_fd(fd);
-
-    ffid->file[fhi_fid].id = fileXioIoctl2(iop_fd, 0x80, NULL, 0, NULL, 0);
-    ffid->file[fhi_fid].size = lseek64(iop_fd, 0, SEEK_END);
-
-    return 0;
-}
-
-int fhi_fileid_add_file(struct fhi_fileid *ffid, int fhi_fid, const char *pathname, int flags)
-{
-    int i, fd, rv;
-
-    // Open file
-    printf("Loading %s...\n", pathname);
-    for (i = 0; i < 1000; i++) {
-        fd = open(pathname, flags);
-        if (fd >= 0)
-            break;
-
-        // Give low level drivers some time to init
-        nopdelay();
-    }
-    if (fd < 0) {
-        printf("Unable to open %s\n", pathname);
-        return -1;
-    }
-
-    rv = fhi_fileid_add_file_by_fd(ffid, fhi_fid, fd);
-
-    // Leave file open!
-    //close(fd);
-
-    return rv;
-}
-
-/*
  * Main neutrino loader function
  */
 int main(int argc, char *argv[])
@@ -1488,20 +1369,8 @@ gsm_done:
     // Only loaded when modules need to be faked
     struct SModule *mod_fakemod = modlist_get_by_func(&drv.mod, "FAKEMOD");
 
-    // Load module settings for fhi_bd_defrag backing store
-    struct fhi_bd_defrag *set_fhi_bd_defrag = module_get_settings(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"));
-    if (set_fhi_bd_defrag != NULL)
-        memset((void *)set_fhi_bd_defrag, 0, sizeof(struct fhi_bd_defrag));
-
-    // Load module settings for fhi_bd backing store
-    struct fhi_bd *set_fhi_bd = module_get_settings(modlist_get_by_func(&drv.mod, "FHI_BD"));
-    if (set_fhi_bd != NULL)
-        memset((void *)set_fhi_bd, 0, sizeof(struct fhi_bd));
-
-    // Load module settings for fhi_fileid backing store
-    struct fhi_fileid *set_fhi_fileid = module_get_settings(modlist_get_by_func(&drv.mod, "FHI_FILEID"));
-    if (set_fhi_fileid != NULL)
-        memset((void *)set_fhi_fileid, 0, sizeof(struct fhi_fileid));
+    // Detect active FHI backing store and zero its settings struct
+    int fhi_active = (fhi_config_init(&drv.mod) == 0);
 
     // Load module settings for cdvd emulator
     struct cdvdman_settings_common *set_cdvdman = module_get_settings(modlist_get_by_name(&drv.mod, "cdvdman_emu.irx"));
@@ -1517,7 +1386,7 @@ gsm_done:
     // Re-initialize EE-side libraries using those modules
     if (sys.bQuickBoot == 1) {
         // fileXioIoctl2 needed ?
-        if ((set_fhi_bd_defrag != NULL) || (set_fhi_bd != NULL) || (set_fhi_fileid != NULL)) {
+        if (fhi_active) {
             if (fileXioInit() < 0) {
                 printf("ERROR: failed to initialize fileXio\n");
                 return -1;
@@ -1531,7 +1400,7 @@ gsm_done:
     if (sDVDFile != NULL) {
         int fd_iso = 0;
 
-        if (set_fhi_bd_defrag == NULL && set_fhi_bd == NULL && set_fhi_fileid == NULL) {
+        if (!fhi_active) {
             printf("ERROR: DVD emulator needs FHI backing store!\n");
             return -1;
         }
@@ -1588,30 +1457,8 @@ gsm_done:
             }
         }
 
-        if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file_by_fd(set_fhi_bd_defrag, FHI_FID_CDVD, fd_iso) < 0)
-                return -1;
-            close(fd_iso);
-        } else if (set_fhi_bd != NULL) {
-            if (fhi_bd_add_file_by_fd(set_fhi_bd, FHI_FID_CDVD, fd_iso) < 0)
-                return -1;
-            close(fd_iso);
-        } else if (set_fhi_fileid != NULL) {
-            const char *s = strchr(sDVDFile, ':');
-
-            set_fhi_fileid->devNr = 0;
-            if (s != NULL) {
-                s--;
-                if (*s >= '0' && *s <= '9')
-                    set_fhi_fileid->devNr = *s - '0';
-            }
-
-            if (fhi_fileid_add_file_by_fd(set_fhi_fileid, FHI_FID_CDVD, fd_iso) < 0)
-                return -1;
-
-            // Leave file open!
-            //close(fd_iso);
-        }
+        if (fhi_add_file_fd(FHI_FID_CDVD, fd_iso, sDVDFile) < 0)
+            return -1;
     }
 
     /*
@@ -1709,23 +1556,11 @@ gsm_done:
      * Enable ATA0 emulation
      */
     if (sys.sATA0File != NULL) {
-        if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0, sys.sATA0File) < 0)
-                return -1;
-            if (sys.sATA0IDFile != NULL) {
-                if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA0ID, sys.sATA0IDFile) < 0)
-                    return -1;
-            }
-        } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0, sys.sATA0File, O_RDWR) < 0)
-                return -1;
-            if (sys.sATA0IDFile != NULL) {
-                if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA0ID, sys.sATA0IDFile, O_RDONLY) < 0)
-                    return -1;
-            }
-        } else {
-            printf("ERROR: ATA emulator needs compatible FHI backing store!\n");
+        if (fhi_add_file(FHI_FID_ATA0, sys.sATA0File, O_RDWR) < 0)
             return -1;
+        if (sys.sATA0IDFile != NULL) {
+            if (fhi_add_file(FHI_FID_ATA0ID, sys.sATA0IDFile, O_RDONLY) < 0)
+                return -1;
         }
     }
 
@@ -1733,48 +1568,24 @@ gsm_done:
      * Enable ATA1 emulation
      */
     if (sys.sATA1File != NULL) {
-        if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_ATA1, sys.sATA1File) < 0)
-                return -1;
-        } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_ATA1, sys.sATA1File, O_RDWR) < 0)
-                return -1;
-        } else {
-            printf("ERROR: ATA emulator needs compatible FHI backing store!\n");
+        if (fhi_add_file(FHI_FID_ATA1, sys.sATA1File, O_RDWR) < 0)
             return -1;
-        }
     }
 
     /*
      * Enable MC0 emulation
      */
     if (sys.sMC0File != NULL) {
-        if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC0, sys.sMC0File) < 0)
-                return -1;
-        } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC0, sys.sMC0File, O_RDWR) < 0)
-                return -1;
-        } else {
-            printf("ERROR: MC0 emulator needs compatible FHI backing store!\n");
+        if (fhi_add_file(FHI_FID_MC0, sys.sMC0File, O_RDWR) < 0)
             return -1;
-        }
     }
 
     /*
      * Enable MC1 emulation
      */
     if (sys.sMC1File != NULL) {
-        if (set_fhi_bd_defrag != NULL) {
-            if (fhi_bd_defrag_add_file(set_fhi_bd_defrag, FHI_FID_MC1, sys.sMC1File) < 0)
-                return -1;
-        } else if (set_fhi_fileid != NULL) {
-            if (fhi_fileid_add_file(set_fhi_fileid, FHI_FID_MC1, sys.sMC1File, O_RDWR) < 0)
-                return -1;
-        } else {
-            printf("ERROR: MC1 emulator needs compatible FHI backing store!\n");
+        if (fhi_add_file(FHI_FID_MC1, sys.sMC1File, O_RDWR) < 0)
             return -1;
-        }
     }
 
     /*

@@ -23,5 +23,4 @@ file = "udpfs_ioman.irx"
 env = ["LE"]
 [[module]]
 file = "udpfs_fhi.irx"
-func = "FHI_FILEID"
 env = ["EE"]

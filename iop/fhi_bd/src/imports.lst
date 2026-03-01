@@ -2,11 +2,9 @@ loadcore_IMPORTS_start
 I_RegisterLibraryEntries
 loadcore_IMPORTS_end
 
-#ifdef DEBUG
 stdio_IMPORTS_start
-I_printf
+I_printf // used by libbdm!
 stdio_IMPORTS_end
-#endif
 
 sysclib_IMPORTS_start
 I_strncmp

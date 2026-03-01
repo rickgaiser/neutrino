@@ -1,4 +1,4 @@
-// File Handle Interface for file ID's (already opened files)
+// File Handle Interface for pre-opened file handles (MMCE / UDPFS)
 #ifndef FHI_FILEID_H
 #define FHI_FILEID_H
 
@@ -24,5 +24,6 @@ struct fhi_fileid
     // 0 = ISO
     struct fhi_fileid_info file[FHI_MAX_FILES];
 } __attribute__((packed));
+
 
 #endif

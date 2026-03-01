@@ -4,6 +4,7 @@
 #include <thsemap.h>
 #include <thbase.h>
 #include <bdm.h>
+#include <bd_defrag.h>
 
 #include "fhi_bd.h"
 #include "mprintf.h"
@@ -60,12 +61,12 @@ void bdm_disconnect_bd(struct block_device *bd)
 // FHI export #4
 u32 fhi_size(int file_handle)
 {
-    M_DEBUG("%s(%d)\n", __func__, file_handle);
-
     if (file_handle < 0 || file_handle >= FHI_MAX_FILES || g_bd == NULL)
         return 0;
 
-    return g_bd->sectorCount;
+    M_DEBUG("%s(%d)\n", __func__, file_handle);
+
+    return fhi.file[file_handle].size / 512;
 }
 
 //---------------------------------------------------------------------------
@@ -73,6 +74,7 @@ u32 fhi_size(int file_handle)
 int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count)
 {
     int rv;
+    struct fhi_bd_file *ff;
 
     if (file_handle)
         M_DEBUG("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
@@ -80,8 +82,9 @@ int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned 
     if (file_handle < 0 || file_handle >= FHI_MAX_FILES)
         return -1;
 
+    ff = &fhi.file[file_handle];
     WaitSema(bdm_io_sema);
-    rv = g_bd->read(g_bd, sector_start, buffer, sector_count);
+    rv = bd_defrag_read(g_bd, ff->frag_count, &fhi.frags[ff->frag_start], sector_start, buffer, sector_count);
     SignalSema(bdm_io_sema);
 
     return rv;
@@ -92,6 +95,7 @@ int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned 
 int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, unsigned int sector_count)
 {
     int rv;
+    struct fhi_bd_file *ff;
 
     if (file_handle)
         M_DEBUG("%s(%d, 0x%x, %d, %d)\n", __func__, file_handle, buffer, sector_start, sector_count);
@@ -99,8 +103,9 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
     if (file_handle < 0 || file_handle >= FHI_MAX_FILES)
         return -1;
 
+    ff = &fhi.file[file_handle];
     WaitSema(bdm_io_sema);
-    rv = g_bd->write(g_bd, sector_start, buffer, sector_count);
+    rv = bd_defrag_write(g_bd, ff->frag_count, &fhi.frags[ff->frag_start], sector_start, buffer, sector_count);
     SignalSema(bdm_io_sema);
 
     return rv;

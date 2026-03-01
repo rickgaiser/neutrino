@@ -13,5 +13,4 @@ env = ["LE"]
 
 [[module]]
 file = "mmcefhi.irx"
-func = "FHI_FILEID"
 env = ["EE"]
