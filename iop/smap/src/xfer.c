@@ -11,7 +11,6 @@ extern struct SmapDriverData SmapDriverData;
 extern u16 g_dma_max_block_size;
 
 static int tx_sema = -1;
-static int tx_done_ev = -1;
 
 /* RX callback state */
 static u16 g_current_frame_ptr = 0;
@@ -51,17 +50,11 @@ static void Dev9PostDmaCbHandler(int bcr, int dir)
 void xfer_init(void)
 {
     iop_sema_t sema_info;
-    iop_event_t event_info;
 
     sema_info.attr    = 0;
     sema_info.initial = 1; /* Unlocked.  */
     sema_info.max     = 1;
     tx_sema = CreateSema(&sema_info);
-
-    event_info.attr   = 0;
-    event_info.option = 0;
-    event_info.bits   = 0;
-    tx_done_ev = CreateEventFlag(&event_info);
 
     dev9RegisterPreDmaCb(1, &Dev9PreDmaCbHandler);
     dev9RegisterPostDmaCb(1, &Dev9PostDmaCbHandler);
@@ -251,16 +244,24 @@ static int HandleTxReqs(struct SmapDriverData *SmapDrivPrivData, void *header, u
 
 int smap_transmit(void *header, uint16_t headersize, const void *data, uint16_t datasize)
 {
-    WaitSema(tx_sema);
+    // Wait up to 2 seconds for autonegotiation to complete.
+    if (!SmapDriverData.SmapIsInitialized) {
+        int i;
+        for (i = 0; i < 2000 && !SmapDriverData.SmapIsInitialized; i++)
+            DelayThread(1000);
+    }
 
-    // Add packet to queue (if there's room)
-    while (HandleTxReqs(&SmapDriverData, header, headersize, data, datasize) < 0) {
+    while (1) {
+        WaitSema(tx_sema);
+        int r = HandleTxReqs(&SmapDriverData, header, headersize, data, datasize);
+        SignalSema(tx_sema);
+        if (r >= 0)
+            break;
+
         // Wait for about 1KiB (at a speed of 100Mbps)
         // FIXME! We want a blocking write, this works but it's not ideal.
         DelayThread(100);
     }
-
-    SignalSema(tx_sema);
 
     return 0;
 }
