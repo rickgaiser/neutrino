@@ -148,4 +148,7 @@ release: all copy
 	cp -R ee/loader/modules      $(RELEASE_DIR)
 	cp    ee/loader/neutrino.elf $(RELEASE_DIR)
 	cp    ee/loader/version.txt  $(RELEASE_DIR)
+	mkdir -p                     $(RELEASE_DIR)/udpfs_server/compressed_iso
+	cp    pc/*.py                $(RELEASE_DIR)/udpfs_server
+	cp    pc/compressed_iso/*.py $(RELEASE_DIR)/udpfs_server/compressed_iso
 	7z a -t7z $(RELEASE_DIR).7z $(RELEASE_DIR)/*
