@@ -16,11 +16,12 @@ Examples:
     python udpfs_server.py -b game.iso -d /games        # Both block device and filesystem
     python udpfs_server.py -b game.iso --sector-size 2048  # Custom sector size
     python udpfs_server.py -b game.iso --read-only      # Read-only mode
-    python udpfs_server.py -d /games --enable-compression  # Transparent .zso/.cso decompression
+    python udpfs_server.py -d /games --enable-compression  # Transparent .zso/.cso/.chd decompression
 
 Compression Support:
-    With --enable-compression, the server transparently decompresses .zso (LZ4) and 
-    .cso (zlib) files. Compressed files appear as .iso in directory listings.
+    With --enable-compression, the server transparently decompresses .zso (LZ4),
+    .cso (zlib), and .chd (MAME CHD v5) files. Compressed files appear as .iso in
+    directory listings.
     Requires 'lz4' package for ZSO support: pip install lz4
 """
 
@@ -40,7 +41,7 @@ from enum import IntEnum
 from typing import Dict, List, Optional, Tuple, Union
 
 # Compressed ISO support
-from compressed_iso import CompressedFileWrapper, ZsoFileWrapper, CsoFileWrapper
+from compressed_iso import CompressedFileWrapper, ZsoFileWrapper, CsoFileWrapper, ChdFileWrapper
 
 # Check LZ4 availability for ZSO format
 try:
@@ -129,6 +130,8 @@ def open_compressed(file_path: str, cache_size: int = None) -> Optional[Compress
         return ZsoFileWrapper(file_path, cache_size)
     elif ext == '.cso':
         return CsoFileWrapper(file_path, cache_size)
+    elif ext == '.chd':
+        return ChdFileWrapper(file_path, cache_size)
     
     return None
 
@@ -142,6 +145,40 @@ def get_compressed_info(file_path: str) -> Optional[Tuple[int, str]]:
     
     try:
         with open(file_path, 'rb') as f:
+            if ext == '.chd':
+                # CHD has different header structure
+                header = f.read(64)
+                if len(header) < 64:
+                    return None
+                
+                # Check CHD magic "MComprHD"
+                magic = header[0:8]
+                if magic != b'MComprHD':
+                    return None
+                
+                # Check version (only v5 supported)
+                version = struct.unpack('>I', header[12:16])[0]
+                if version != 5:
+                    return None
+                
+                # Uncompressed size is at offset 32 (big-endian uint64 in v5)
+                uncompressed_size = struct.unpack('>Q', header[32:40])[0]
+                compressors = struct.unpack('>4I', header[16:32])
+                hunk_size = struct.unpack('>I', header[56:60])[0]
+
+                # For CD-format CHDs (cdlz/cdzl/cdfl), the stored uncompressed_size
+                # counts full 2448-byte CD frames (2352 sector + 96 subcode).
+                # We present as 2048-byte/sector ISO, so correct the size.
+                _CD_FRAME_SIZE = 2448
+                _CD_CODECS = (0x63646c7a, 0x63647a6c, 0x6364666c)  # cdlz, cdzl, cdfl
+                if (any(c in _CD_CODECS for c in compressors if c != 0)
+                        and hunk_size > 0 and hunk_size % _CD_FRAME_SIZE == 0):
+                    frames_per_hunk = hunk_size // _CD_FRAME_SIZE
+                    total_hunks = (uncompressed_size + hunk_size - 1) // hunk_size
+                    uncompressed_size = total_hunks * frames_per_hunk * 2048
+
+                return (uncompressed_size, 'CHD')
+            
             header = f.read(24)
             if len(header) < 16:
                 return None
@@ -347,6 +384,7 @@ class UdpfsServer:
             if LZ4_AVAILABLE:
                 formats.append('ZSO')
             formats.append('CSO')
+            formats.append('CHD')
             print(f"  Compression: enabled ({', '.join(formats)})")
         print(f"  Listening...")
         print()
@@ -443,11 +481,11 @@ class UdpfsServer:
         return resolved
 
     def _transform_compressed_name(self, name: str) -> str:
-        """Transform .zso/.cso extensions to .iso for directory listing."""
+        """Transform .zso/.cso/.chd extensions to .iso for directory listing."""
         if not self.enable_compression:
             return name
         lower_name = name.lower()
-        for ext in ['.zso', '.cso']:
+        for ext in ['.zso', '.cso', '.chd']:
             if lower_name.endswith(ext):
                 return name[:-len(ext)] + '.iso'
         return name
@@ -458,7 +496,7 @@ class UdpfsServer:
             return None
         if not iso_path.lower().endswith('.iso'):
             return None
-        for ext in ['.zso', '.cso']:
+        for ext in ['.zso', '.cso', '.chd']:
             compressed = iso_path[:-4] + ext
             if os.path.exists(compressed):
                 return compressed
@@ -718,7 +756,7 @@ class UdpfsServer:
             # Check if the .iso file doesn't exist
             if resolved is None or not os.path.exists(resolved):
                 base_path = path[:-4]  # Remove .iso
-                for ext in ['.zso', '.cso']:
+                for ext in ['.zso', '.cso', '.chd']:
                     compressed_path = base_path + ext
                     compressed_resolved = self._resolve_path(compressed_path)
                     if compressed_resolved and os.path.exists(compressed_resolved):
@@ -766,7 +804,7 @@ class UdpfsServer:
             is_compressed = False
             if self.enable_compression:
                 lower_path = actual_resolved.lower()
-                if lower_path.endswith('.zso') or lower_path.endswith('.cso'):
+                if lower_path.endswith('.zso') or lower_path.endswith('.cso') or lower_path.endswith('.chd'):
                     is_compressed = True
             
             py_mode = self._flags_to_mode(flags)
@@ -801,9 +839,9 @@ class UdpfsServer:
                             self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{display_path}' -> handle={handle}, size={uncompressed_size} (compressed)")
                             self._send_open_reply(addr, handle, stat_info=stat_info)
                             return
-                    except (ImportError, ValueError) as e:
+                    except (ImportError, ValueError, OSError, struct.error) as e:
                         # Fall back to regular open if compression fails
-                        self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> compression error: {e}, falling back")
+                        self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> compression error: {type(e).__name__}: {e}, falling back")
                         f = open(actual_resolved, py_mode)
                         st = os.fstat(f.fileno())
                         stat_info = self._stat_to_bytes(st)
@@ -1716,7 +1754,7 @@ def main():
     parser.add_argument(
         '--enable-compression', '-c',
         action='store_true',
-        help='Enable transparent decompression of .zso (LZ4) and .cso (zlib) files. '
+        help='Enable transparent decompression of .zso (LZ4), .cso (zlib), and .chd (CHD v5) files. '
              'Compressed files appear as .iso in directory listings.'
     )
     parser.add_argument(
