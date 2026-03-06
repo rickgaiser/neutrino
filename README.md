@@ -176,6 +176,53 @@ Usage examples:
   neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 ```
 
+## UDPFS / UDPBD PC Server
+
+The `pc/udpfs_server.py` script serves files and/or block devices to the PS2 over UDP (Ethernet).
+
+### Requirements
+
+- **Python 3** (no additional packages required for basic use)
+- **`lz4`** — optional, required only for `.zso` (LZ4-compressed ISO) support:
+  ```
+  pip install lz4
+  ```
+
+The `pc/compressed_iso/` directory is a local module bundled with the server; no installation is needed.
+
+### Usage
+
+```
+# Share a USB drive (or any block device) with many games — typical UDPBD use case
+python pc/udpfs_server.py -b /dev/sdX          # Linux
+python pc/udpfs_server.py -b \\.\PhysicalDriveX  # Windows
+
+# Share a single disk image (UDPBD mode)
+python pc/udpfs_server.py -b game.iso
+
+# Share a directory as a filesystem (UDPFS mode)
+python pc/udpfs_server.py -d /path/to/ps2games
+
+# Share both a block device and a directory
+python pc/udpfs_server.py -b /dev/sdX -d /path/to/ps2games
+
+# With transparent decompression (.zso/.cso/.chd files appear as .iso)
+python pc/udpfs_server.py -d /games --enable-compression
+
+# Read-only mode
+python pc/udpfs_server.py -b /dev/sdX --read-only
+```
+
+### Compression support
+
+When `--enable-compression` is passed, the server transparently decompresses compressed ISO images:
+
+Format | Extension | Compression | Extra dependency
+-------|-----------|-------------|----------------
+ZSO    | `.zso`    | LZ4         | `pip install lz4`
+CSO    | `.cso`    | zlib        | none
+CHD    | `.chd`    | zlib/lzma   | none
+
 ## Third-Party Loaders
 The following third-party projects use neutrino:
 
