@@ -19,16 +19,17 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include <sbv_patches.h>
 
 // Neutrino EE_CORE
-#include "../../ee_core/include/interface.h"
+#include "../../../common/include/eecore_config.h"
 
 // Neutrino IOP modules
-#include "../../../iop/common/cdvd_config.h"
-#include "../../../iop/common/fakemod.h"
-#include "../../../iop/common/fhi.h"
+#include "../../../common/include/cdvdman_config.h"
+#include "../../../common/include/fakemod_config.h"
+#include "../../../common/include/fhi.h"
 
 // Neutrino EE loader
 #include "fhi_config.h"
-#include "module_utils.h"
+#include "modlist.h"
+#include "config.h"
 
 // Neutrino
 #include "elf.h"
@@ -48,46 +49,7 @@ PS2_DISABLE_AUTOSTART_PTHREAD();  // Disable pthread functionality
 void _libcglue_timezone_update() {}; // Disable timezone update
 void _libcglue_rtc_update() {}; // Disable rtc update
 
-// TOML helper functions
-void toml_string_move(toml_datum_t v, char **dest);
-void toml_string_in_overwrite(toml_datum_t t, const char *name, char **dest);
-void toml_bool_in_overwrite(toml_datum_t t, const char *name, int *dest);
-void toml_int_in_overwrite(toml_datum_t t, const char *name, int *dest);
-
-int load_config_file(const char * type, const char * subtype);
-
-// Map an iomanX path prefix (e.g. "usb0", "mx4sio0", "ata0") to a -bsd config name.
-// Strips trailing digits so both "usb0:" and "usb:" match "usb".
-// Returns NULL when the prefix is ambiguous or unknown.
-static const char *bsd_from_path(const char *path)
-{
-    const char *colon;
-    char prefix[16];
-    int len;
-
-    if (path == NULL)
-        return NULL;
-    colon = strchr(path, ':');
-    if (colon == NULL)
-        return NULL;
-
-    len = colon - path;
-    while (len > 0 && path[len - 1] >= '0' && path[len - 1] <= '9')
-        len--;
-    if (len == 0 || len >= (int)sizeof(prefix))
-        return NULL;
-    memcpy(prefix, path, len);
-    prefix[len] = '\0';
-
-    if (strcmp(prefix, "usb") == 0)    return "usb";
-    if (strcmp(prefix, "mx4sio") == 0) return "mx4sio";
-    if (strcmp(prefix, "ilink") == 0)  return "ilink";
-    if (strcmp(prefix, "ata") == 0)    return "ata";
-    if (strcmp(prefix, "udpbd") == 0)  return "udpbd";
-    if (strcmp(prefix, "mmce") == 0)   return "mmce";
-    if (strcmp(prefix, "udpfs") == 0)  return "udpfs";
-    return NULL;
-}
+struct SModule mod_ee_core;
 
 void print_usage()
 {
@@ -187,823 +149,19 @@ void print_usage()
     printf("  neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0\n");
 }
 
-#define MOD_ENV_LE (1<<0)
-#define MOD_ENV_EE (1<<1)
-struct SModule
-{
-    char *sFileName;
-    char *sIOPRP;
-    char *sFunc;
-
-    off_t iSize;
-    void *pData;
-
-    int arg_len;
-    char *args;
-
-    unsigned int env;
-};
-
-#define DRV_MAX_MOD 20
-struct SModList {
-    int count;
-    struct SModule mod[DRV_MAX_MOD];
-};
-
-struct SFakeList {
-    int count;
-    struct FakeModule fake[MODULE_SETTINGS_MAX_FAKE_COUNT];
-};
-
-struct SSystemSettings {
-    char *sBSD;
-    char *sBSDFS;
-    char *sDVDMode;
-    char *sATA0File;
-    char *sATA0IDFile;
-    char *sATA1File;
-    char *sMC0File;
-    char *sMC1File;
-    char *sELFFile;
-    char *sGC;
-    char *sGSM;
-    char *sCFGFile;
-    int bDebug;
-    int bLogo;
-    int bQuickBoot;
-
-    struct {
-        // CDVDMAN settings
-        char *media_type;
-        uint32_t flags;
-        int fs_sectors;
-        union {
-            uint8_t ilink_id[8];
-            uint64_t ilink_id_int;
-        };
-        union {
-            uint8_t disk_id[5];
-            uint64_t disk_id_int; // 8 bytes, but that's ok for compare reasons
-        };
-    } cdvdman;
-
-    char *eecore_elf;
-    struct ee_core_data eecore;
-} sys;
-
-struct SDriver {
-    // All modules
-    struct SModList mod;
-    // List of fake modules for emulation environment
-    struct SFakeList fake;
-} drv;
-
-struct SModule mod_ee_core;
-
-/* Folder prefixes — overwritten with "" in SAS flat-folder mode */
-static const char *g_config_prefix = "config/";
-static const char *g_modules_prefix = "modules/";
-
-#define MAX_FILENAME 128
-int module_load(struct SModule *mod)
-{
-    char sFilePath[MAX_FILENAME];
-
-    //printf("%s(%s)\n", __FUNCTION__, mod->sFileName);
-
-    if (mod->pData != NULL) {
-        printf("WARNING: Module already loaded: %s\n", mod->sFileName);
-        return 0;
-    }
-
-    if (mod->sFileName == NULL) {
-        return -1;
-    }
-
-    // Open module on default location
-    snprintf(sFilePath, MAX_FILENAME, "%s%s", g_modules_prefix, mod->sFileName);
-    int fd = open(sFilePath, O_RDONLY);
-    if (fd < 0) {
-        printf("ERROR: Unable to open %s\n", mod->sFileName);
-        return -1;
-    }
-
-    //printf("%s(%s) loaded %s\n", __FUNCTION__, mod->sFileName, sFilePath);
-
-    // Get module size
-    mod->iSize = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-
-    // Allocate memory for module
-    mod->pData = malloc(mod->iSize); // NOTE: never freed, but we don't care
-
-    // Load module into memory
-    read(fd, mod->pData, mod->iSize);
-
-    // Close module
-    close(fd);
-
-    return 0;
-}
-
-int modlist_load(struct SModList *ml, unsigned int filter)
-{
-    int i;
-
-    for (i = 0; i < ml->count; i++) {
-        if (ml->mod[i].env & filter) {
-            if (module_load(&ml->mod[i]) < 0)
-                return -1;
-        }
-    }
-
-    return 0;
-}
-
-int module_start(struct SModule *mod)
-{
-    int rv, IRX_ID;
-
-    if (mod->pData == NULL) {
-        printf("ERROR: %s not loaded\n", mod->sFileName);
-        return -1;
-    }
-
-    IRX_ID = SifExecModuleBuffer(mod->pData, mod->iSize, mod->arg_len, mod->args, &rv);
-    if (IRX_ID < 0 || rv == 1) {
-        printf("ERROR: Could not load %s (ID+%d, rv=%d)\n", mod->sFileName, IRX_ID, rv);
-        return -1;
-    }
-
-    printf("- %s started\n", mod->sFileName);
-
-    return 0;
-}
-
-struct SModule *modlist_get_by_name(struct SModList *ml, const char *name)
-{
-    int i;
-
-    for (i = 0; i < ml->count; i++) {
-        if (strcmp(ml->mod[i].sFileName, name) == 0) {
-            return &ml->mod[i];
-        }
-    }
-
-    return NULL;
-}
-
-struct SModule *modlist_get_by_udnlname(struct SModList *ml, const char *name)
-{
-    int i;
-
-    for (i = 0; i < ml->count; i++) {
-        struct SModule *m = &ml->mod[i];
-        if (m->sIOPRP != NULL) {
-            if (strcmp(m->sIOPRP, name) == 0)
-                return m;
-        }
-    }
-
-    return NULL;
-}
-
-struct SModule *modlist_get_by_func(struct SModList *ml, const char *func)
-{
-    int i;
-
-    for (i = 0; i < ml->count; i++) {
-        struct SModule *m = &ml->mod[i];
-        if (m->sFunc != NULL) {
-            if (strcmp(m->sFunc, func) == 0)
-                return m;
-        }
-    }
-
-    return NULL;
-}
-
-static void print_iop_args(int arg_len, const char *args)
-{
-    // Multiple null terminated strings together
-    int args_idx = 0;
-    int was_null = 1;
-
-    if (arg_len == 0)
-        return;
-
-    printf("Module arguments (arg_len=%d):\n", arg_len);
-
-    // Search strings
-    while(args_idx < arg_len) {
-        if (args[args_idx] == 0) {
-            if (was_null == 1) {
-                printf("- args[%d]=0\n", args_idx);
-            }
-            was_null = 1;
-        }
-        else if (was_null == 1) {
-            printf("- args[%d]='%s'\n", args_idx, &args[args_idx]);
-            was_null = 0;
-        }
-        args_idx++;
-    }
-}
-
-static uint8_t * module_install(struct SModule *mod, uint8_t *addr, irxptr_t *irx)
-{
-    if (mod == NULL) {
-        printf("ERROR: mod == NULL\n");
-        return addr;
-    }
-
-    // Install module
-    memcpy(addr, mod->pData, mod->iSize);
-    irx->size = mod->iSize;
-    irx->ptr = addr;
-    addr += mod->iSize;
-
-    // Install module arguments
-    irx->arg_len = mod->arg_len;
-    memcpy(addr, mod->args, irx->arg_len);
-    irx->args = (char *)addr;
-    addr += irx->arg_len;
-
-    printf("Module %s installed to 0x%p\n", mod->sFileName, irx->ptr);
-    print_iop_args(mod->arg_len, mod->args);
-
-    // Align to 16 bytes
-    return (uint8_t *)((uint32_t)(addr + 0xf) & ~0xf);
-}
-
-/*----------------------------------------------------------------------------------------
-    Replace modules in IOPRP image:
-    - CDVDMAN
-    - CDVDFSV
-    - EESYNC
-------------------------------------------------------------------------------------------*/
-static unsigned int patch_IOPRP_image(struct romdir_entry *romdir_out, const struct romdir_entry *romdir_in)
-{
-    struct romdir_entry *romdir_out_org = romdir_out;
-    uint8_t *ioprp_in = (uint8_t *)romdir_in;
-    uint8_t *ioprp_out = (uint8_t *)romdir_out;
-
-    while (romdir_in->name[0] != '\0') {
-        struct SModule *mod = modlist_get_by_udnlname(&drv.mod, romdir_in->name);
-        if (mod != NULL) {
-            printf("IOPRP: replacing %s with %s\n", romdir_in->name, mod->sFileName);
-            memcpy(ioprp_out, mod->pData, mod->iSize);
-            romdir_out->size = mod->iSize;
-        } else {
-            printf("IOPRP: keeping %s\n", romdir_in->name);
-            memcpy(ioprp_out, ioprp_in, romdir_in->size);
-            romdir_out->size = romdir_in->size;
-        }
-
-        // Align all addresses to a multiple of 16
-        ioprp_in += (romdir_in->size + 0xF) & ~0xF;
-        ioprp_out += (romdir_out->size + 0xF) & ~0xF;
-        romdir_in++;
-        romdir_out++;
-    }
-
-    return (ioprp_out - (uint8_t *)romdir_out_org);
-}
-
-struct ioprp_ext_full {
-    extinfo_t reset_date_ext;
-    uint32_t  reset_date;
-
-    extinfo_t cdvdman_date_ext;
-    uint32_t  cdvdman_date;
-    extinfo_t cdvdman_version_ext;
-    extinfo_t cdvdman_comment_ext;
-    char      cdvdman_comment[12];
-
-    extinfo_t cdvdfsv_date_ext;
-    uint32_t  cdvdfsv_date;
-    extinfo_t cdvdfsv_version_ext;
-    extinfo_t cdvdfsv_comment_ext;
-    char      cdvdfsv_comment[16];
-
-    extinfo_t syncee_date_ext;
-    uint32_t  syncee_date;
-    extinfo_t syncee_version_ext;
-    extinfo_t syncee_comment_ext;
-    char      syncee_comment[8];
-};
-struct ioprp_img_full
-{
-    romdir_entry_t romdir[7];
-    struct ioprp_ext_full ext;
-};
-static const struct ioprp_img_full ioprp_img_full = {
-    {{"RESET"  ,  8, 0},
-     {"ROMDIR" ,  0, 0x10 * 7},
-     {"EXTINFO",  0, sizeof(struct ioprp_ext_full)},
-     {"CDVDMAN", 28, 0},
-     {"CDVDFSV", 32, 0},
-     {"EESYNC" , 24, 0},
-     {"", 0, 0}},
-    {
-        // RESET extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        // CDVDMAN extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 12, EXTINFO_TYPE_COMMENT},
-        "cdvd_driver",
-        // CDVDFSV extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 16, EXTINFO_TYPE_COMMENT},
-        "cdvd_ee_driver",
-        // SYNCEE extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 8, EXTINFO_TYPE_COMMENT},
-        "SyncEE"
-    }};
-
-struct ioprp_ext_dvd {
-    extinfo_t reset_date_ext;
-    uint32_t  reset_date;
-
-    extinfo_t cdvdman_date_ext;
-    uint32_t  cdvdman_date;
-    extinfo_t cdvdman_version_ext;
-    extinfo_t cdvdman_comment_ext;
-    char      cdvdman_comment[12];
-
-    extinfo_t cdvdfsv_date_ext;
-    uint32_t  cdvdfsv_date;
-    extinfo_t cdvdfsv_version_ext;
-    extinfo_t cdvdfsv_comment_ext;
-    char      cdvdfsv_comment[16];
-
-    extinfo_t syncee_date_ext;
-    uint32_t  syncee_date;
-    extinfo_t syncee_version_ext;
-    extinfo_t syncee_comment_ext;
-    char      syncee_comment[8];
-};
-struct ioprp_img_dvd
-{
-    romdir_entry_t romdir[5];
-    struct ioprp_ext_dvd ext;
-};
-static const struct ioprp_img_dvd ioprp_img_dvd = {
-    {{"RESET"  ,  8, 0},
-     {"ROMDIR" ,  0, 0x10 * 5},
-     {"EXTINFO",  0, sizeof(struct ioprp_ext_dvd)},
-     {"EESYNC" , 24, 0},
-     {"", 0, 0}},
-    {
-        // RESET extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        // SYNCEE extinfo
-        {0, 4, EXTINFO_TYPE_DATE},
-        0x20230621,
-        {0x9999, 0, EXTINFO_TYPE_VERSION},
-        {0, 8, EXTINFO_TYPE_COMMENT},
-        "SyncEE"
-    }};
-
-int modlist_add(struct SModList *ml, toml_datum_t t)
-{
-    toml_datum_t v;
-    toml_datum_t arr;
-    struct SModule *m;
-
-    v = toml_get(t, "file");
-    if (v.type != TOML_STRING) {
-        printf("ERROR: module.file does not exist\n");
-        return -1;
-    }
-
-    m = modlist_get_by_name(ml, v.u.s);
-    if (m != NULL) {
-        printf("WARNING: module %s already loaded\n", m->sFileName);
-        // Free dynamic memory
-        if (m->sFileName)
-            free(m->sFileName);
-        if (m->sIOPRP)
-            free(m->sIOPRP);
-        if (m->sFunc)
-            free(m->sFunc);
-        if (m->args)
-            free(m->args);
-        if (m->pData)
-            free(m->pData);
-        // Clear entry
-        memset(m, 0, sizeof(struct SModule));
-    } else {
-        if (ml->count >= DRV_MAX_MOD) {
-            printf("ERROR: too many modules\n");
-            return -1;
-        }
-        m = &ml->mod[ml->count];
-        ml->count++;
-    }
-
-    toml_string_move(v, &m->sFileName);
-
-    toml_string_in_overwrite(t, "ioprp", &m->sIOPRP);
-    toml_string_in_overwrite(t, "func",  &m->sFunc);
-    arr = toml_get(t, "args");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        m->args = malloc(256); // NOTE: never freed, but we don't care
-        m->arg_len = 0;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                strcpy(&m->args[m->arg_len], v.u.s);
-                m->arg_len += strlen(v.u.s) + 1; // +1 for 0 termination
-            }
-        }
-    }
-    arr = toml_get(t, "env");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                if (strncmp(v.u.s, "LE", 2) == 0)
-                    m->env |= MOD_ENV_LE;
-                else if (strncmp(v.u.s, "EE", 2) == 0)
-                    m->env |= MOD_ENV_EE;
-                else
-                    printf("ERROR: unknown module.env: %s\n", v.u.s);
-            }
-        }
-    }
-
-    return 0;
-}
-
-int modlist_add_array(struct SModList *ml, toml_datum_t t)
-{
-    int i;
-    toml_datum_t arr = toml_get(t, "module");
-    if (arr.type != TOML_ARRAY)
-        return 0;
-
-    for (i=0; i < arr.u.arr.size; i++) {
-        toml_datum_t t = arr.u.arr.elem[i];
-        if (t.type != TOML_TABLE)
-            return -1;
-        if (modlist_add(ml, t) < 0)
-            return -1;
-    }
-
-    return 0;
-}
-
-int fakelist_add(struct SFakeList *fl, toml_datum_t t)
-{
-    toml_datum_t v;
-    struct FakeModule *f;
-
-    if (fl->count >= MODULE_SETTINGS_MAX_FAKE_COUNT)
-        return -1;
-    f = &fl->fake[fl->count];
-    fl->count++;
-
-    toml_string_in_overwrite(t, "file", &f->fname);
-    toml_string_in_overwrite(t, "name", &f->name);
-    v = toml_get(t, "unload");
-    if (v.type == TOML_BOOLEAN)
-        f->prop |= (v.u.boolean != 0) ? FAKE_PROP_UNLOAD : 0;
-    v = toml_get(t, "version");
-    if (v.type == TOML_INT64)
-        f->version = v.u.int64;
-    v = toml_get(t, "loadrv");
-    if (v.type == TOML_INT64)
-        f->returnLoad = v.u.int64;
-    v = toml_get(t, "startrv");
-    if (v.type == TOML_INT64)
-        f->returnStart = v.u.int64;
-
-    return 0;
-}
-
-int fakelist_add_array(struct SFakeList *fl, toml_datum_t t)
-{
-    int i;
-    toml_datum_t arr = toml_get(t, "fake");
-    if (arr.type != TOML_ARRAY)
-        return 0;
-
-    for (i=0; i < arr.u.arr.size; i++) {
-        toml_datum_t t = arr.u.arr.elem[i];
-        if (t.type != TOML_TABLE)
-            return -1;
-        if (fakelist_add(fl, t) < 0)
-            return -1;
-    }
-
-    return 0;
-}
-
-void toml_string_move(toml_datum_t v, char **dest)
-{
-    // Free old string if previously set
-    if (*dest != NULL) {
-        free(*dest);
-        *dest = NULL;
-    }
-    // Allocate data for new string
-    *dest = malloc(strlen(v.u.s) + 1);
-    // Copy string
-    strcpy(*dest, v.u.s);
-}
-
-void toml_string_in_overwrite(toml_datum_t t, const char *name, char **dest)
-{
-    toml_datum_t v = toml_get(t, name);
-    if (v.type == TOML_STRING)
-        toml_string_move(v, dest);
-}
-
-void toml_bool_in_overwrite(toml_datum_t t, const char *name, int *dest)
-{
-    toml_datum_t v = toml_get(t, name);
-    if (v.type == TOML_BOOLEAN)
-        *dest = v.u.boolean;
-}
-
-void toml_int_in_overwrite(toml_datum_t t, const char *name, int *dest)
-{
-    toml_datum_t v = toml_get(t, name);
-    if (v.type == TOML_INT64)
-        *dest = v.u.int64;
-}
-
-int load_config_eecore(toml_datum_t t)
-{
-    toml_datum_t arr;
-    toml_datum_t v;
-
-    toml_string_in_overwrite(t, "elf",      &sys.eecore_elf);
-    v = toml_get(t, "mod_base");
-    if (v.type == TOML_INT64)
-        sys.eecore.ModStorageStart = (void *)(int)v.u.int64;
-
-    arr = toml_get(t, "irm");
-    if (arr.type == TOML_ARRAY && arr.u.arr.size == 3) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_INT64)
-                sys.eecore.iop_rm[i] = v.u.int64;
-        }
-    }
-
-    arr = toml_get(t, "flags");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                if(!strcmp(v.u.s, "UNHOOK")) sys.eecore.flags |= EECORE_FLAG_UNHOOK;
-            }
-        }
-    }
-
-    return 0;
-}
-
-int load_config_cdvdman(toml_datum_t t)
-{
-    toml_datum_t arr;
-    toml_datum_t v;
-
-    toml_string_in_overwrite(t, "media_type", &sys.cdvdman.media_type);
-    toml_int_in_overwrite(t, "fs_sectors", &sys.cdvdman.fs_sectors);
-
-    arr = toml_get(t, "flags");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                if(!strcmp(v.u.s, "FAST_READ")) sys.cdvdman.flags |= CDVDMAN_COMPAT_FAST_READ;
-                if(!strcmp(v.u.s, "SYNC_READ")) sys.cdvdman.flags |= CDVDMAN_COMPAT_SYNC_READ;
-                if(!strcmp(v.u.s, "SYNC_CB"))   sys.cdvdman.flags |= CDVDMAN_COMPAT_SYNC_CALLBACK;
-                if(!strcmp(v.u.s, "DVD_DL"))    sys.cdvdman.flags |= CDVDMAN_COMPAT_DVD_DL;
-                if(!strcmp(v.u.s, "F1_2001"))   sys.cdvdman.flags |= CDVDMAN_COMPAT_F1_2001;
-            }
-        }
-    }
-
-    arr = toml_get(t, "ilink_id");
-    if (arr.type == TOML_ARRAY && arr.u.arr.size == 8) {
-        int i;
-        for (i=0; i < 8; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_INT64)
-                sys.cdvdman.ilink_id[i] = v.u.int64;
-        }
-    }
-
-    arr = toml_get(t, "disk_id");
-    if (arr.type == TOML_ARRAY && arr.u.arr.size == 5) {
-        int i;
-        for (i=0; i < 5; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_INT64)
-                sys.cdvdman.disk_id[i] = v.u.int64;
-        }
-    }
-
-    return 0;
-}
-
-int load_config(toml_datum_t t)
-{
-    toml_datum_t arr;
-    toml_datum_t v;
-
-    // Recurse into dependencies
-    arr = toml_get(t, "depends");
-    if (arr.type == TOML_ARRAY) {
-        int i;
-        for (i=0; i < arr.u.arr.size; i++) {
-            v = arr.u.arr.elem[i];
-            if (v.type == TOML_STRING) {
-                if (load_config_file(v.u.s, NULL) < 0) {
-                    return -1;
-                }
-            }
-        }
-    }
-
-    // Display driver set being loaded
-    v = toml_get(t, "name");
-    if (v.type == TOML_STRING) {
-        printf("Loading: %s\n", v.u.s);
-    }
-
-    toml_string_in_overwrite(t, "default_bsd",    &sys.sBSD);
-    toml_string_in_overwrite(t, "default_bsdfs",  &sys.sBSDFS);
-    toml_string_in_overwrite(t, "default_dvd",    &sys.sDVDMode);
-    toml_string_in_overwrite(t, "default_ata0",   &sys.sATA0File);
-    toml_string_in_overwrite(t, "default_ata0id", &sys.sATA0IDFile);
-    toml_string_in_overwrite(t, "default_ata1",   &sys.sATA1File);
-    toml_string_in_overwrite(t, "default_mc0",    &sys.sMC0File);
-    toml_string_in_overwrite(t, "default_mc1",    &sys.sMC1File);
-    toml_string_in_overwrite(t, "default_elf",    &sys.sELFFile);
-    toml_string_in_overwrite(t, "default_gc",     &sys.sGC);
-    toml_string_in_overwrite(t, "default_gsm",    &sys.sGSM);
-    toml_string_in_overwrite(t, "default_cfg",    &sys.sCFGFile);
-    toml_bool_in_overwrite  (t, "default_dbc",    &sys.bDebug);
-    toml_bool_in_overwrite  (t, "default_logo",   &sys.bLogo);
-
-    load_config_eecore (toml_get(t, "eecore"));
-    load_config_cdvdman(toml_get(t, "cdvdman"));
-
-    if (modlist_add_array(&drv.mod, t) < 0)
-        return -1;
-    if (fakelist_add_array(&drv.fake, t) < 0)
-        return -1;
-
-    return 0;
-}
-
-toml_result_t load_config_file_toml(const char * type, const char * subtype)
-{
-    char filename[256];
-    toml_result_t res;
-
-    // Open and parse file
-    if (subtype != NULL)
-        snprintf(filename, 256, "%s%s-%s.toml", g_config_prefix, type, subtype);
-    else
-        snprintf(filename, 256, "%s%s.toml", g_config_prefix, type);
-
-    res = toml_parse_file_ex(filename);
-    if (!res.ok)
-        printf("ERROR: failed to load and parse %s: %s\n", filename, res.errmsg);
-
-    return res;
-}
-
-int load_config_file(const char * type, const char * subtype)
-{
-    toml_result_t res = load_config_file_toml(type, subtype);
-    if (res.ok) {
-        int rv = load_config(res.toptab);
-        toml_free(res);
-        return rv;
-    }
-    else {
-        return -1;
-    }
-}
-
-void *module_get_settings(struct SModule *mod)
-{
-    // Get a pointer to the settings data structure of a module
-    void *settings = NULL;
-
-    if (mod != NULL) {
-        int i;
-        for (i = 0; i < mod->iSize; i += 4) {
-            if (*(uint32_t *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
-                settings = (void *)(mod->pData + i);
-                break;
-            }
-        }
-    }
-
-    return settings;
-}
-
 /*
- * Main neutrino loader function
+ * Parse command-line arguments into sys.* fields.
+ * *out_iELFArgcStart is set to the index of the first ELF argument (after --b),
+ * or argc if no --b was found.
+ * Returns 0 on success, -1 on unknown argument.
  */
-int main(int argc, char *argv[])
+static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
 {
-    irxtab_t *irxtable;
-    irxptr_t *irxptr_tab;
-    uint8_t *irxptr;
-    int i, j;
-    char sGameID[12];
-    int fd_system_cnf;
-    char system_cnf_data[128];
-    off_t iso_size = 0;
-    uint32_t layer1_lba_start = 0;
+    int i;
 
-    printf("--------------------------------\n");
-    printf("- Neutrino PS2 Device Emulator\n");
-    printf("- Version: %s\n", GIT_TAG);
-    printf("- By Maximus32\n");
-    printf("--------------------------------\n");
+    *out_iELFArgcStart = argc;
 
-    /*
-     * Initialiaze structures before filling them from config files
-     */
-    memset(&sys, 0, sizeof(struct SSystemSettings));
-    memset(&drv, 0, sizeof(struct SDriver));
-
-    /*
-     * Change working directory
-     */
     for (i = 1; i < argc; i++) {
-        if (!strncmp(argv[i], "-cwd=", 5)) {
-            if (chdir(&argv[i][5]) != 0) {
-                printf("ERROR: failed to change working directory to %s\n", &argv[i][5]);
-                return -1;
-            }
-        }
-    }
-
-    /*
-     * Detect folder layout: if config/system.toml does not exist, fall back
-     * to a flat folder structure compatible with SAS (Save Application System).
-     */
-    {
-        int fd = open("config/system.toml", O_RDONLY);
-        if (fd < 0) {
-            g_config_prefix  = "";
-            g_modules_prefix = "";
-            printf("INFO: config/system.toml not found, using flat folder layout (SAS mode)\n");
-        } else {
-            close(fd);
-        }
-    }
-
-    /*
-     * Load system settings
-     */
-    if (load_config_file("system", NULL) < 0) {
-        printf("ERROR: failed to load system settings\n");
-        return -1;
-    }
-
-    /*
-     * Debugging / testing
-     * Becouse PSX2 does not support command line arguments, create a file
-     * `config/pcsx2.toml` and put all arguments there. See `config/system.toml`
-     * for a list of supported arguments.
-     */
-    //sys.sCFGFile = "pcsx2";
-
-    /*
-     * Parse user commands
-     */
-    const char *sDVDFile = NULL;
-    const char *sATAMode = "no";
-    const char *sMCMode = "no";
-    int iELFArgcStart = -1;
-    for (i=1; i<argc; i++) {
-        //printf("argv[%d] = %s\n", i, argv[i]);
         if (!strncmp(argv[i], "-bsd=", 5))
             sys.sBSD = &argv[i][5];
         else if (!strncmp(argv[i], "-bsdfs=", 7))
@@ -1029,7 +187,7 @@ int main(int argc, char *argv[])
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
         else if (!strncmp(argv[i], "-cwd=", 5))
-            continue;
+            continue; // already handled before config loading
         else if (!strncmp(argv[i], "-dbc", 4))
             sys.bDebug = 1;
         else if (!strncmp(argv[i], "-logo", 5))
@@ -1037,15 +195,301 @@ int main(int argc, char *argv[])
         else if (!strncmp(argv[i], "-qb", 3))
             sys.bQuickBoot = 1;
         else if (!strncmp(argv[i], "--b", 3)) {
-            iELFArgcStart = i + 1;
+            *out_iELFArgcStart = i + 1;
             break;
-        }
-        else {
+        } else {
             printf("ERROR: unknown argv[%d] = %s\n", i, argv[i]);
             print_usage();
             return -1;
         }
     }
+
+    return 0;
+}
+
+/*
+ * Parse the -gsm= flag string stored in sys.sGSM and populate
+ * sys.eecore.GsmVideoMode and sys.eecore.GsmCompMode.
+ * Returns 0 on success, -1 on parse error.
+ */
+static int parse_gsm_flags(void)
+{
+    char *p = sys.sGSM;
+
+    if (p == NULL || p[0] == 0)
+        return 0;
+
+    // Parse video mode
+    if (p[0] != ':') {
+        if (!strncmp(p, "fp1", 3)) {
+            printf("GSM: Force 240p/288p\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_FP1;
+            p += 3;
+        } else if (!strncmp(p, "fp2", 3)) {
+            printf("GSM: Force 480p/576p\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_FP2;
+            p += 3;
+        } else if (!strncmp(p, "1080ix1", 7)) {
+            printf("GSM: Force 1080i x1 (width x1, height x1)\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X1;
+            p += 7;
+        } else if (!strncmp(p, "1080ix2", 7)) {
+            printf("GSM: Force 1080i x2 (width x2, height x2)\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X2;
+            p += 7;
+        } else if (!strncmp(p, "1080ix3", 7)) {
+            printf("GSM: Force 1080i x3 (width x3, height x2)\n");
+            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X3;
+            p += 7;
+        }
+    }
+
+    if (p[0] == 0)
+        return 0;
+
+    // Parse compatibility mode (after ':')
+    if (p[0] != ':') {
+        printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
+        print_usage();
+        return -1;
+    }
+    p++; // skip ':'
+
+    if (!strncmp(p, "1", 1)) {
+        printf("GSM: Compatibility Mode = 1\n");
+        sys.eecore.GsmCompMode = EECORE_GSM_COMP_1;
+    } else if (!strncmp(p, "2", 1)) {
+        printf("GSM: Compatibility Mode = 2\n");
+        sys.eecore.GsmCompMode = EECORE_GSM_COMP_2;
+    } else if (!strncmp(p, "3", 1)) {
+        printf("GSM: Compatibility Mode = 3\n");
+        sys.eecore.GsmCompMode = EECORE_GSM_COMP_3;
+    } else {
+        printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
+        print_usage();
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+ * Open, validate, and register a DVD ISO file with the FHI layer.
+ * Detects DVD-DL by checking for a second PVD at layer0_lba_size.
+ * Returns 0 on success, -1 on error.
+ */
+static int setup_dvd_iso(const char *path, off_t *out_iso_size,
+                         uint32_t *out_layer1_lba_start)
+{
+    int fd;
+    char buffer[6];
+    uint32_t layer0_lba_size;
+    int i;
+
+    *out_iso_size        = 0;
+    *out_layer1_lba_start = 0;
+
+    printf("Loading %s...\n", path);
+    for (i = 0; i < 1000; i++) {
+        fd = open(path, O_RDONLY);
+        if (fd >= 0)
+            break;
+        nopdelay();
+    }
+    if (fd < 0) {
+        printf("Unable to open %s\n", path);
+        return -1;
+    }
+
+    *out_iso_size = lseek64(fd, 0, SEEK_END);
+    printf("- size = %dMiB\n", (int)(*out_iso_size / (1024 * 1024)));
+
+    // Validate ISO header (PVD at sector 16)
+    lseek64(fd, 16 * 2048, SEEK_SET);
+    if (read(fd, buffer, sizeof(buffer)) != sizeof(buffer)) {
+        printf("Unable to read ISO\n");
+        return -1;
+    }
+    if ((buffer[0x00] != 1) || (strncmp(&buffer[0x01], "CD001", 5))) {
+        printf("File is not a valid ISO\n");
+        return -1;
+    }
+
+    // Get layer0 LBA size
+    lseek64(fd, 16 * 2048 + 80, SEEK_SET);
+    if (read(fd, &layer0_lba_size, sizeof(layer0_lba_size)) != sizeof(layer0_lba_size)) {
+        printf("ISO invalid\n");
+        return -1;
+    }
+
+    // Try to detect DVD-DL by looking for a second PVD at the layer1 boundary
+    lseek64(fd, (uint64_t)layer0_lba_size * 2048, SEEK_SET);
+    if (read(fd, buffer, sizeof(buffer)) == sizeof(buffer)) {
+        if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
+            *out_layer1_lba_start = layer0_lba_size - 16;
+            printf("- DVD-DL detected\n");
+        }
+    }
+
+    if (fhi_add_file_fd(FHI_FID_CDVD, fd, path) < 0)
+        return -1;
+
+    return 0;
+}
+
+/*
+ * Allocate and populate the IRX module table in the EE module storage area.
+ * Patches IOPRP.img and installs all EE-env modules.
+ * Returns a pointer to the end of the written module data, or NULL on error.
+ */
+static uint8_t *build_irx_table(int dvd_active, struct SModule *mod_fakemod)
+{
+    irxtab_t  *irxtable;
+    irxptr_t  *irxptr_tab;
+    uint8_t   *irxptr;
+    int        i, modcount;
+    unsigned int ioprp_size;
+
+    // Count modules: IOPRP + EE modules without sIOPRP + optional FAKEMOD
+    modcount = 1; // IOPRP always present
+    for (i = 0; i < drv.mod.count; i++) {
+        struct SModule *pm = &drv.mod.mod[i];
+        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL)) {
+            printf("Module to load: %s\n", pm->sFileName);
+            modcount++;
+        }
+    }
+    if (drv.fake.count > 0)
+        modcount++; // FAKEMOD
+
+    printf("modstart %p\n", sys.eecore.ModStorageStart);
+    irxtable   = (irxtab_t *)sys.eecore.ModStorageStart;
+    irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
+    irxptr     = (uint8_t *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
+
+    irxtable->modules = irxptr_tab;
+    irxtable->count   = 0;
+
+    // Patch IOPRP.img with our custom modules (CDVDMAN, CDVDFSV, EESYNC)
+    if (dvd_active)
+        ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_full.romdir, &drv.mod);
+    else
+        ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_dvd.romdir, &drv.mod);
+    irxptr_tab->size = ioprp_size;
+    irxptr_tab->ptr  = irxptr;
+    irxptr_tab++;
+    irxptr += ioprp_size;
+    irxtable->count++;
+
+    // IMGDRV
+    irxptr = module_install(modlist_get_by_func(&drv.mod, "IMGDRV"), irxptr, irxptr_tab++);
+    irxtable->count++;
+
+    // UDNL — entry always present, even if there is no custom UDNL module
+    if (modlist_get_by_func(&drv.mod, "UDNL") != NULL)
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "UDNL"), irxptr, irxptr_tab);
+    irxptr_tab++;
+    irxtable->count++;
+
+    // FHI — prefer BD_DEFRAG over BD
+    if (modlist_get_by_func(&drv.mod, "FHI_BD") != NULL) {
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD"), irxptr, irxptr_tab++);
+        irxtable->count++;
+    } else if (modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG") != NULL) {
+        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"), irxptr, irxptr_tab++);
+        irxtable->count++;
+    }
+
+    // All other EE modules without a special function
+    for (i = 0; i < drv.mod.count; i++) {
+        struct SModule *pm = &drv.mod.mod[i];
+        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL) && ((pm->sFunc == NULL) || (
+               strcmp(pm->sFunc, "FAKEMOD") != 0
+            && strcmp(pm->sFunc, "IMGDRV") != 0
+            && strcmp(pm->sFunc, "UDNL") != 0
+            && strcmp(pm->sFunc, "FHI_BD") != 0
+            && strcmp(pm->sFunc, "FHI_BD_DEFRAG") != 0
+            )))
+        {
+            irxptr = module_install(pm, irxptr, irxptr_tab++);
+            irxtable->count++;
+        }
+    }
+
+    // FAKEMOD last, to prevent it from faking our own modules
+    if (drv.fake.count > 0) {
+        irxptr = module_install(mod_fakemod, irxptr, irxptr_tab++);
+        irxtable->count++;
+    }
+
+    return irxptr;
+}
+
+/*
+ * Main neutrino loader function
+ */
+int main(int argc, char *argv[])
+{
+    int i, j;
+    char sGameID[12];
+    int fd_system_cnf;
+    char system_cnf_data[128];
+    off_t iso_size = 0;
+    uint32_t layer1_lba_start = 0;
+    int iELFArgcStart;
+
+    printf("--------------------------------\n");
+    printf("- Neutrino PS2 Device Emulator\n");
+    printf("- Version: %s\n", GIT_TAG);
+    printf("- By Maximus32\n");
+    printf("--------------------------------\n");
+
+    /*
+     * Initialize structures before filling them from config files
+     */
+    memset(&sys, 0, sizeof(struct SSystemSettings));
+    memset(&drv, 0, sizeof(struct SDriver));
+
+    /*
+     * Change working directory
+     */
+    for (i = 1; i < argc; i++) {
+        if (!strncmp(argv[i], "-cwd=", 5)) {
+            if (chdir(&argv[i][5]) != 0) {
+                printf("ERROR: failed to change working directory to %s\n", &argv[i][5]);
+                return -1;
+            }
+        }
+    }
+
+    /*
+     * Detect folder layout: if config/system.toml does not exist, fall back
+     * to a flat folder structure compatible with SAS (Save Application System).
+     */
+    {
+        int fd = open("config/system.toml", O_RDONLY);
+        if (fd < 0) {
+            config_set_config_prefix("");
+            modlist_set_modules_prefix("");
+            printf("INFO: config/system.toml not found, using flat folder layout (SAS mode)\n");
+        } else {
+            close(fd);
+        }
+    }
+
+    /*
+     * Load system settings
+     */
+    if (load_config_file("system", NULL) < 0) {
+        printf("ERROR: failed to load system settings\n");
+        return -1;
+    }
+
+    /*
+     * Parse command-line arguments
+     */
+    if (parse_cmdline_args(argc, argv, &iELFArgcStart) < 0)
+        return -1;
 
     /*
      * Load default compat settings
@@ -1071,25 +515,16 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Make sure we don't pass loader arguments to the ELF
-    if (iELFArgcStart == -1)
-        iELFArgcStart = argc;
-
     // Check for "file" mode of dvd emulation
+    const char *sDVDFile = NULL;
     if (strstr(sys.sDVDMode, ":")) {
         sDVDFile = sys.sDVDMode;
         sys.sDVDMode = "file";
     }
 
-    // Check for "file" mode of ata emulation
-    if (sys.sATA0File != NULL || sys.sATA1File != NULL) {
-        sATAMode = "file";
-    }
-
-    // Check for "file" mode of mc emulation
-    if (sys.sMC0File != NULL || sys.sMC1File != NULL) {
-        sMCMode = "file";
-    }
+    // Check for "file" mode of ata/mc emulation
+    const char *sATAMode = (sys.sATA0File != NULL || sys.sATA1File != NULL) ? "file" : "no";
+    const char *sMCMode  = (sys.sMC0File  != NULL || sys.sMC1File  != NULL) ? "file" : "no";
 
     // Auto-detect BSD driver from path prefix when not explicitly set
     if (!strcmp(sys.sBSD, "no")) {
@@ -1105,21 +540,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Process command line game compatibility modes
+    // Process command-line game compatibility modes
     if (sys.sGC != NULL) {
         char *c;
         for (c = sys.sGC; *c != 0; c++) {
             switch (*c) {
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
                 {
                     const char mode[] = {'M', 'O', 'D', 'E', *c};
                     toml_datum_t t_mode = toml_get(toml_compat.toptab, mode);
@@ -1139,12 +566,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Process ELF file and game compatibility
-    // We do this early if (while still in the LE) if possible so we can load patch files
+    // Process ELF file and game compatibility early (while still in LE) so we can load patch files
     if (strcmp(sys.sELFFile, "auto") != 0) {
         // Not "auto", so the ELF filename should have been provided
         if ((strlen(sys.sELFFile) > 18) && (sys.sELFFile[12] == '_') && (sys.sELFFile[16] == '.')) {
-            // We need the GameID
+            // Extract GameID from ELF path
             memcpy(sGameID, &sys.sELFFile[8], 11);
             sGameID[11] = '\0';
 
@@ -1169,68 +595,8 @@ int main(int argc, char *argv[])
     /*
      * GSM: process user flags
      */
-    if (sys.sGSM == NULL)
-        goto gsm_done;
-
-    char *pgsm = sys.sGSM;
-
-    if (pgsm[0] == 0) {
-        goto gsm_done;
-    } else if (pgsm[0] != ':') {
-        // Interlaced field mode
-        if (!strncmp(pgsm, "fp1", 3)) {
-            printf("GSM: Force 480p/576p\n");
-            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_FP1;
-            pgsm += 3;
-        }else if (!strncmp(pgsm, "fp2", 3)) {
-            printf("GSM: Force 480p/576p\n");
-            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_FP2;
-            pgsm += 3;
-        } else if (!strncmp(pgsm, "1080ix1", 7)) {
-            printf("GSM: Force 1080i x1 (width x1, height x1)\n");
-            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X1;
-            pgsm += 7;
-        } else if (!strncmp(pgsm, "1080ix2", 7)) {
-            printf("GSM: Force 1080i x2 (width x2, height x2)\n");
-            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X2;
-            pgsm += 7;
-        } else if (!strncmp(pgsm, "1080ix3", 7)) {
-            printf("GSM: Force 1080i x3 (width x3, height x2)\n");
-            sys.eecore.GsmVideoMode = EECORE_GSM_VMODE_1080I_X3;
-            pgsm += 7;
-        }
-    }
-
-    if (pgsm[0] == 0) {
-        goto gsm_done;
-    } else if (pgsm[0] == ':') {
-        pgsm++; // this argument
-        //if (pgsm[0] != ':') {
-            // Compatibility mode
-            if (!strncmp(pgsm, "1", 1)) {
-                printf("GSM: Compatibility Mode = 1\n");
-                sys.eecore.GsmCompMode = EECORE_GSM_COMP_1;
-                pgsm += 1;
-            } else if (!strncmp(pgsm, "2", 1)) {
-                printf("GSM: Compatibility Mode = 2\n");
-                sys.eecore.GsmCompMode = EECORE_GSM_COMP_2;
-                pgsm += 1;
-            } else if (!strncmp(pgsm, "3", 1)) {
-                printf("GSM: Compatibility Mode = 3\n");
-                sys.eecore.GsmCompMode = EECORE_GSM_COMP_3;
-                pgsm += 1;
-            } else {
-                goto gsm_error;
-            }
-        //}
-    }
-
-    goto gsm_done;
-gsm_error:
-    printf("ERROR: gsm flag %s not supported\n", sys.sGSM);
-    print_usage();
-    return -1;
-gsm_done:
+    if (parse_gsm_flags() < 0)
+        return -1;
 
     /*
      * GSM: check for 576p capability
@@ -1240,7 +606,6 @@ gsm_done:
         if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) >= 0) {
             char romver[16], romverNum[5];
 
-            // Read ROM version
             read(fd_ROMVER, romver, sizeof(romver));
             close(fd_ROMVER);
 
@@ -1264,11 +629,11 @@ gsm_done:
             printf("ERROR: driver %s failed\n", sys.sBSD);
             return -1;
         }
-        
-        // mmce devices don't have a filesystem
+
+        // mmce and udpfs devices don't have a filesystem layer
         if ((!strcmp(sys.sBSD, "mmce")) || (!strcmp(sys.sBSD, "udpfs")))
             sys.sBSDFS = "no";
-        
+
         if (!strcmp(sys.sBSDFS, "no")) {
             // Load nothing
         } else if (load_config_file("bsdfs", sys.sBSDFS) < 0) {
@@ -1333,10 +698,9 @@ gsm_done:
 
     if (sys.bQuickBoot == 0) {
         /*
-        * Reboot IOP into Load Environment (LE)
-        */
+         * Reboot IOP into Load Environment (LE)
+         */
         printf("Reboot IOP into Load Environment (LE)\n");
-        //fileXioExit();
         SifExitIopHeap();
         SifLoadFileExit();
         SifExitRpc();
@@ -1349,8 +713,8 @@ gsm_done:
         sbv_patch_enable_lmb();
 
         /*
-        * Start load environment modules
-        */
+         * Start load environment modules
+         */
         for (i = 0; i < drv.mod.count; i++) {
             struct SModule *pm = &drv.mod.mod[i];
             if (pm->env & MOD_ENV_LE) {
@@ -1365,8 +729,7 @@ gsm_done:
     // Load EE_CORE settings
     struct ee_core_data *set_ee_core = module_get_settings(&mod_ee_core);
 
-    // FAKEMOD optional module
-    // Only loaded when modules need to be faked
+    // FAKEMOD optional module — only needed when modules are to be faked
     struct SModule *mod_fakemod = modlist_get_by_func(&drv.mod, "FAKEMOD");
 
     // Detect active FHI backing store and zero its settings struct
@@ -1382,10 +745,8 @@ gsm_done:
     if (set_fakemod != NULL)
         memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
 
-    // Quickboot requires certain IOP modules to be loaded before starting Neutrino
-    // Re-initialize EE-side libraries using those modules
+    // QuickBoot requires certain IOP modules to be loaded before starting Neutrino
     if (sys.bQuickBoot == 1) {
-        // fileXioIoctl2 needed ?
         if (fhi_active) {
             if (fileXioInit() < 0) {
                 printf("ERROR: failed to initialize fileXio\n");
@@ -1398,8 +759,6 @@ gsm_done:
      * Enable DVD emulation
      */
     if (sDVDFile != NULL) {
-        int fd_iso = 0;
-
         if (!fhi_active) {
             printf("ERROR: DVD emulator needs FHI backing store!\n");
             return -1;
@@ -1409,60 +768,12 @@ gsm_done:
             return -1;
         }
 
-        /*
-         * Check if file exists
-         * Give low level drivers 10s to start
-         */
-        printf("Loading %s...\n", sDVDFile);
-        for (i = 0; i < 1000; i++) {
-            fd_iso = open(sDVDFile, O_RDONLY);
-            if (fd_iso >= 0)
-                break;
-
-            // Give low level drivers some time to init
-            nopdelay();
-        }
-        if (fd_iso < 0) {
-            printf("Unable to open %s\n", sDVDFile);
-            return -1;
-        }
-        // Get ISO file size
-        iso_size = lseek64(fd_iso, 0, SEEK_END);
-        printf("- size = %dMiB\n", (int)(iso_size / (1024 * 1024)));
-
-        char buffer[6];
-        // Validate this is an ISO
-        lseek64(fd_iso, 16 * 2048, SEEK_SET);
-        if (read(fd_iso, buffer, sizeof(buffer)) != sizeof(buffer)) {
-            printf("Unable to read ISO\n");
-            return -1;
-        }
-        if ((buffer[0x00] != 1) || (strncmp(&buffer[0x01], "CD001", 5))) {
-            printf("File is not a valid ISO\n");
-            return -1;
-        }
-        // Get ISO layer0 size
-        uint32_t layer0_lba_size;
-        lseek64(fd_iso, 16 * 2048 + 80, SEEK_SET);
-        if (read(fd_iso, &layer0_lba_size, sizeof(layer0_lba_size)) != sizeof(layer0_lba_size)) {
-            printf("ISO invalid\n");
-            return -1;
-        }
-        // Try to get ISO layer1 size
-        lseek64(fd_iso, (uint64_t)layer0_lba_size * 2048, SEEK_SET);
-        if (read(fd_iso, buffer, sizeof(buffer)) == sizeof(buffer)) {
-            if ((buffer[0x00] == 1) && (!strncmp(&buffer[0x01], "CD001", 5))) {
-                layer1_lba_start = layer0_lba_size - 16;
-                printf("- DVD-DL detected\n");
-            }
-        }
-
-        if (fhi_add_file_fd(FHI_FID_CDVD, fd_iso, sDVDFile) < 0)
+        if (setup_dvd_iso(sDVDFile, &iso_size, &layer1_lba_start) < 0)
             return -1;
     }
 
     /*
-     * Figure out the the elf file to start automatically from the SYSTEM.CNF
+     * Figure out the ELF file to start automatically from the SYSTEM.CNF
      */
     if (strcmp(sys.sELFFile, "auto") == 0) {
         if (sDVDFile != NULL) {
@@ -1480,7 +791,6 @@ gsm_done:
                 return -1;
             }
 
-            // Read file contents
             read(fd_system_cnf, system_cnf_data, 128);
             close(fd_system_cnf);
         }
@@ -1531,10 +841,10 @@ gsm_done:
         if (eMediaType == SCECdNODISC)
             eMediaType = iso_size <= (333000 * 2048) ? SCECdPS2CD : SCECdPS2DVD;
 
-        set_cdvdman->media = eMediaType;
+        set_cdvdman->media        = eMediaType;
         set_cdvdman->layer1_start = layer1_lba_start;
-        set_cdvdman->flags = sys.cdvdman.flags;
-        set_cdvdman->fs_sectors = sys.cdvdman.fs_sectors;
+        set_cdvdman->flags        = sys.cdvdman.flags;
+        set_cdvdman->fs_sectors   = sys.cdvdman.fs_sectors;
     } else {
         if (sys.cdvdman.flags != 0)
             printf("WARNING: compatibility cannot be changed without emulating the DVD\n");
@@ -1605,7 +915,7 @@ gsm_done:
 
             printf("- %s, %s\n", drv.fake.fake[i].fname, drv.fake.fake[i].name);
 
-            // Copy file name into cdvdman data
+            // Copy file name into fakemod data
             len = strlen(drv.fake.fake[i].fname) + 1;
             if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
                 printf("Too much fake string data\n");
@@ -1615,7 +925,7 @@ gsm_done:
             set_fakemod->fake[i].fname = (char *)(stringbase + 0x80000000);
             stringbase += len;
 
-            // Copy module name into cdvdman data
+            // Copy module name into fakemod data
             len = strlen(drv.fake.fake[i].name) + 1;
             if ((stringbase + len) > MODULE_SETTINGS_MAX_DATA_SIZE) {
                 printf("Too much fake string data\n");
@@ -1642,112 +952,29 @@ gsm_done:
     memset((void *)0x00082000, 0, 0x00100000 - 0x00082000);
 #pragma GCC diagnostic pop
 
-    // Count the number of modules to pass to the ee_core
-    int modcount = 1; // IOPRP.img is always present
-    for (i = 0; i < drv.mod.count; i++) {
-        struct SModule *pm = &drv.mod.mod[i];
-        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL)) {
-            printf("Module to load: %s\n", pm->sFileName);
-            modcount++;
-        }
-    }
-    if (drv.fake.count > 0) {
-        // FAKEMOD
-        modcount++;
-    }
-
-    printf("modstart %p\n", sys.eecore.ModStorageStart);
-    irxtable = (irxtab_t *)sys.eecore.ModStorageStart;
-    irxptr_tab = (irxptr_t *)((unsigned char *)irxtable + sizeof(irxtab_t));
-    irxptr = (uint8_t *)((((unsigned int)irxptr_tab + sizeof(irxptr_t) * modcount) + 0xF) & ~0xF);
-
-    irxtable->modules = irxptr_tab;
-    irxtable->count = 0;
-
-    //
-    // Patch IOPRP.img with our custom modules
-    //
-    //printf("IOPRP.img (old):\n");
-    //print_romdir(ioprp_img_base.romdir);
-    unsigned int ioprp_size;
-    if (sDVDFile != NULL)
-        ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_full.romdir);
-    else
-        ioprp_size = patch_IOPRP_image((struct romdir_entry *)irxptr, ioprp_img_dvd.romdir);
-    //printf("IOPRP.img (new):\n");
-    //print_romdir((struct romdir_entry *)irxptr);
-    irxptr_tab->size = ioprp_size;
-    irxptr_tab->ptr = irxptr;
-    irxptr_tab++;
-    irxptr += ioprp_size;
-    irxtable->count++;
-
-    //
-    // Load modules into place
-    //
-    // IMGDRV
-    irxptr = module_install(modlist_get_by_func(&drv.mod, "IMGDRV"), irxptr, irxptr_tab++);
-    irxtable->count++;
-    // UDNL, entry is always present, even if there is no custom UDNL module
-    if (modlist_get_by_func(&drv.mod, "UDNL") != NULL)
-        irxptr = module_install(modlist_get_by_func(&drv.mod, "UDNL"), irxptr, irxptr_tab);
-    irxptr_tab++;
-    irxtable->count++;
-    // FHI
-    if (modlist_get_by_func(&drv.mod, "FHI_BD") != NULL) {
-        // FHI BD
-        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD"), irxptr, irxptr_tab++);
-        irxtable->count++;
-    }
-    else if (modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG") != NULL) {
-        // FHI BD DEFRAG
-        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"), irxptr, irxptr_tab++);
-        irxtable->count++;
-    }
-    //else if (modlist_get_by_func(&drv.mod, "FHI_FILEID") != NULL) {
-    //    // FHI FILEID
-    //    irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_FILEID"), irxptr, irxptr_tab++);
-    //    irxtable->count++;
-    //}
-    // All other modules
-    //printf("Other modules(%d):\n", drv.mod.count);
-    for (i = 0; i < drv.mod.count; i++) {
-        struct SModule *pm = &drv.mod.mod[i];
-        //printf("Module: %s, func: %s, env: 0x%x, ioprp: %s\n", pm->sFileName, (pm->sFunc == NULL) ? "NULL" : pm->sFunc, pm->env, (pm->sIOPRP != NULL) ? "yes" : "no");
-        // Load only the modules that are not part of IOPRP and don't have a special function
-        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL) && ((pm->sFunc == NULL) || (
-               strcmp(pm->sFunc, "FAKEMOD") != 0
-            && strcmp(pm->sFunc, "IMGDRV") != 0
-            && strcmp(pm->sFunc, "UDNL") != 0
-            && strcmp(pm->sFunc, "FHI_BD") != 0
-            && strcmp(pm->sFunc, "FHI_BD_DEFRAG") != 0
-            //&& strcmp(pm->sFunc, "FHI_FILEID") != 0
-            )))
-        {
-            irxptr = module_install(pm, irxptr, irxptr_tab++);
-            irxtable->count++;
-        }
-    }
-    // FAKEMOD last, to prevent it from faking our own modules
-    if (drv.fake.count > 0) {
-        irxptr = module_install(mod_fakemod, irxptr, irxptr_tab++);
-        irxtable->count++;
-    }
+    /*
+     * Build the IRX module table in EE memory
+     */
+    uint8_t *irxptr_end = build_irx_table(sDVDFile != NULL, mod_fakemod);
+    if (irxptr_end == NULL)
+        return -1;
 
     //
     // Set EE_CORE settings before loading into place
     //
+    irxtab_t *irxtable = (irxtab_t *)sys.eecore.ModStorageStart;
     strncpy(sys.eecore.GameID, sGameID, 12);
-    sys.eecore.CheatList       = NULL;
-    sys.eecore.ModStorageEnd   = irxptr;
-    // Add simple checksum
+    sys.eecore.CheatList     = NULL;
+    sys.eecore.ModStorageEnd = irxptr_end;
+
+    // Add simple checksum over the module data
     uint32_t *pms = (uint32_t *)irxtable;
 #ifdef DEBUG
     printf("Module memory checksum:\n");
 #endif
     for (j = 0; j < EEC_MOD_CHECKSUM_COUNT; j++) {
         uint32_t ssv = 0;
-        for (i=0; i<1024; i++) {
+        for (i = 0; i < 1024; i++) {
             ssv += pms[i];
             // Skip imgdrv patch area
             if (pms[i] == 0xDEC1DEC1)
@@ -1759,6 +986,7 @@ gsm_done:
         sys.eecore.mod_checksum_4k[j] = ssv;
         pms += 1024;
     }
+
     // Copy settings to module memory
     *set_ee_core = sys.eecore;
 
@@ -1766,7 +994,7 @@ gsm_done:
     // Load EECORE ELF sections
     //
     uint8_t *boot_elf = (uint8_t *)mod_ee_core.pData;
-    elf_header_t *eh = (elf_header_t *)boot_elf;
+    elf_header_t  *eh  = (elf_header_t *)boot_elf;
     elf_pheader_t *eph = (elf_pheader_t *)(boot_elf + eh->phoff);
     for (i = 0; i < eh->phnum; i++) {
         if (eph[i].type != ELF_PT_LOAD)
@@ -1782,7 +1010,7 @@ gsm_done:
     // Patch PS2 to use our "ee_core.elf" instead of EELOAD
     sbvpp_replace_eeload((void *)eh->entry);
     // Patch PS2 to not wipe our module buffer
-    sbvpp_patch_user_mem_clear(irxptr);
+    sbvpp_patch_user_mem_clear(irxptr_end);
 
     //
     // Create EE_CORE argument string
@@ -1797,19 +1025,19 @@ gsm_done:
         snprintf(psConfig, maxStrLen, "%s", "rom0:PS2LOGO");
         ee_core_argv[ee_core_argc++] = psConfig;
         maxStrLen -= strlen(psConfig) + 1;
-        psConfig += strlen(psConfig) + 1;
+        psConfig  += strlen(psConfig) + 1;
     }
     // ELF path
     snprintf(psConfig, maxStrLen, "%s", sys.sELFFile);
     ee_core_argv[ee_core_argc++] = psConfig;
     maxStrLen -= strlen(psConfig) + 1;
-    psConfig += strlen(psConfig) + 1;
+    psConfig  += strlen(psConfig) + 1;
     // ELF args
     for (i = iELFArgcStart; i < argc; i++) {
         snprintf(psConfig, maxStrLen, "%s", argv[i]);
         ee_core_argv[ee_core_argc++] = psConfig;
         maxStrLen -= strlen(psConfig) + 1;
-        psConfig += strlen(psConfig) + 1;
+        psConfig  += strlen(psConfig) + 1;
     }
 
     //

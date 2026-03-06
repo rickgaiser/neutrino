@@ -1,6 +1,6 @@
 GIT_TAG = $(shell git describe --tags --exclude=latest)
 
-EE_OBJS = main.o fhi_config.o xparam.o patch.o ioprp.o tomlc17.o iso_cnf.o
+EE_OBJS = main.o modlist.o config.o fhi_config.o xparam.o patch.o ioprp.o tomlc17.o iso_cnf.o
 EE_LIBS = -lfileXio -lpatches
 EE_CFLAGS = -DGIT_TAG=\"$(GIT_TAG)\"
 

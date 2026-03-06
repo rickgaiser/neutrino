@@ -14,11 +14,11 @@ _off64_t lseek64(int __filedes, _off64_t __offset, int __whence); // should be i
 #include <io_common.h>
 
 // IOP settings structs
-#include "../../../iop/common/fhi_bd.h"    // fhi_bd, fhi_bd_file — also pulls usbhdfsd-common.h
-#include "../../../iop/common/fhi_fileid.h"
+#include "../../../common/include/fhi_bd_config.h"    // fhi_bd, fhi_bd_file — also pulls usbhdfsd-common.h
+#include "../../../common/include/fhi_fileid_config.h"
 
 #include "fhi_config.h"
-#include "module_utils.h"
+#include "modlist.h"
 
 // ---------------------------------------------------------------------------
 // Settings pointers — exactly one is non-NULL after fhi_config_init

@@ -1,7 +1,7 @@
 #ifndef FHI_CONFIG_H
 #define FHI_CONFIG_H
 
-#include "../../../iop/common/fhi.h"  // FHI_FID_*, FHI_MAX_FILES
+#include "../../../common/include/fhi.h"  // FHI_FID_*, FHI_MAX_FILES
 
 struct SModList;
 
