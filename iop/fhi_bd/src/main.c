@@ -6,7 +6,7 @@
 #include <bdm.h>
 #include <bd_defrag.h>
 
-#include "fhi_bd.h"
+#include "fhi_bd_config.h"
 #include "mprintf.h"
 
 #define MODNAME "fhi" // give all fhi modules the same name

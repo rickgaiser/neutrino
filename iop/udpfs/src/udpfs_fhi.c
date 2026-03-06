@@ -18,7 +18,7 @@
 
 #include "main.h"
 #include "udpfs_core.h"
-#include "fhi_fileid.h"
+#include "fhi_fileid_config.h"
 
 
 /* Module settings - populated by EE loader via MODULE_SETTINGS_MAGIC scan */

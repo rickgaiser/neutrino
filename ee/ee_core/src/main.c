@@ -20,7 +20,7 @@
 #include "asm.h"
 #include "cheat_api.h"
 #include "gsm_api.h"
-#include "interface.h"
+#include "eecore_config.h"
 
 extern void *_stack_end;
 

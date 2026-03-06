@@ -3,8 +3,8 @@
 #define __CDVDMAN_INTERNAL__
 
 #include "dev9.h"
-#include "cdvdman_opl.h"
-#include "cdvd_config.h"
+#include "cdvdman_emu.h"
+#include "cdvdman_config.h"
 #include "device.h"
 
 #include <loadcore.h>

@@ -1,6 +1,6 @@
 
-#ifndef __CDVDMAN__
-#define __CDVDMAN__
+#ifndef __CDVDMAN_EMU__
+#define __CDVDMAN_EMU__
 
 // PS2 CDVD hardware registers
 #define CDL_DATA_RDY      0x01

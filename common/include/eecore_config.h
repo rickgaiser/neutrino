@@ -1,9 +1,10 @@
-#ifndef EE_CORE_INTERFACE_H
-#define EE_CORE_INTERFACE_H
+#ifndef EECORE_CONFIG_H
+#define EECORE_CONFIG_H
 
 
 #include <stdint.h>
 
+#include "module_config.h"
 
 // Pointer to IRX module in hidden EE RAM area
 typedef struct
@@ -21,9 +22,6 @@ typedef struct
     irxptr_t *modules;
     int count;
 } irxtab_t;
-
-// Magic number to find the interface struct
-#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
 
 // Compatibility flags
 #define EECORE_FLAG_UNHOOK      (1<<0) // Unhook syscalls, keep value the same as in asm.S!

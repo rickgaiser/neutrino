@@ -29,7 +29,7 @@
 // Neutrino
 #include "cheat_api.h"
 #include "cheat_engine.h"
-#include "interface.h"
+#include "eecore_config.h"
 
 /*---------------------------------*/
 /* Setup PS2RD Cheat Engine params */

@@ -18,7 +18,7 @@
 #include <thsemap.h>
 #include <cdvdman.h>
 
-#include "cdvdman_opl.h"
+#include "../../cdvdman_emu/include/cdvdman_emu.h"
 #include "mprintf.h"
 
 #define MODNAME "cdvd_ee_driver"

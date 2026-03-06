@@ -2,6 +2,7 @@
 #define __CDVD_CONFIG__
 
 #include <tamtypes.h>
+#include "module_config.h"
 
 // flags
 #define CDVDMAN_COMPAT_FAST_READ     (1<<0) // ~MODE_1
@@ -10,7 +11,6 @@
 #define CDVDMAN_COMPAT_F1_2001       (1<<3)
 #define CDVDMAN_COMPAT_SYNC_CALLBACK (1<<4) // MODE_2
 
-#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
 struct cdvdman_settings_common
 {
     // Magic number to find

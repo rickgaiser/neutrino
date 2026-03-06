@@ -3,7 +3,7 @@
 #include <sysclib.h>
 #include <xmodload.h>
 
-#include "fakemod.h"
+#include "fakemod_config.h"
 #include "ioplib.h"
 #include "elf.h"
 #include "mprintf.h"

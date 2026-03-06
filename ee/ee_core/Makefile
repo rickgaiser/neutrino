@@ -20,7 +20,7 @@ EE_OBJS = main.o iopmgr.o loadfile.o util.o patches.o patches_asm.o \
 	  asm.o crt0.o $(GSMCORE_EE_OBJS) $(CHEATCORE_EE_OBJS)
 MAPFILE = ee_core.map
 
-EE_INCS := -I. -Iinclude -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I$(GSKIT)/include
+EE_INCS := -I. -Iinclude -I../../common/include -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I$(GSKIT)/include
 EE_CFLAGS = -D_EE -Os -G0 -Wall -Werror -fdata-sections -ffunction-sections $(EE_INCS)
 
 ifeq ($(EESIO_DEBUG),1)

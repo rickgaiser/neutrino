@@ -8,7 +8,7 @@
 // Neutrino
 #include "util.h"
 #include "ee_debug.h"
-#include "interface.h"
+#include "eecore_config.h"
 #include "ee_asm.h"
 #include "ee_regs.h"
 #include "ee_debug.h"

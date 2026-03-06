@@ -17,7 +17,7 @@
 // Neutrino
 #include "ee_debug.h"
 #include "util.h"
-#include "interface.h"
+#include "eecore_config.h"
 
 // This patch needs apemodpatch.irx loaded
 // Currently not supported by neutrino, fix later

@@ -1,8 +1,10 @@
-#ifndef FAKEMOD_H
-#define FAKEMOD_H
+#ifndef FAKEMOD_CONFIG_H
+#define FAKEMOD_CONFIG_H
 
 
 #include <stdint.h>
+
+#include "module_config.h"
 
 
 struct FakeModule
@@ -21,7 +23,6 @@ struct FakeModule
 // Fake module properties
 #define FAKE_PROP_UNLOAD  (1<<1) /// 'fake' module can be unloaded (note that re-loading is not possible!)
 
-#define MODULE_SETTINGS_MAGIC 0xf1f2f3f4
 #define MODULE_SETTINGS_MAX_DATA_SIZE 256
 #define MODULE_SETTINGS_MAX_FAKE_COUNT 10
 struct fakemod_data

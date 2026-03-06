@@ -14,7 +14,7 @@
 #include "iopmgr.h"
 #include "asm.h"
 #include "util.h"
-#include "interface.h"
+#include "eecore_config.h"
 
 extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
 
