@@ -11,6 +11,7 @@ Based on MAME chd.cpp/chdcodec.cpp source code.
 """
 
 import struct
+import sys
 import zlib
 import lzma
 from typing import List, Optional, Tuple
@@ -30,6 +31,8 @@ CHD_CODEC_CDFL = 0x6364666c  # "cdfl" - CD FLAC
 CHD_CODEC_ZLIB = 0x7a6c6962  # "zlib"
 CHD_CODEC_ZLIB_PLUS = 0x7a6c702b  # "zlp+"
 CHD_CODEC_LZMA = 0x6c7a6d61  # "lzma"
+CHD_CODEC_HUFF = 0x68756666  # "huff"
+CHD_CODEC_FLAC = 0x666c6163  # "flac"
 
 # CD sector constants (from cdrom.h)
 CD_MAX_SECTOR_DATA = 2352
@@ -59,146 +62,214 @@ COMPRESSION_PARENT_1 = 13
 
 
 class BitstreamReader:
-    """Read bits from a byte stream."""
-    
+    """Read bits from a byte stream, MSB first (matches MAME bitstream_in)."""
+
     def __init__(self, data: bytes):
         self.data = data
-        self.offset = 0  # bit offset
-        
+        self.offset = 0  # current bit position
+
     def read(self, num_bits: int) -> int:
-        """Read num_bits from the stream."""
+        """Consume and return num_bits, MSB first."""
         if num_bits == 0:
             return 0
-            
         result = 0
         bits_read = 0
-        
         while bits_read < num_bits:
             byte_offset = self.offset // 8
             bit_offset = self.offset % 8
-            
             if byte_offset >= len(self.data):
                 raise ValueError("Bitstream overflow")
-            
-            # How many bits can we read from current byte?
             bits_available = 8 - bit_offset
             bits_needed = num_bits - bits_read
             bits_to_read = min(bits_available, bits_needed)
-            
-            # Extract bits from current byte
             byte_val = self.data[byte_offset]
-            mask = (1 << bits_to_read) - 1
             shift = bits_available - bits_to_read
-            bits = (byte_val >> shift) & mask
-            
+            bits = (byte_val >> shift) & ((1 << bits_to_read) - 1)
             result = (result << bits_to_read) | bits
             bits_read += bits_to_read
             self.offset += bits_to_read
-        
         return result
-    
+
+    def peek(self, num_bits: int) -> int:
+        """Return num_bits without consuming; zero-pads at EOF (like MAME buffer)."""
+        if num_bits == 0:
+            return 0
+        result = 0
+        bits_read = 0
+        pos = self.offset
+        while bits_read < num_bits:
+            byte_offset = pos // 8
+            if byte_offset >= len(self.data):
+                result <<= (num_bits - bits_read)  # zero-pad
+                break
+            bit_offset = pos % 8
+            bits_available = 8 - bit_offset
+            bits_needed = num_bits - bits_read
+            bits_to_read = min(bits_available, bits_needed)
+            byte_val = self.data[byte_offset]
+            shift = bits_available - bits_to_read
+            bits = (byte_val >> shift) & ((1 << bits_to_read) - 1)
+            result = (result << bits_to_read) | bits
+            bits_read += bits_to_read
+            pos += bits_to_read
+        return result
+
     def remaining(self) -> int:
-        """Return number of bits remaining."""
         return len(self.data) * 8 - self.offset
 
 
 class HuffmanDecoder:
-    """Huffman decoder for CHD v5 map.
-    
-    Based on MAME huffman.cpp import_tree_rle().
+    """Huffman decoder matching MAME huffman_context_base / huffman_decoder<N,M>.
+
+    Supports two tree-import modes:
+      import_tree_rle()     — used by CHD v5 map (huffman_decoder<16,8>)
+      import_tree_huffman() — used by huff data codec (huffman_decoder<256,16>)
     """
-    
+
     def __init__(self, maxbits: int = 16, numcodes: int = 256):
         self.maxbits = maxbits
         self.numcodes = numcodes
-        # numbits for reading tree: 5 for maxbits>=16, 4 for maxbits>=8, 3 otherwise
+        # RLE numbits: 5 if maxbits>=16, 4 if >=8, else 3
         self.numbits = 5 if maxbits >= 16 else (4 if maxbits >= 8 else 3)
-        # huffnode[i] = {'numbits': bit_length, 'code': canonical_code}
         self.huffnode = [{'numbits': 0, 'code': 0} for _ in range(numcodes)]
-        self.lookup = {}  # (length, code) -> value
-        
-    def import_tree_rle(self, bitstream: BitstreamReader) -> None:
-        """Import Huffman tree from RLE-encoded format.
+        # lookup_array[peek(maxbits)] = (symbol << 5) | numbits  (MAKE_LOOKUP)
+        self._lookup_array = [0] * (1 << maxbits)
 
-        From MAME huffman.cpp import_tree_rle():
-        - Read numbits per entry
-        - If value != 1: raw numbits value
-        - If value == 1:
-          - If next value == 1: single 1
-          - Else: repeat (next value + 3) times
+    def import_tree_rle(self, bitstream: BitstreamReader) -> None:
+        """Import tree bit-lengths via simple RLE (MAME import_tree_rle).
+
+        Used for CHD v5 compressed map decoding.
         """
         curnode = 0
         while curnode < self.numcodes:
             nodebits = bitstream.read(self.numbits)
             if nodebits != 1:
-                # Raw value
                 self.huffnode[curnode]['numbits'] = nodebits
                 curnode += 1
             else:
-                # Escape code - read next value
                 nodebits2 = bitstream.read(self.numbits)
                 if nodebits2 == 1:
-                    # Double 1 = single 1
                     self.huffnode[curnode]['numbits'] = 1
                     curnode += 1
                 else:
-                    # Repeat count: read another value and add 3
                     repcount = bitstream.read(self.numbits) + 3
                     while repcount > 0 and curnode < self.numcodes:
                         self.huffnode[curnode]['numbits'] = nodebits2
                         curnode += 1
                         repcount -= 1
-        
-        # Verify we got the right number
+
         if curnode != self.numcodes:
-            raise ValueError(f"Huffman tree incomplete: got {curnode}, expected {self.numcodes}")
-        
-        # Assign canonical codes
+            raise ValueError(f"Huffman RLE tree incomplete: {curnode}/{self.numcodes}")
+
         self._assign_canonical_codes()
-        
-        # Build lookup table
         self._build_lookup_table()
-    
+
+    def import_tree_huffman(self, bitstream: BitstreamReader) -> None:
+        """Import tree encoded with a secondary huffman_decoder<24,6> (MAME import_tree_huffman).
+
+        Used by huffman_8bit_encoder::encode() → export_tree_huffman().
+        This is the correct mode for the CHD 'huff' data codec.
+        """
+        # --- Parse the small tree (huffman_decoder<24,6>) ---
+        small = HuffmanDecoder(maxbits=6, numcodes=24)
+        small.huffnode[0]['numbits'] = bitstream.read(3)
+        start = bitstream.read(3) + 1  # first_non_zero
+        count = 0
+        for index in range(1, 24):
+            if index < start or count == 7:
+                small.huffnode[index]['numbits'] = 0
+            else:
+                count = bitstream.read(3)
+                small.huffnode[index]['numbits'] = 0 if count == 7 else count
+        small._assign_canonical_codes()
+        small._build_lookup_table()
+
+        # --- Compute rlefullbits = floor(log2(numcodes - 9)) ---
+        rlefullbits = 0
+        temp = self.numcodes - 9
+        while temp != 0:
+            temp >>= 1
+            rlefullbits += 1
+
+        # --- Decode main tree bit-lengths via small tree ---
+        last = 0
+        curcode = 0
+        while curcode < self.numcodes:
+            value = small.decode_one(bitstream)
+            if value != 0:
+                self.huffnode[curcode]['numbits'] = value - 1
+                last = value - 1
+                curcode += 1
+            else:
+                # RLE token: read 3-bit count (+2); if raw==7 read rlefullbits more
+                rle_count = bitstream.read(3) + 2
+                if rle_count == 9:  # raw was 7 → 7+2=9
+                    rle_count += bitstream.read(rlefullbits)
+                while rle_count > 0 and curcode < self.numcodes:
+                    self.huffnode[curcode]['numbits'] = last
+                    curcode += 1
+                    rle_count -= 1
+
+        if curcode != self.numcodes:
+            raise ValueError(f"Huffman tree incomplete: {curcode}/{self.numcodes}")
+
+        self._assign_canonical_codes()
+        self._build_lookup_table()
+
     def _assign_canonical_codes(self) -> None:
-        """Assign canonical Huffman codes based on bit lengths."""
-        # Count nodes at each bit length
-        bithistogram = [0] * (self.maxbits + 2)  # +2 for safety
+        """Assign canonical codes, matching MAME assign_canonical_codes() exactly.
+
+        Uses bithisto[33] loop from codelen=32 down to 1, then assigns codes in
+        node order (same as MAME: node.m_bits = bithisto[node.m_numbits]++).
+        """
+        bithisto = [0] * 33
         for node in self.huffnode:
             bits = node['numbits']
-            if bits > 0 and bits <= self.maxbits:
-                bithistogram[bits] += 1
-        
-        # Compute starting code for each bit length
-        # Canonical Huffman: codes of same length are consecutive
-        startcode = [0] * (self.maxbits + 2)
-        for i in range(self.maxbits, 0, -1):
-            startcode[i - 1] = (startcode[i] + bithistogram[i]) >> 1
-        
-        # Assign codes to nodes
+            if 0 < bits <= 32:
+                bithisto[bits] += 1
+
+        curstart = 0
+        for codelen in range(32, 0, -1):
+            nextstart = (curstart + bithisto[codelen]) >> 1
+            bithisto[codelen] = curstart   # repurpose as starting code
+            curstart = nextstart
+
         for node in self.huffnode:
-            bits = node['numbits']
-            if bits > 0 and bits <= self.maxbits:
-                node['code'] = startcode[bits]
-                startcode[bits] += 1
-    
-    def _build_lookup_table(self) -> None:
-        """Build lookup table for fast decoding."""
-        self.lookup = {}
-        for i, node in enumerate(self.huffnode):
             bits = node['numbits']
             if bits > 0:
-                self.lookup[(bits, node['code'])] = i
-    
+                node['code'] = bithisto[bits]
+                bithisto[bits] += 1
+
+    def _build_lookup_table(self) -> None:
+        """Build O(1) lookup array matching MAME build_lookup_table().
+
+        For each code: fill all lookup_array entries whose top numbits match
+        the code. Entry value = MAKE_LOOKUP(symbol, numbits) = (symbol<<5)|numbits.
+        """
+        self._lookup_array = [0] * (1 << self.maxbits)
+        for i, node in enumerate(self.huffnode):
+            bits = node['numbits']
+            if 0 < bits <= self.maxbits:
+                value = (i << 5) | (bits & 0x1f)
+                shift = self.maxbits - bits
+                start = node['code'] << shift
+                end = (node['code'] + 1) << shift
+                for j in range(start, end):
+                    self._lookup_array[j] = value
+
     def decode_one(self, bitstream: BitstreamReader) -> int:
-        """Decode one value from the bitstream."""
-        code = 0
-        for bits in range(1, self.maxbits + 1):
-            if bitstream.remaining() < 1:
-                return 0
-            code = (code << 1) | bitstream.read(1)
-            if (bits, code) in self.lookup:
-                return self.lookup[(bits, code)]
-        return 0
+        """Decode one symbol using O(1) table lookup (MAME decode_one).
+
+        peek(maxbits) → lookup_array[bits] → remove(numbits) → return symbol.
+        """
+        bits = bitstream.peek(self.maxbits)
+        lookup = self._lookup_array[bits]
+        if lookup == 0:
+            # Unrecognised code — consume 1 bit to avoid infinite loop
+            bitstream.read(1)
+            return 0
+        bitstream.read(lookup & 0x1f)  # consume the actual code bits
+        return lookup >> 5
 
 
 class ChdFileWrapper(CompressedFileWrapper):
@@ -442,9 +513,19 @@ class ChdFileWrapper(CompressedFileWrapper):
             return self._decompress_lzma(compressed_data, block_idx)
         elif codec in (CHD_CODEC_ZLIB, CHD_CODEC_ZLIB_PLUS):
             return self._decompress_zlib(compressed_data, block_idx)
+        elif codec == CHD_CODEC_FLAC:
+            return self._decompress_flac(compressed_data, block_idx)
+        elif codec == CHD_CODEC_HUFF:
+            return self._decompress_huff(compressed_data, block_idx)
         else:
-            # Unknown codec, return as-is
-            return compressed_data[:self.block_size].ljust(self.block_size, b'\x00')
+            codec_name = f'0x{codec:08x}'
+            for name, val in [('cdlz', CHD_CODEC_CDLZ), ('cdzl', CHD_CODEC_CDZL),
+                               ('cdfl', CHD_CODEC_CDFL)]:
+                if codec == val:
+                    codec_name = name
+                    break
+            print(f"CHD: unsupported codec '{codec_name}' for hunk {block_idx}", file=sys.stderr)
+            return b'\x00' * self.block_size
     
     def _extract_user_data_from_sector(self, sector: bytes, ecc_set: bool) -> bytes:
         """Extract 2048 bytes of user data from a 2352-byte raw CD sector.
@@ -574,12 +655,166 @@ class ChdFileWrapper(CompressedFileWrapper):
         return bytes(result)
     
     def _decompress_lzma(self, compressed_data: bytes, block_idx: int) -> bytes:
-        """Decompress standard LZMA format."""
+        """Decompress standard LZMA format (raw LZMA1 as used by MAME CHD)."""
+        data = None
+
+        # Try raw LZMA1 with MAME's fixed properties (from chdcodec.cpp s_lzma_props)
+        # props[] = { 0x5d, 0x00, 0x00, 0x10, 0x00 } → lc=3, lp=0, pb=2, dict=1MB
         try:
-            return lzma.decompress(compressed_data)
+            lzma_filter = {'id': lzma.FILTER_LZMA1, 'lc': 3, 'lp': 0, 'pb': 2,
+                           'dict_size': 0x00100000}
+            data = lzma.LZMADecompressor(
+                format=lzma.FORMAT_RAW, filters=[lzma_filter]).decompress(
+                    compressed_data, max_length=self.hunk_size)
         except lzma.LZMAError:
-            return compressed_data.ljust(self.hunk_size, b'\x00')
+            pass
+
+        # Fallback: properties encoded in first 5 bytes (lzma-alone format)
+        if data is None and len(compressed_data) >= 5:
+            try:
+                props = compressed_data[0]
+                lc = props % 9
+                lp = (props // 9) % 5
+                pb = props // 45
+                dict_size = struct.unpack('<I', compressed_data[1:5])[0]
+                lzma_filter = {'id': lzma.FILTER_LZMA1, 'lc': lc, 'lp': lp, 'pb': pb,
+                               'dict_size': dict_size if dict_size > 0 else self.hunk_size}
+                data = lzma.LZMADecompressor(
+                    format=lzma.FORMAT_RAW, filters=[lzma_filter]).decompress(
+                        compressed_data[5:], max_length=self.hunk_size)
+            except (lzma.LZMAError, struct.error):
+                pass
+
+        # Fallback: XZ container format
+        if data is None:
+            try:
+                data = lzma.decompress(compressed_data)
+            except lzma.LZMAError:
+                pass
+
+        if data is None:
+            return b'\x00' * self.hunk_size
+
+        # Clamp to exactly hunk_size (MAME decompresses to exactly destlen)
+        if len(data) < self.hunk_size:
+            data = data + b'\x00' * (self.hunk_size - len(data))
+        elif len(data) > self.hunk_size:
+            data = data[:self.hunk_size]
+        return data
     
+    def _decompress_flac(self, compressed_data: bytes, block_idx: int) -> bytes:
+        """Decompress FLAC format as used by MAME CHD.
+
+        MAME stores arbitrary binary data as 16-bit mono FLAC.
+        On x86 (little-endian), MAME encodes with swap_endian=True: each pair of
+        bytes [A, B] is encoded as sample (A<<8)|B (big-endian read), and decoded
+        back by writing the sample's high byte then low byte. So the decoded output
+        is the sample values in big-endian byte order, which matches the original data.
+        """
+        raw = self._flac_decode_to_bytes(compressed_data, block_idx)
+        if raw is None:
+            return b'\x00' * self.hunk_size
+        if len(raw) < self.hunk_size:
+            raw += b'\x00' * (self.hunk_size - len(raw))
+        return raw[:self.hunk_size]
+
+    def _make_flac_header(self, total_samples: int) -> bytes:
+        """Build a synthetic FLAC STREAMINFO header for headerless CHD FLAC frames.
+
+        MAME's FLAC write callback only stores audio frames (skips metadata blocks).
+        To decode with standard tools we need to prepend a valid STREAMINFO.
+
+        Parameters from chdcodec.cpp: sample_rate=44100, channels=2, bps=16.
+        total_samples = hunk_size // 4  (bytes / 2ch / 2B per sample, per channel).
+        Block size varies; use flexible min/max so the decoder uses frame headers.
+        """
+        sample_rate = 44100
+        ch_m1 = 1       # stereo (2 channels - 1)
+        bps_m1 = 15     # 16-bit (16 - 1)
+
+        # 8-byte field: [sr:20][ch-1:3][bps-1:5][total_samples:36]
+        val = (sample_rate << 44) | (ch_m1 << 41) | (bps_m1 << 36) | (total_samples & 0xFFFFFFFFF)
+        sr_ch_bps = val.to_bytes(8, 'big')
+
+        streaminfo = (
+            struct.pack('>HH', 16, 65535) +  # min/max block size (accept any valid size)
+            b'\x00\x00\x00' +               # min frame size (unknown)
+            b'\x00\x00\x00' +               # max frame size (unknown)
+            sr_ch_bps +                     # rate/ch/bps/total_samples
+            b'\x00' * 16                    # MD5 (unknown)
+        )  # 34 bytes
+
+        # Metadata block header: last=1 (0x80), type=STREAMINFO(0), length=34 (0x22)
+        return b'fLaC' + b'\x80\x00\x00\x22' + streaminfo
+
+    def _flac_decode_to_bytes(self, compressed_data: bytes, block_idx: int):
+        """Decode FLAC data, returning raw PCM bytes or None on failure.
+
+        From chdcodec.cpp chd_flac_decompressor::decompress():
+          src[0] == 'L' (0x4C): LE encoding (swap_endian=false on x86) → no byte-swap
+          src[0] == 'B' (0x42): BE encoding (swap_endian=true on x86)  → byte-swap int16s
+        """
+        import array as _array
+
+        if len(compressed_data) < 2:
+            return None
+
+        # Strip the mandatory 'L'/'B' endianness marker prepended by MAME
+        marker = compressed_data[0]
+        if marker == 0x4C:    # 'L': LE encoding, samples are native LE — no swap
+            swap = False
+            compressed_data = compressed_data[1:]
+        elif marker == 0x42:  # 'B': BE encoding, samples are byte-swapped — swap back
+            swap = True
+            compressed_data = compressed_data[1:]
+        else:
+            swap = True  # unknown marker: assume BE as fallback
+
+        # total_samples per channel: hunk_size bytes / 2 channels / 2 bytes per sample
+        total_samples = self.hunk_size // 4
+
+        # CHD FLAC stores raw frames only (no fLaC/STREAMINFO header); prepend one
+        if not compressed_data.startswith(b'fLaC'):
+            compressed_data = self._make_flac_header(total_samples) + compressed_data
+
+        try:
+            import io
+            import soundfile as sf
+            data, _ = sf.read(io.BytesIO(compressed_data), dtype='int16', always_2d=True,
+                              frames=total_samples)
+            raw = data.tobytes()  # C-order: interleaved L/R int16, native (LE) endian
+            if swap:
+                # Byte-swap each int16: soundfile returns native LE; 'B' hunks need swap
+                a = _array.array('h')
+                a.frombytes(raw)
+                a.byteswap()
+                raw = a.tobytes()
+            return raw
+        except ImportError:
+            print("CHD: FLAC support requires 'soundfile' (pip install soundfile)", file=sys.stderr)
+        except Exception as e:
+            print(f"CHD: FLAC decode error for hunk {block_idx}: {e}", file=sys.stderr)
+
+        return None
+
+    def _decompress_huff(self, compressed_data: bytes, block_idx: int) -> bytes:
+        """Decompress MAME huffman_8bit_decoder (huffman_decoder<256,16>).
+
+        Encoder uses export_tree_huffman() (secondary huffman_decoder<24,6>),
+        so we must use import_tree_huffman(), NOT import_tree_rle().
+        """
+        try:
+            bitstream = BitstreamReader(compressed_data)
+            decoder = HuffmanDecoder(maxbits=16, numcodes=256)
+            decoder.import_tree_huffman(bitstream)
+            result = bytearray(self.hunk_size)
+            for i in range(self.hunk_size):
+                result[i] = decoder.decode_one(bitstream)
+            return bytes(result)
+        except Exception as e:
+            print(f"CHD: huff decode error for hunk {block_idx}: {e}", file=sys.stderr)
+            return b'\x00' * self.hunk_size
+
     def _decompress_zlib(self, compressed_data: bytes, block_idx: int) -> bytes:
         """Decompress zlib format."""
         try:

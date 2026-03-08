@@ -217,11 +217,11 @@ python pc/udpfs_server.py -b /dev/sdX --read-only
 
 When `--enable-compression` is passed, the server transparently decompresses compressed ISO images:
 
-Format | Extension | Compression | Extra dependency
--------|-----------|-------------|----------------
-ZSO    | `.zso`    | LZ4         | `pip install lz4`
-CSO    | `.cso`    | zlib        | none
-CHD    | `.chd`    | zlib/lzma   | none
+Format | Extension | Compression          | Extra dependency
+-------|-----------|----------------------|----------------
+ZSO    | `.zso`    | LZ4                  | `pip install lz4`
+CSO    | `.cso`    | zlib                 | none
+CHD    | `.chd`    | zlib/lzma/huff/flac  | `pip install soundfile` (only if FLAC hunks present)
 
 ## Third-Party Loaders
 The following third-party projects use neutrino:
