@@ -187,10 +187,11 @@ The `pc/udpfs_server.py` script serves files and/or block devices to the PS2 ove
   ```
   pip install lz4
   ```
-- **`soundfile`** — optional, required only for `.chd` files with FLAC-compressed hunks:
+- **`libchdr0`** — required for `.chd` (CHD compressed ISO) support:
   ```
-  pip install soundfile
+  apt install libchdr0
   ```
+  Build from source: https://github.com/rtissera/libchdr
 
 The `pc/compressed_iso/` directory is a local module bundled with the server; no installation is needed.
 
@@ -225,7 +226,7 @@ Format | Extension | Compression          | Extra dependency
 -------|-----------|----------------------|----------------
 ZSO    | `.zso`    | LZ4                  | `pip install lz4`
 CSO    | `.cso`    | zlib                 | none
-CHD    | `.chd`    | zlib/lzma/huff/flac  | `pip install soundfile` (only if FLAC hunks present)
+CHD    | `.chd`    | zlib/lzma/huff/flac  | `apt install libchdr0`
 
 ## Third-Party Loaders
 The following third-party projects use neutrino:

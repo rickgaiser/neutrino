@@ -41,7 +41,7 @@ from enum import IntEnum
 from typing import Dict, List, Optional, Tuple, Union
 
 # Compressed ISO support
-from compressed_iso import CompressedFileWrapper, ZsoFileWrapper, CsoFileWrapper, ChdFileWrapper
+from compressed_iso import CompressedFileWrapper, ZsoFileWrapper, CsoFileWrapper, ChdFileWrapper, LIBCHDR_AVAILABLE
 
 # Check LZ4 availability for ZSO format
 try:
@@ -1781,6 +1781,9 @@ def main():
     if args.enable_compression and not LZ4_AVAILABLE:
         print("Warning: LZ4 library not available. ZSO files will not be supported.")
         print("Install with: pip install lz4")
+    if args.enable_compression and not LIBCHDR_AVAILABLE:
+        print("Warning: libchdr not found. CHD files will not be supported.")
+        print("Install with: apt install libchdr0")
 
     server = UdpfsServer(
         root_dir=args.root_dir,
