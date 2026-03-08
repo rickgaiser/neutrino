@@ -187,6 +187,10 @@ The `pc/udpfs_server.py` script serves files and/or block devices to the PS2 ove
   ```
   pip install lz4
   ```
+- **`soundfile`** — optional, required only for `.chd` files with FLAC-compressed hunks:
+  ```
+  pip install soundfile
+  ```
 
 The `pc/compressed_iso/` directory is a local module bundled with the server; no installation is needed.
 
