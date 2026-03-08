@@ -391,24 +391,20 @@ static uint8_t *build_irx_table(int dvd_active, struct SModule *mod_fakemod)
     irxptr_tab++;
     irxtable->count++;
 
-    // FHI — prefer BD_DEFRAG over BD
-    if (modlist_get_by_func(&drv.mod, "FHI_BD") != NULL) {
-        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD"), irxptr, irxptr_tab++);
-        irxtable->count++;
-    } else if (modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG") != NULL) {
-        irxptr = module_install(modlist_get_by_func(&drv.mod, "FHI_BD_DEFRAG"), irxptr, irxptr_tab++);
+    // FHI BD — must be loaded before cdvdman (EE side)
+    struct SModule *mod_fhi_bd = modlist_get_by_name(&drv.mod, "fhi_bd.irx");
+    if (mod_fhi_bd != NULL) {
+        irxptr = module_install(mod_fhi_bd, irxptr, irxptr_tab++);
         irxtable->count++;
     }
 
     // All other EE modules without a special function
     for (i = 0; i < drv.mod.count; i++) {
         struct SModule *pm = &drv.mod.mod[i];
-        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL) && ((pm->sFunc == NULL) || (
+        if ((pm->env & MOD_ENV_EE) && (pm->sIOPRP == NULL) && pm != mod_fhi_bd && ((pm->sFunc == NULL) || (
                strcmp(pm->sFunc, "FAKEMOD") != 0
             && strcmp(pm->sFunc, "IMGDRV") != 0
             && strcmp(pm->sFunc, "UDNL") != 0
-            && strcmp(pm->sFunc, "FHI_BD") != 0
-            && strcmp(pm->sFunc, "FHI_BD_DEFRAG") != 0
             )))
         {
             irxptr = module_install(pm, irxptr, irxptr_tab++);
