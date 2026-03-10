@@ -810,7 +810,11 @@ int main(int argc, char *argv[])
         toml_datum_t tbl_gc = toml_get(toml_compat.toptab, sGameID);
         if (tbl_gc.type == TOML_TABLE) {
             if (load_config(tbl_gc) < 0) {
-                printf("ERROR: failed to load %s compat\n", sGameID);
+                printf("ERROR: failed to load per-game config for %s\n", sGameID);
+                if (sys.bQuickBoot == 0) {
+                    printf("       To enable full per-game config support, re-run with:\n");
+                    printf("         -elf='%s'\n", sys.sELFFile);
+                }
                 return -1;
             }
         }
