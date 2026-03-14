@@ -181,6 +181,11 @@ static int _write_with_combined_header(udprdma_socket_t *socket, const void *req
     data_hdr.chunk_size = first_chunk_size;
     data_hdr.total_chunks = total_chunks;
 
+    /* Set up receive buffer for WRITE_DONE before sending: server may send
+     * WRITE_DONE immediately after ACKing the first (and only) chunk, so
+     * rx_buffer must be ready before the IST can fire. */
+    udprdma_set_rx_buffer(socket, g_write_rx_buf, sizeof(g_write_rx_buf));
+
     /* Combine request header + WRITE_DATA header as app header, first chunk as data */
     memcpy(combined_hdr, req_header, req_size);
     memcpy(combined_hdr + req_size, &data_hdr, sizeof(data_hdr));
@@ -194,9 +199,6 @@ static int _write_with_combined_header(udprdma_socket_t *socket, const void *req
 
     buf_ptr += first_chunk_size;
     sent = first_chunk_size;
-
-    /* Set up receive buffer for WRITE_DONE */
-    udprdma_set_rx_buffer(socket, g_write_rx_buf, sizeof(g_write_rx_buf));
 
     /* Send remaining chunks */
     for (chunk_nr = 1; sent < total_size; chunk_nr++) {
