@@ -586,7 +586,7 @@ class UdpfsServer:
             'mtime': self._encode_time(st.st_mtime),
         }
 
-    def _flags_to_mode(self, flags: int) -> str:
+    def _flags_to_mode(self, flags: int, file_exists: bool = True) -> str:
         """Convert PS2 open flags to Python file mode"""
         access = flags & 0x03
         if access == 0x01:  # O_RDONLY
@@ -597,7 +597,7 @@ class UdpfsServer:
             elif flags & 0x0400:  # O_TRUNC
                 return 'wb'
             elif flags & 0x0200:  # O_CREAT
-                return 'wb'
+                return 'r+b' if file_exists else 'wb'
             else:
                 return 'r+b'
         elif access == 0x03:  # O_RDWR
@@ -605,7 +605,7 @@ class UdpfsServer:
                 if flags & 0x0400:  # O_TRUNC
                     return 'w+b'
                 else:
-                    return 'a+b' if (flags & 0x0100) else 'r+b'
+                    return 'a+b' if (flags & 0x0100) else ('r+b' if file_exists else 'w+b')
             else:
                 return 'r+b'
         return 'rb'
@@ -796,20 +796,20 @@ class UdpfsServer:
             # Check if we should open compressed version
             actual_resolved = compressed_resolved if compressed_resolved else resolved
             
-            # Check if the file exists
-            if not os.path.exists(actual_resolved):
+            # Check if the file exists (skip for O_CREAT)
+            if not os.path.exists(actual_resolved) and not (flags & 0x0200):
                 self._print_event(f"[{addr[0]}:{addr[1]}] OPEN '{path}' -> ENOENT (file not found)")
                 self._send_open_reply(addr, -errno.ENOENT)
                 return
-            
+
             # Check if the file is a compressed format
             is_compressed = False
             if self.enable_compression:
                 lower_path = actual_resolved.lower()
                 if lower_path.endswith('.zso') or lower_path.endswith('.cso') or lower_path.endswith('.chd'):
                     is_compressed = True
-            
-            py_mode = self._flags_to_mode(flags)
+
+            py_mode = self._flags_to_mode(flags, file_exists=os.path.exists(actual_resolved))
             try:
                 # Create parent directories if O_CREAT and they don't exist
                 if (flags & 0x0200) and not os.path.exists(os.path.dirname(actual_resolved)):
