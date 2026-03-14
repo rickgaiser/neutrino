@@ -1,23 +1,10 @@
 #include "ministack_eth.h"
 #include "ministack_arp.h"
 #include "ministack_ip.h"
-#include "smap.h" /* for SMAPGetMACAddress, smap_transmit */
+#include "smap.h" /* for smap_transmit */
 
 #include <stdio.h>
 
-
-void eth_packet_init(eth_packet_t *pkt, uint16_t type)
-{
-    // Ethernet, broadcast
-    pkt->eth.addr_dst[0] = 0xff;
-    pkt->eth.addr_dst[1] = 0xff;
-    pkt->eth.addr_dst[2] = 0xff;
-    pkt->eth.addr_dst[3] = 0xff;
-    pkt->eth.addr_dst[4] = 0xff;
-    pkt->eth.addr_dst[5] = 0xff;
-    SMAPGetMACAddress(pkt->eth.addr_src);
-    pkt->eth.type = htons(type);
-}
 
 int eth_packet_send_ll(eth_packet_t *pkt, uint16_t pktdatasize, const void *data, uint16_t datasize)
 {

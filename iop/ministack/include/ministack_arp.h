@@ -25,7 +25,9 @@ typedef struct
 } __attribute__((packed, aligned(4))) arp_packet_t;
 
 
-int arp_add_entry(uint32_t ip, uint8_t mac[6]);
+int arp_add_entry(uint32_t ip, const uint8_t mac[6]);
+int arp_lookup(uint32_t ip, uint8_t mac[6]);
+int arp_resolve(uint32_t ip, uint8_t mac[6]);
 int handle_rx_arp(const uint8_t *hdr);
 
 

@@ -1,4 +1,5 @@
 #include "ministack_ip.h"
+#include "ministack_arp.h"
 #include "ministack_udp.h"
 #include "smap.h"
 
@@ -10,9 +11,20 @@ uint32_t ip_addr = IP_ADDR(192, 168, 1, 10);
 
 void ip_packet_init(ip_packet_t *pkt, uint32_t ip_dest)
 {
-    eth_packet_init((eth_packet_t *)pkt, ETH_TYPE_IPV4);
+    SMAPGetMACAddress(pkt->eth.addr_src);
+    pkt->eth.type = htons(ETH_TYPE_IPV4);
+    if (ip_dest == 0xFFFFFFFF) {
+        pkt->eth.addr_dst[0] = 0xff;
+        pkt->eth.addr_dst[1] = 0xff;
+        pkt->eth.addr_dst[2] = 0xff;
+        pkt->eth.addr_dst[3] = 0xff;
+        pkt->eth.addr_dst[4] = 0xff;
+        pkt->eth.addr_dst[5] = 0xff;
+    } else {
+        arp_resolve(ip_dest, pkt->eth.addr_dst);
+    }
 
-    // IP, broadcast
+    // IP
     pkt->ip.hlen             = 0x45;
     pkt->ip.tos              = 0;
     //pkt->ip_len              = ;

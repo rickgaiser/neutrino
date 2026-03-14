@@ -9,6 +9,7 @@
 #include "smap.h"
 #include <stdio.h>
 #include <sysclib.h>
+#include <thbase.h>
 #include <thsemap.h>
 
 #endif /* IOP_IRX_IMPORTS_H */

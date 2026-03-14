@@ -42,13 +42,6 @@ typedef struct
 #define ETH_TYPE_ARP  0x0806
 
 /**
- * Initialize ethernet packet
- * @param pkt Ethernet packet
- * @param type Packet type, like IPv4/ARP/..
- */
-void eth_packet_init(eth_packet_t *pkt, uint16_t type);
-
-/**
  * Send ethernet packet low level
  * @param pkt Ethernet packet
  * @param pktdatasize Size of the payload in bytes
