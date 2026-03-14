@@ -11,11 +11,11 @@ Usage:
     python udpfs_server.py --block-device disk.iso --root-dir /path/to/serve
 
 Examples:
-    python udpfs_server.py -b game.iso                # Block device only (UDPBD mode)
-    python udpfs_server.py -d /home/user/ps2games      # Filesystem only
-    python udpfs_server.py -b game.iso -d /games        # Both block device and filesystem
+    python udpfs_server.py -b game.iso                     # Block device only (UDPBD mode)
+    python udpfs_server.py -d /home/user/ps2games          # Filesystem only
+    python udpfs_server.py -b game.iso -d /games           # Both block device and filesystem
     python udpfs_server.py -b game.iso --sector-size 2048  # Custom sector size
-    python udpfs_server.py -b game.iso --read-only      # Read-only mode
+    python udpfs_server.py -b game.iso --read-only         # Read-only mode
     python udpfs_server.py -d /games --enable-compression  # Transparent .zso/.cso/.chd decompression
 
 Compression Support:
@@ -282,12 +282,14 @@ class UdpfsServer:
     def __init__(self, root_dir: Optional[str] = None,
                  block_device: Optional[str] = None,
                  port: int = UDPFS_PORT,
+                 bind_ip: str = '',
                  sector_size: int = 512,
                  read_only: bool = False, verbose: bool = False,
                  enable_compression: bool = False,
                  compression_cache_size: int = 32):
         self.root_dir = os.path.realpath(root_dir) if root_dir else None
         self.port = port
+        self.bind_ip = bind_ip
         self.sector_size = sector_size
         self.read_only = read_only
         self.verbose = verbose
@@ -302,7 +304,7 @@ class UdpfsServer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.sock.bind(('', port))
+        self.sock.bind((bind_ip, port))
 
         # Protocol state
         self.peer_addr: Optional[Tuple[str, int]] = None
@@ -377,7 +379,7 @@ class UdpfsServer:
             print(f"  Block device: handle={BLOCK_DEVICE_HANDLE}, "
                   f"sectors={self.bd_sector_count:,}, "
                   f"sector_size={self.bd_sector_size}")
-        print(f"  Port: {self.port} (0x{self.port:04X})")
+        print(f"  Bind: {self.bind_ip or '0.0.0.0'}:{self.port} (0x{self.port:04X})")
         print(f"  Mode: {'read-only' if self.read_only else 'read-write'}")
         if self.enable_compression:
             formats = []
@@ -1736,6 +1738,12 @@ def main():
         help=f'UDP port to listen on (default: 0x{UDPFS_PORT:04X})'
     )
     parser.add_argument(
+        '--bind', '-i',
+        default='',
+        metavar='IP',
+        help='IP address to bind/listen on (default: all interfaces)'
+    )
+    parser.add_argument(
         '--sector-size', '-s',
         type=int,
         default=512,
@@ -1789,6 +1797,7 @@ def main():
         root_dir=args.root_dir,
         block_device=args.block_device,
         port=args.port,
+        bind_ip=args.bind,
         sector_size=args.sector_size,
         read_only=args.read_only,
         verbose=args.verbose,
