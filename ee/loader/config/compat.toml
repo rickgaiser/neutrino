@@ -158,6 +158,7 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4, 0]}
 "SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4, 0]}
 "SLES_503.55" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
+"SLUS_202.26" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
 "SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.fs_sectors = 64} # Optimization
 "SLUS_202.30" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 "SLES_503.25" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
