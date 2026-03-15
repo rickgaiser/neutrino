@@ -30,6 +30,7 @@ import errno
 import gzip
 import math
 import os
+import select
 import socket
 import struct
 import sys
@@ -226,15 +227,15 @@ class Header:
 class DiscHeader:
     """Discovery/Inform header (4 bytes)"""
     service_id: int
-    reserved: int = 0
+    port: int = 0
 
     @classmethod
     def unpack(cls, data: bytes) -> 'DiscHeader':
-        service_id, reserved = struct.unpack('<HH', data[:4])
-        return cls(service_id=service_id, reserved=reserved)
+        service_id, port = struct.unpack('<HH', data[:4])
+        return cls(service_id=service_id, port=port)
 
     def pack(self) -> bytes:
-        return struct.pack('<HH', self.service_id, self.reserved)
+        return struct.pack('<HH', self.service_id, self.port)
 
 
 @dataclass
@@ -300,12 +301,19 @@ class UdpfsServer:
             print(f"Error: '{root_dir}' is not a directory")
             sys.exit(1)
 
-        # Create UDP socket
+        # Discovery socket, broadcast UDP
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.sock.bind((bind_ip, port))
+        self.sock.bind(('', port))
+        self.sock.setblocking(False)
 
+        # Data socket
+        self.dsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.dsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.dsock.bind((bind_ip, 0))
+        self.dsock.setblocking(False)
+        
         # Protocol state
         self.peer_addr: Optional[Tuple[str, int]] = None
         self.tx_seq_nr = 0
@@ -379,7 +387,9 @@ class UdpfsServer:
             print(f"  Block device: handle={BLOCK_DEVICE_HANDLE}, "
                   f"sectors={self.bd_sector_count:,}, "
                   f"sector_size={self.bd_sector_size}")
-        print(f"  Bind: {self.bind_ip or '0.0.0.0'}:{self.port} (0x{self.port:04X})")
+        print(f"  Discovery bind: 0.0.0.0:{self.port} (0x{self.port:04X})")
+        addr, port = self.dsock.getsockname()
+        print(f"  Data bind: {addr}:{port} (0x{port:04X})")
         print(f"  Mode: {'read-only' if self.read_only else 'read-write'}")
         if self.enable_compression:
             formats = []
@@ -388,13 +398,25 @@ class UdpfsServer:
             formats.append('CSO')
             formats.append('CHD')
             print(f"  Compression: enabled ({', '.join(formats)})")
+
         print(f"  Listening...")
         print()
-
         while True:
             try:
-                data, addr = self.sock.recvfrom(2048)
-                self._handle_packet(data, addr)
+                r, _, _ = select.select([self.sock, self.dsock], [], [])
+                for ready in r:
+                    if ready is self.sock:
+                        try:
+                            data, addr = self.sock.recvfrom(2048)
+                            self._handle_discovery(data, addr)
+                        except BlockingIOError:
+                            pass
+                    elif ready is self.dsock:
+                        try:
+                            data, addr = self.dsock.recvfrom(2048)
+                            self._handle_data(data, addr)
+                        except BlockingIOError:
+                            pass
             except KeyboardInterrupt:
                 if self._status_visible:
                     sys.stdout.write(f"\r{'':<79}\r")
@@ -612,41 +634,33 @@ class UdpfsServer:
 
     # --- UDPRDMA packet handling ---
 
-    def _handle_packet(self, data: bytes, addr: Tuple[str, int]):
-        """Handle incoming UDPRDMA packet"""
-        if len(data) < 2:
-            return
-
-        hdr = Header.unpack(data)
-
-        if hdr.packet_type == PacketType.DISCOVERY:
-            self._handle_discovery(data, addr, hdr)
-        elif hdr.packet_type == PacketType.DATA:
-            self._handle_data(data, addr, hdr)
-
-    def _handle_discovery(self, data: bytes, addr: Tuple[str, int], hdr: Header):
+    def _handle_discovery(self, data: bytes, addr: Tuple[str, int]):
         """Handle DISCOVERY packet"""
         if len(data) < 6:
             return
 
-        disc = DiscHeader.unpack(data[2:6])
+        hdr = Header.unpack(data)
+        if hdr.packet_type != PacketType.DISCOVERY:
+            return
+
+        disc = DiscHeader.unpack(data[2:10])
 
         if disc.service_id != UDPRDMA_SVC_UDPFS:
             return
 
         self.stats['discovery'] += 1
+
         self.peer_addr = addr
-        self.rx_seq_nr_expected = (hdr.seq_nr + 1) & 0xFFF
-
         self._print_event(f"[{addr[0]}:{addr[1]}] DISCOVERY -> INFORM")
-
         self._send_inform(addr)
-        # Initialize acked to just before current tx_seq (INFORM consumed one)
-        self.tx_seq_nr_acked = (self.tx_seq_nr - 1) & 0xFFF
 
-    def _handle_data(self, data: bytes, addr: Tuple[str, int], hdr: Header):
+    def _handle_data(self, data: bytes, addr: Tuple[str, int]):
         """Handle DATA packet containing UDPFS message"""
         if len(data) < 6:
+            return
+
+        hdr = Header.unpack(data)
+        if hdr.packet_type != PacketType.DATA:
             return
 
         data_hdr = DataHeader.unpack(data[2:6])
@@ -687,11 +701,21 @@ class UdpfsServer:
                 self._send_ack(addr, is_ack=True)
                 if self.tx_buffer:
                     self._retransmit_from(addr, self.tx_buffer[0][0])
+                return
+            elif hdr.seq_nr == 0:
+                # Assume the peer is reestablishing the connection, reset the connection state
+                if self.verbose:
+                    self._print_event(f"  Received seq={hdr.seq_nr}, assuming the peer was reset")
+                self.tx_seq_nr = 0
+                self.tx_buffer = ()
+                self.tx_start_seq = 0
+                self.tx_seq_nr_acked = 0
+                self.rx_seq_nr_expected = 0
             else:
                 if self.verbose:
                     self._print_event(f"  WARNING: Expected seq={self.rx_seq_nr_expected}, got {hdr.seq_nr}")
                 self._send_ack(addr, is_ack=False)
-            return
+                return
 
         self.rx_seq_nr_expected = (self.rx_seq_nr_expected + 1) & 0xFFF
 
@@ -1348,13 +1372,11 @@ class UdpfsServer:
 
     def _send_inform(self, addr: Tuple[str, int]):
         """Send INFORM packet"""
-        hdr = Header(packet_type=PacketType.INFORM, seq_nr=self.tx_seq_nr)
-        disc = DiscHeader(service_id=UDPRDMA_SVC_UDPFS)
+        hdr = Header(packet_type=PacketType.INFORM, seq_nr=1) # INFORM sequence number is always 1
+        disc = DiscHeader(service_id=UDPRDMA_SVC_UDPFS, port = self.dsock.getsockname()[1])
 
         packet = hdr.pack() + disc.pack()
-        self.sock.sendto(packet, addr)
-
-        self.tx_seq_nr = (self.tx_seq_nr + 1) & 0xFFF
+        self.dsock.sendto(packet, addr)
 
     def _send_ack(self, addr: Tuple[str, int], is_ack: bool = True):
         """Send ACK or NACK packet"""
@@ -1367,7 +1389,7 @@ class UdpfsServer:
         )
 
         packet = hdr.pack() + data_hdr.pack()
-        self.sock.sendto(packet, addr)
+        self.dsock.sendto(packet, addr)
 
     def _send_data(self, addr: Tuple[str, int], payload: bytes):
         """Send DATA packet with payload (single packet, always FIN)"""
@@ -1383,7 +1405,7 @@ class UdpfsServer:
         )
 
         packet = hdr.pack() + data_hdr.pack() + padded_payload
-        self.sock.sendto(packet, addr)
+        self.dsock.sendto(packet, addr)
 
         self.tx_seq_nr = (self.tx_seq_nr + 1) & 0xFFF
 
@@ -1410,7 +1432,7 @@ class UdpfsServer:
 
         self.tx_buffer.append((self.tx_seq_nr, packet))
 
-        self.sock.sendto(packet, addr)
+        self.dsock.sendto(packet, addr)
         self.tx_seq_nr = (self.tx_seq_nr + 1) & 0xFFF
 
     def _retransmit_from(self, addr: Tuple[str, int], from_seq: int):
@@ -1419,7 +1441,7 @@ class UdpfsServer:
         for seq, packet in self.tx_buffer:
             seq_diff = (seq - from_seq) & 0xFFF
             if seq_diff < 2048:
-                self.sock.sendto(packet, addr)
+                self.dsock.sendto(packet, addr)
                 count += 1
         if self.verbose and count > 0:
             self._print_event(f"  Retransmitted {count} packets from seq={from_seq}")
@@ -1449,10 +1471,10 @@ class UdpfsServer:
     def _wait_for_window_ack(self, addr: Tuple[str, int]):
         """Wait for window ACK/NACK during multi-packet send.
         Updates tx_seq_nr_acked. On NACK, retransmits."""
-        self.sock.settimeout(WINDOW_ACK_TIMEOUT)
+        self.dsock.settimeout(WINDOW_ACK_TIMEOUT)
         try:
             while True:
-                pkt, recv_addr = self.sock.recvfrom(2048)
+                pkt, recv_addr = self.dsock.recvfrom(2048)
                 if len(pkt) < 6:
                     continue
                 hdr = Header.unpack(pkt)
@@ -1476,13 +1498,13 @@ class UdpfsServer:
                     return
         except socket.timeout:
             # No ACK received - retransmit all unacked
-            self.sock.settimeout(None)
+            self.dsock.settimeout(None)
             if self.tx_buffer:
                 start_seq = self.tx_buffer[0][0]
                 self._retransmit_from(addr, start_seq)
             return
         finally:
-            self.sock.settimeout(None)
+            self.dsock.settimeout(None)
 
     def _in_flight(self) -> int:
         """Number of unacknowledged packets in flight"""
@@ -1490,10 +1512,10 @@ class UdpfsServer:
 
     def _wait_for_ack(self, addr: Tuple[str, int], timeout: float = 5.0) -> bool:
         """Wait for ACK from peer before proceeding with next transfer"""
-        self.sock.settimeout(timeout)
+        self.dsock.settimeout(timeout)
         try:
             while True:
-                pkt, recv_addr = self.sock.recvfrom(2048)
+                pkt, recv_addr = self.dsock.recvfrom(2048)
                 if len(pkt) < 6:
                     continue
                 hdr = Header.unpack(pkt)
@@ -1510,7 +1532,7 @@ class UdpfsServer:
         except socket.timeout:
             return False
         finally:
-            self.sock.settimeout(None)
+            self.dsock.settimeout(None)
 
     def _send_raw_data(self, addr: Tuple[str, int], data: bytes):
         """Send raw data as UDPRDMA multi-packet transfer with flow control"""
