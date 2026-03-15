@@ -121,8 +121,8 @@ The app header is delivered to the receiver via PIO (register reads) into a sepa
 ### Client Discovery Flow
 
 1. Client broadcasts DISCOVERY with desired service_id
-2. Server responds with INFORM if it provides that service
-3. Client extracts server IP from INFORM packet
+2. Server responds with INFORM on the data port if it provides that service
+3. Client extracts server IP and data port from INFORM packet
 4. Connection established
 
 ```
@@ -140,7 +140,7 @@ Client                           Server
 ### Sequence Number Initialization
 
 After discovery/inform exchange:
-- Both sides set `rx_seq_nr_expected = (peer's seq_nr + 1) & 0xFFF`
+- Both sides start the data connecton with sequence number 0 and use `rx_seq_nr_expected = (peer's seq_nr + 1) & 0xFFF` for the next packet
 
 ## Reliable Data Transfer
 

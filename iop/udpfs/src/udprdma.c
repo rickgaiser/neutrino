@@ -130,13 +130,15 @@ static int _ist(udp_socket_t *udp_socket, void *arg, const uint8_t *hdr, uint16_
             uint16_t service_id = disc.service_id;
             M_DEBUG("_ist: INFORM svc=0x%04X\n", service_id);
 
+            if (s->state == STATE_CONNECTED)
+              M_DEBUG("_ist: already connected, ignoring INFORM\n");
+
             if (service_id == s->service_id) {
                 s->peer_ip = IP_ADDR(disc_pkt->ip.addr_src.addr[0],
                                      disc_pkt->ip.addr_src.addr[1],
                                      disc_pkt->ip.addr_src.addr[2],
                                      disc_pkt->ip.addr_src.addr[3]);
-                /* Next expected seq is INFORM's seq + 1 */
-                s->rx_seq_nr_expected = (base_hdr.seq_nr + 1) & 0xFFF;
+                s->port = ntohs(disc_pkt->udp.port_src);
                 SetEventFlag(s->event_flag, EF_RX_INFO);
             }
             break;
@@ -219,14 +221,12 @@ static int _ist(udp_socket_t *udp_socket, void *arg, const uint8_t *hdr, uint16_
 static void _send_discovery(struct udprdma_socket *s)
 {
     s->pkt_disc.hdr.packet_type = UDPRDMA_PT_DISCOVERY;
-    s->pkt_disc.hdr.seq_nr = s->tx_seq_nr;
-    s->pkt_disc.disc.service_id = s->service_id;
+    s->pkt_disc.hdr.seq_nr = 0;
     s->pkt_disc.disc.reserved = 0;
+    s->pkt_disc.disc.service_id = s->service_id;
 
     udp_packet_send(s->udp_socket, (udp_packet_t *)&s->pkt_disc,
         sizeof(udprdma_hdr_t) + sizeof(udprdma_hdr_disc_t));
-
-    s->tx_seq_nr = (s->tx_seq_nr + 1) & 0xFFF;
 }
 
 /*
@@ -235,14 +235,12 @@ static void _send_discovery(struct udprdma_socket *s)
 static void _send_inform(struct udprdma_socket *s)
 {
     s->pkt_disc.hdr.packet_type = UDPRDMA_PT_INFORM;
-    s->pkt_disc.hdr.seq_nr = s->tx_seq_nr;
-    s->pkt_disc.disc.service_id = s->service_id;
+    s->pkt_disc.hdr.seq_nr = 1;
     s->pkt_disc.disc.reserved = 0;
+    s->pkt_disc.disc.service_id = s->service_id;
 
     udp_packet_send(s->udp_socket, (udp_packet_t *)&s->pkt_disc,
         sizeof(udprdma_hdr_t) + sizeof(udprdma_hdr_disc_t));
-
-    s->tx_seq_nr = (s->tx_seq_nr + 1) & 0xFFF;
 }
 
 /*
@@ -422,14 +420,14 @@ int udprdma_discover(udprdma_socket_t *socket, uint32_t timeout_ms)
         if (evf_bits & EF_RX_INFO) {
             /* Got INFORM response */
             socket->state = STATE_CONNECTED;
-            M_DEBUG("udprdma_discover: connected to %d.%d.%d.%d\n",
+            M_DEBUG("udprdma_discover: connected to %d.%d.%d.%d:%d\n",
                 (socket->peer_ip >> 24) & 0xFF,
                 (socket->peer_ip >> 16) & 0xFF,
                 (socket->peer_ip >>  8) & 0xFF,
-                (socket->peer_ip >>  0) & 0xFF);
-
+                (socket->peer_ip >>  0) & 0xFF,
+                socket->port);
+                
             /* Update packet destination to peer */
-            udp_packet_init((udp_packet_t *)&socket->pkt_disc, socket->peer_ip, socket->port);
             udp_packet_init((udp_packet_t *)&socket->pkt_data, socket->peer_ip, socket->port);
 
             return UDPRDMA_OK;
