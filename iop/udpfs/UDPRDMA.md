@@ -140,7 +140,7 @@ Client                           Server
 ### Sequence Number Initialization
 
 After discovery/inform exchange:
-- Both sides set `rx_seq_nr_expected = (peer's seq_nr + 1) & 0xFFF`
+- Both sides start the data connecton with sequence number 0 and use `rx_seq_nr_expected = (peer's seq_nr + 1) & 0xFFF` for the next packet
 
 ## Reliable Data Transfer
 
