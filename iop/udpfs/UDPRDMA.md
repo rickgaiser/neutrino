@@ -121,8 +121,8 @@ The app header is delivered to the receiver via PIO (register reads) into a sepa
 ### Client Discovery Flow
 
 1. Client broadcasts DISCOVERY with desired service_id
-2. Server responds with INFORM on the data port if it provides that service
-3. Client extracts server IP and data port from INFORM packet
+2. Server responds with INFORM if it provides that service
+3. Client extracts server IP from INFORM packet
 4. Connection established
 
 ```

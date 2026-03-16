@@ -130,8 +130,10 @@ static int _ist(udp_socket_t *udp_socket, void *arg, const uint8_t *hdr, uint16_
             uint16_t service_id = disc.service_id;
             M_DEBUG("_ist: INFORM svc=0x%04X\n", service_id);
 
-            if (s->state == STATE_CONNECTED)
+            if (s->state == STATE_CONNECTED) {
               M_DEBUG("_ist: already connected, ignoring INFORM\n");
+              break;
+            }
 
             if (service_id == s->service_id) {
                 s->peer_ip = IP_ADDR(disc_pkt->ip.addr_src.addr[0],
