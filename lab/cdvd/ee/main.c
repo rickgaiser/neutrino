@@ -1,8 +1,20 @@
 /*
+ * CDVD Behavior Test Suite
+ *
+ * Tests CDVD behavior across many IOPRP firmware versions to identify
+ * differences that can guide neutrino emulation improvements.
+ *
  * How to use:
- * - run on PCSX2 with the DVD "Auto Modellista" inserted
- * - make clean all sim
- * - debug output will be visible over EE serial output, using PCSX2
+ * - make iso sim       (builds cdvd.iso and launches PCSX2)
+ * - EE serial output is visible in PCSX2's EE Console
+ * - IOP TTY output is visible in PCSX2's IOP Console (separate window)
+ * - Save both outputs as results/run_<date>_ee.txt and results/run_<date>_iop.txt
+ *
+ * The test ISO (cdvd.iso) contains:
+ * - CDVD.ELF     — this executable (booted via SYSTEM.CNF)
+ * - CDVD.IRX     — IOP test module (loaded at runtime per IOPRP version)
+ * - IRP*.IMG     — IOPRP firmware images (loaded from disc, not embedded)
+ * - TEST.BIN     — 512KB test data file for read tests
  */
 
 // ps2sdk
@@ -16,23 +28,117 @@
 #include <sifrpc.h>
 #include <sbv_patches.h>
 #include <libcdvd-common.h>
+#include <timer.h>
 
 // libc
 #include <stdio.h>
-#include <time.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-// This function is defined as weak in ps2sdkc, so how
-// we are not using time zone, so we can safe some KB
 void _ps2sdk_timezone_update() {}
 
-DISABLE_PATCHED_FUNCTIONS(); // Disable the patched functionalities
-// DISABLE_EXTRA_TIMERS_FUNCTIONS(); // Disable the extra functionalities for timers
+DISABLE_PATCHED_FUNCTIONS();
 
-extern unsigned char cdvd_irx[];
-extern unsigned int size_cdvd_irx;
+//--------------------------------------------------------------
+// IOPRP table — each entry maps a test label to the ISO9660 path
+// of the corresponding firmware image on the test disc.
+// iop_path: passed directly to SifIopReset() — the IOP reads from disc itself.
+// Naming: "IRP*.IMG" for ioprp*, "DNAS*.IMG"/"DNS*.IMG" for dnas*.
+// All names are ≤8.3 characters (ISO9660 level 1 limit).
+//--------------------------------------------------------------
+typedef struct {
+    const char *name;     // label printed in output (e.g., "ioprp14")
+    const char *iop_path; // SifIopReset path (e.g., "cdrom0:\\MODULES\\IRP14.IMG;1")
+} ioprp_entry_t;
 
+static const ioprp_entry_t g_ioprp_table[] = {
+    { "ioprp14",    "rom0:UDNL cdrom0:\\MODULES\\IRP14.IMG;1"   },
+    { "ioprp15",    "rom0:UDNL cdrom0:\\MODULES\\IRP15.IMG;1"   },
+    { "ioprp16",    "rom0:UDNL cdrom0:\\MODULES\\IRP16.IMG;1"   },
+    { "ioprp165",   "rom0:UDNL cdrom0:\\MODULES\\IRP165.IMG;1"  },
+    { "ioprp202",   "rom0:UDNL cdrom0:\\MODULES\\IRP202.IMG;1"  },
+    { "ioprp205",   "rom0:UDNL cdrom0:\\MODULES\\IRP205.IMG;1"  },
+    { "ioprp21",    "rom0:UDNL cdrom0:\\MODULES\\IRP21.IMG;1"   },
+    { "ioprp210",   "rom0:UDNL cdrom0:\\MODULES\\IRP210.IMG;1"  },
+    { "ioprp211",   "rom0:UDNL cdrom0:\\MODULES\\IRP211.IMG;1"  },
+    { "ioprp213",   "rom0:UDNL cdrom0:\\MODULES\\IRP213.IMG;1"  },
+    { "ioprp214",   "rom0:UDNL cdrom0:\\MODULES\\IRP214.IMG;1"  },
+    { "ioprp224",   "rom0:UDNL cdrom0:\\MODULES\\IRP224.IMG;1"  },
+    { "ioprp23",    "rom0:UDNL cdrom0:\\MODULES\\IRP23.IMG;1"   },
+    { "ioprp234",   "rom0:UDNL cdrom0:\\MODULES\\IRP234.IMG;1"  },
+    { "ioprp241",   "rom0:UDNL cdrom0:\\MODULES\\IRP241.IMG;1"  },
+    { "ioprp242",   "rom0:UDNL cdrom0:\\MODULES\\IRP242.IMG;1"  },
+    { "ioprp243",   "rom0:UDNL cdrom0:\\MODULES\\IRP243.IMG;1"  },
+    { "ioprp250",   "rom0:UDNL cdrom0:\\MODULES\\IRP250.IMG;1"  },
+    { "ioprp253",   "rom0:UDNL cdrom0:\\MODULES\\IRP253.IMG;1"  },
+    { "ioprp255",   "rom0:UDNL cdrom0:\\MODULES\\IRP255.IMG;1"  },
+    { "ioprp260",   "rom0:UDNL cdrom0:\\MODULES\\IRP260.IMG;1"  },
+    { "ioprp271",   "rom0:UDNL cdrom0:\\MODULES\\IRP271.IMG;1"  },
+    { "ioprp271_2", "rom0:UDNL cdrom0:\\MODULES\\IRP2712.IMG;1" },
+    { "ioprp280",   "rom0:UDNL cdrom0:\\MODULES\\IRP280.IMG;1"  },
+    { "ioprp300",   "rom0:UDNL cdrom0:\\MODULES\\IRP300.IMG;1"  },
+    { "ioprp300_2", "rom0:UDNL cdrom0:\\MODULES\\IRP3002.IMG;1" },
+    { "ioprp300_3", "rom0:UDNL cdrom0:\\MODULES\\IRP3003.IMG;1" },
+    { "ioprp300_4", "rom0:UDNL cdrom0:\\MODULES\\IRP3004.IMG;1" },
+    { "ioprp310",   "rom0:UDNL cdrom0:\\MODULES\\IRP310.IMG;1"  },
+    { "dnas280",    "rom0:UDNL cdrom0:\\MODULES\\DNAS280.IMG;1" },
+    { "dnas300",    "rom0:UDNL cdrom0:\\MODULES\\DNAS300.IMG;1" },
+    { "dnas300_2",  "rom0:UDNL cdrom0:\\MODULES\\DNS3002.IMG;1" },
+    { NULL, NULL }
+};
 
-void list_modules()
+//--------------------------------------------------------------
+// sceCdSync with a 5-second timeout. Returns 0 on completion, -1 on timeout.
+// Use this everywhere instead of sceCdSync(0) so the test never hangs.
+//--------------------------------------------------------------
+#define SYNC_TIMEOUT_TICKS (147456000UL * 5)  // 5s at 147.456 MHz EE bus
+
+static int cdvd_sync(void)
+{
+    struct timespec tv = {0};
+    tv.tv_sec = 1;
+    tv.tv_nsec = 0;
+
+    u32 end = cpu_ticks() + SYNC_TIMEOUT_TICKS;
+    while (sceCdSync(1)) {
+        nanosleep(&tv, NULL);
+        if ((u32)(cpu_ticks() - end) < 0x80000000U) {
+            _print("  [SYNC_TIMEOUT]\n");
+            // Abort the pending operation so cdvdman is ready for next call
+            sceCdStop();
+            // Give stop command time to propagate (brief spin)
+            for (volatile int z = 0; z < 1000000; z++) {}
+            return -1;
+        }
+    }
+    return 0;
+}
+
+//--------------------------------------------------------------
+// Read buffers
+//--------------------------------------------------------------
+#define BUF_SECTORS (128)
+#define BUF_SIZE    (BUF_SECTORS * 2048)
+static unsigned char g_buf[BUF_SIZE]  __attribute__((aligned(64)));
+static unsigned char g_buf2[BUF_SIZE] __attribute__((aligned(64)));
+
+// Callback thread stack — created once, persists across IOP resets
+#define CB_STACK_SIZE (16 * 1024)
+static unsigned char cb_stack[CB_STACK_SIZE] __attribute__((aligned(16)));
+
+// Per-section callback state
+static volatile int g_cb_called;
+static volatile int g_cb_reason;
+static volatile u32 g_cb_tick;
+static volatile int g_cb_sync_inside; // sceCdSync(1) return value inside callback
+static volatile int g_reenter_ret;    // sceCdRead() return value inside callback
+static u32          g_fp_lsn;        // target LSN, readable from callback
+
+//--------------------------------------------------------------
+// Section 1+2: Module list + IOP free memory estimate
+//--------------------------------------------------------------
+static void section_modules(void)
 {
     smod_mod_info_t info;
     smod_mod_info_t *curr = NULL;
@@ -40,9 +146,11 @@ void list_modules()
     u32 txtsz_total = 0;
     u32 dtasz_total = 0;
     u32 bsssz_total = 0;
+    u32 top_used = 0;
 
-    _print("\t\ttxtst   | txtsz   | dtasz   | bsssz   | versi. | name\n");
-    _print("\t\t------------------------------------------------------------\n");
+    _print("[MODULES]\n");
+    _print("  txtst   | txtsz   | dtasz   | bsssz   | ver    | name\n");
+    _print("  ------------------------------------------------------------\n");
     while (smod_get_next_mod(curr, &info) != 0) {
         smem_read(info.name, sName, 20);
         sName[20] = 0;
@@ -50,175 +158,344 @@ void list_modules()
         dtasz_total += info.data_size;
         bsssz_total += info.bss_size;
 
-        _print("\t\t0x%05x | %6db | %6db | %6db | 0x%4x | %s\n", info.text_start, info.text_size, info.data_size, info.bss_size, info.version, sName);
+        u32 mod_end = info.text_start + info.text_size + info.data_size + info.bss_size;
+        if (mod_end > top_used)
+            top_used = mod_end;
+
+        _print("  0x%05x | %6db | %6db | %6db | 0x%04x | %s\n",
+               info.text_start, info.text_size, info.data_size, info.bss_size,
+               info.version, sName);
         curr = &info;
     }
 
     u32 total = txtsz_total + dtasz_total + bsssz_total;
-    _print("\t\t------------------------------------------------------------\n");
-    _print("\t\t        | %6db | %6db | %6db | total\n", txtsz_total, dtasz_total, bsssz_total);
-    _print("\t\t------------------------------------------------------------\n");
-    _print("\t\tTotal: %db (%dKiB)\n", total, total / 1024);
-    _print("\t\t------------------------------------------------------------\n");
+    _print("  ------------------------------------------------------------\n");
+    _print("  txt_total: %db  dta_total: %db  bss_total: %db\n",
+           txtsz_total, dtasz_total, bsssz_total);
+    _print("  grand_total: %db (%dKiB)\n", total, total / 1024);
+
+    // IOP RAM = 2MB; estimate free region after last module
+    u32 free_start = (top_used + 0xFF) & ~0xFF;
+    u32 iop_ram    = 0x200000;
+    u32 free_size  = (free_start < iop_ram) ? (iop_ram - free_start) : 0;
+    _print("  [FREE_MEM_ESTIMATE] top_used=0x%05x free_start=0x%05x"
+           " free_size=%db (%dKiB)\n",
+           top_used, free_start, free_size, free_size / 1024);
+    _print("[/MODULES]\n");
 }
 
-// Read buffer
-#define BUF_SECTORS (128)
-#define BUF_SIZE    (BUF_SECTORS*2048)
-static unsigned char buffer[BUF_SIZE] __attribute__((aligned(16)));
-// Callback stack
-#define CB_STACK_SIZE (16*1024)
-static unsigned char cb_stack[CB_STACK_SIZE];
-void test_read_callback(int reason)
+//--------------------------------------------------------------
+// Section setup: init CDVD and find test file
+// Returns 1 on success (file found), 0 on failure
+//--------------------------------------------------------------
+static int section_setup(sceCdlFILE *fp_out)
 {
-    switch(reason) {
-        case SCECdFuncRead:
-            _print("%s(%d=SCECdFuncRead)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncReadCDDA:
-            _print("%s(%d=SCECdFuncReadCDDA)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncGetToc:
-            _print("%s(%d=SCECdFuncGetToc)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncSeek:
-            _print("%s(%d=SCECdFuncSeek)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncStandby:
-            _print("%s(%d=SCECdFuncStandby)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncStop:
-            _print("%s(%d=SCECdFuncStop)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncPause:
-            _print("%s(%d=SCECdFuncPause)\n", __FUNCTION__, reason);
-            break;
-        case SCECdFuncBreak:
-            _print("%s(%d=SCECdFuncBrea)\n", __FUNCTION__, reason);
-            break;
-        default:
-            _print("%s(%d)\n", __FUNCTION__, reason);
-    }
+    int init_ret   = sceCdInit(SCECdINIT);
+    int disk_type  = sceCdGetDiskType();
+    int err_dt     = sceCdGetError();
+    int mmode_ret  = sceCdMmode(SCECdMmodeCd);
+    int err_mm     = sceCdGetError();
+    int search_ret = sceCdSearchFile(fp_out, "\\TEST.BIN;1");
+    int err_sf     = sceCdGetError();
+
+    _print("[SETUP]\n");
+    _print("  init_ret: %d err: %d\n", init_ret, sceCdGetError());
+    _print("  disk_type: %d err: %d\n", disk_type, err_dt);
+    _print("  mmode_ret: %d err: %d\n", mmode_ret, err_mm);
+    _print("  search_ret: %d lsn: %d size: %d err: %d\n",
+           search_ret, fp_out->lsn, fp_out->size, err_sf);
+    _print("[/SETUP]\n");
+
+    return (search_ret != 0);
 }
-void test_read(const char *filename)
+
+//--------------------------------------------------------------
+// Section 3: Callback timing — when relative to sceCdRead/sceCdSync?
+//--------------------------------------------------------------
+static void cb_timing(int reason)
 {
-    int ret;
+    g_cb_called     = 1;
+    g_cb_reason     = reason;
+    g_cb_tick       = cpu_ticks();
+    g_cb_sync_inside = sceCdSync(1); // 0=done, 1=still busy
+}
+
+static void section_callback(const sceCdlFILE *fp)
+{
+    sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
+                        .datapattern=SCECdSecS2048, .pad=0 };
+
+    g_cb_called = 0;
+    g_cb_reason = -1;
+    g_cb_sync_inside = -1;
+    sceCdCallback(cb_timing);
+
+    u32 t_before_read = cpu_ticks();
+    int read_ret = sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
+    u32 t_after_read = cpu_ticks();
+
+    // Poll ~100ms to see if callback fires before we call sceCdSync
+    // EE bus clock = 147.456 MHz; 100ms = ~14,745,600 ticks
+    int cb_before_sync = 0;
+    u32 poll_end = cpu_ticks() + 14745600U;
+    while ((u32)cpu_ticks() < poll_end) {
+        if (g_cb_called) { cb_before_sync = 1; break; }
+    }
+    u32 t_cb_if_early = g_cb_tick;
+
+    int sync_ret = cdvd_sync();
+    u32 t_after_sync = cpu_ticks();
+
+    sceCdCallback(NULL);
+
+    _print("[CALLBACK_TEST]\n");
+    _print("  read_ret: %d\n", read_ret);
+    _print("  cb_before_sync_100ms_poll: %d\n", cb_before_sync);
+    _print("  cb_after_sync: %d\n", g_cb_called);
+    _print("  cb_reason: %d\n", g_cb_reason);
+    _print("  cb_sync_state_inside: %d\n", g_cb_sync_inside);
+    _print("  sync_ret: %d\n", sync_ret);
+    _print("  ticks_read_to_sync: %u\n", t_after_sync - t_after_read);
+    if (cb_before_sync)
+        _print("  ticks_read_to_cb: %u\n", t_cb_if_early - t_after_read);
+    else if (g_cb_called)
+        _print("  ticks_read_to_cb: %u\n", g_cb_tick - t_after_read);
+    (void)t_before_read;
+    _print("[/CALLBACK_TEST]\n");
+}
+
+//--------------------------------------------------------------
+// Section 4: Reentrancy — can sceCdRead() be called from inside callback?
+//--------------------------------------------------------------
+static void cb_reenter(int reason)
+{
+    g_cb_called = 1;
+    g_cb_reason = reason;
+    sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
+                        .datapattern=SCECdSecS2048, .pad=0 };
+    g_reenter_ret = sceCdRead(g_fp_lsn, 1, g_buf2, &mode);
+}
+
+static void section_reenter(const sceCdlFILE *fp)
+{
+    sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
+                        .datapattern=SCECdSecS2048, .pad=0 };
+
+    g_cb_called   = 0;
+    g_reenter_ret = -99;
+    g_fp_lsn      = fp->lsn;
+    sceCdCallback(cb_reenter);
+
+    int read1_ret = sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
+    cdvd_sync(); // wait for first read (and lets callback fire)
+    // If reentry read was started inside callback, wait for it too
+    if (g_reenter_ret == 1)
+        cdvd_sync();
+
+    sceCdCallback(NULL);
+
+    _print("[REENTER_TEST]\n");
+    _print("  read1_ret: %d\n", read1_ret);
+    _print("  cb_called: %d cb_reason: %d\n", g_cb_called, g_cb_reason);
+    _print("  reenter_from_callback_ret: %d\n", g_reenter_ret);
+    _print("[/REENTER_TEST]\n");
+}
+
+//--------------------------------------------------------------
+// Section 5: Sync mode timing — sceCdSync(0) vs sceCdSync(1) poll
+//--------------------------------------------------------------
+static void section_sync_modes(const sceCdlFILE *fp)
+{
+    sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
+                        .datapattern=SCECdSecS2048, .pad=0 };
+    sceCdCallback(NULL);
+
+    _print("[SYNC_TEST]\n");
+
+    // 5a: sceCdSync via cdvd_sync() (polls with timeout)
+    sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
+    u32 t0 = cpu_ticks();
+    int sync0_ret = cdvd_sync();
+    u32 t1 = cpu_ticks();
+    _print("  sync0_ret: %d ticks: %u\n", sync0_ret, t1 - t0);
+
+    // 5b: sceCdSync(1) polling (raw, counts iterations)
+    sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
+    t0 = cpu_ticks();
+    u32 poll_count = 0;
+    u32 sync1_end = cpu_ticks() + SYNC_TIMEOUT_TICKS;
+    while (sceCdSync(1)) {
+        poll_count++;
+        if ((u32)(cpu_ticks() - sync1_end) < 0x80000000U) { poll_count = 0; break; }
+    }
+    t1 = cpu_ticks();
+    _print("  sync1_poll_count: %u ticks: %u\n", poll_count, t1 - t0);
+
+    // 5c: No sync — check if buffer has data before sync
+    memset(g_buf, 0xAA, 2048);
+    sceCdRead(fp->lsn, 1, g_buf, &mode);
+    // Read byte immediately without any sync
+    unsigned char byte_immediate = *((volatile unsigned char *)g_buf);
+    // Spin briefly (~1M iterations) without calling sceCdSync
+    for (volatile int z = 0; z < 1000000; z++) {}
+    unsigned char byte_after_spin = *((volatile unsigned char *)g_buf);
+    cdvd_sync();
+    unsigned char byte_after_sync = *((volatile unsigned char *)g_buf);
+    _print("  nosync_byte0_immediate: 0x%02x\n", byte_immediate);
+    _print("  nosync_byte0_after_spin: 0x%02x\n", byte_after_spin);
+    _print("  nosync_byte0_after_sync: 0x%02x\n", byte_after_sync);
+
+    _print("[/SYNC_TEST]\n");
+}
+
+//--------------------------------------------------------------
+// Section 6: Does cdrom0: file I/O trigger the sceCdRead callback?
+//--------------------------------------------------------------
+static void cb_fio(int reason)
+{
+    g_cb_called = 1;
+    g_cb_reason = reason;
+}
+
+static void section_fio(void)
+{
+    g_cb_called = 0;
+    g_cb_reason = -1;
+    sceCdCallback(cb_fio);
+
+    int fd = open("cdrom0:\\TEST.BIN;1", O_RDONLY);
+    int bytes = -1;
+    if (fd >= 0) {
+        bytes = (int)read(fd, g_buf, 2048);
+        close(fd);
+    }
+
+    // Brief spin to let callback fire if it's going to
+    for (volatile int z = 0; z < 5000000; z++) {}
+
+    sceCdCallback(NULL);
+
+    _print("[FIO_TEST]\n");
+    _print("  open_fd: %d\n", fd);
+    _print("  read_bytes: %d\n", bytes);
+    _print("  cb_called_by_fio: %d\n", g_cb_called);
+    _print("  cb_reason: %d\n", g_cb_reason);
+    _print("[/FIO_TEST]\n");
+}
+
+//--------------------------------------------------------------
+// Section 7: Concurrent reads — what happens when 2nd read issued while busy?
+//--------------------------------------------------------------
+static void section_concurrent(const sceCdlFILE *fp)
+{
+    sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
+                        .datapattern=SCECdSecS2048, .pad=0 };
+    sceCdCallback(NULL);
+
+    int r1   = sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
+    int r2   = sceCdRead(fp->lsn, 1, g_buf2, &mode);
+    int err2 = sceCdGetError();
+    cdvd_sync();
+    if (r2 == 1) cdvd_sync(); // in case 2nd read also started
+    int err_after = sceCdGetError();
+
+    _print("[CONCURRENT_TEST]\n");
+    _print("  read1_ret: %d\n", r1);
+    _print("  read2_while_busy_ret: %d err: %d\n", r2, err2);
+    _print("  err_after_sync: %d\n", err_after);
+    _print("[/CONCURRENT_TEST]\n");
+}
+
+//--------------------------------------------------------------
+// Run all test sections for one IOPRP version.
+// iop_path: cdrom0: path for SifIopReset (e.g. "cdrom0:\\MODULES\\IRP14.IMG;1"),
+//           or NULL for plain BIOS baseline.
+// is_subsequent: 1 if SifLoadFileExit/ExitIopHeap need to be called first.
+//--------------------------------------------------------------
+static void run_tests(const char *label, const char *iop_path)
+{
+    _print("[IOPRP_BEGIN: %s]\n", label);
+
+    // Reset to plain BIOS first so cdvdman starts in a clean state.
+    SifExitIopHeap();
+    SifLoadFileExit();
+    SifExitRpc();
+    SifInitRpc(0);
+    while(!SifIopReset("", 0)){};
+    while(!SifIopSync()) {};
+    SifInitRpc(0);
+    SifInitIopHeap();
+    SifLoadFileInit();
+    sceCdInit(SCECdINIT);
+    sceCdMmode(SCECdMmodeCd);
+
+    if (iop_path != NULL) {
+        SifExitIopHeap();
+        SifLoadFileExit();
+        SifExitRpc();
+        SifInitRpc(0);
+        while (!SifIopReset(iop_path, 0)) ;
+        while (!SifIopSync()) ;
+        SifInitRpc(0);
+        SifInitIopHeap();
+        SifLoadFileInit();
+        //sceCdInit(SCECdINIT);
+        //sceCdMmode(SCECdMmodeCd);
+        // NOTE: do NOT call sceCdInitEeCB here — callback thread was created once in main()
+        //       and persists across all IOP resets.
+    }
+
+    section_modules();
+
     sceCdlFILE fp;
-    sceCdRMode mode = {
-        .trycount = 0,
-        .spindlctrl = SCECdSpinNom,
-        .datapattern = SCECdSecS2048,
-        .pad = 0
-    };
-
-    sceCdInitEeCB(20, cb_stack, CB_STACK_SIZE);
-    sceCdCallback(test_read_callback);
-
-    ret = sceCdInit(SCECdINIT);
-    //if (ret == 0) {
-        _print("%s: sceCdInit = %d, err = %d\n", __FUNCTION__, ret, sceCdGetError());
-    //    return;
-    //}
-
-    int dt = sceCdGetDiskType();
-    _print("%s: sceCdGetDiskType() = %d\n", __FUNCTION__, dt);
-    _print("%s: sceCdStatus() = %d\n", __FUNCTION__, sceCdStatus());
-
-    ret = sceCdMmode(dt);
-    //if (ret == 0) {
-        _print("%s: sceCdMmode(dt) = %d, err = %d\n", __FUNCTION__, ret, sceCdGetError());
-    //    return;
-    //}
-
-    ret = sceCdSearchFile(&fp, filename);
-    //if (ret == 0) {
-        _print("%s: sceCdSearchFile(..., %s) = %d, err = %d\n", __FUNCTION__, filename, ret, sceCdGetError());
-    //    return;
-    //}
-
-    ret = sceCdRead(fp.lsn, BUF_SECTORS, buffer, &mode);
-    //if (ret == 0) {
-        _print("%s: sceCdRead(%d, %d, 0x%x, ...) = %d, err = %d\n", __FUNCTION__, fp.lsn, BUF_SECTORS, buffer, ret, sceCdGetError());
-    //    return;
-    //}
-#if 0
-    // Blocking
-    ret = sceCdSync(0);
-    if (ret != 0) {
-        _print("%s: sceCdSync(0) = %d, err = %d\n", __FUNCTION__, ret, sceCdGetError());
-        return;
+    memset(&fp, 0, sizeof(fp));
+    if (!section_setup(&fp)) {
+        _print("[SKIP] TEST.BIN not found, skipping read tests\n");
+        goto load_iop_module;
     }
-#else
-    // NON-Blocking
-    while(sceCdSync(1)) {
-        nanosleep((const struct timespec[]){{1, 0}}, NULL);
-    }
-#endif
+
+    section_callback(&fp);
+    section_reenter(&fp);
+    section_sync_modes(&fp);
+    section_fio();
+    section_concurrent(&fp);
+
+load_iop_module:
+    // Load IOP test module from disc — no bin2c needed, disc is always available
+    _print("[IOP_MODULE]\n");
+    int rv = SifLoadModule("cdrom0:\\CDVD.IRX;1", 0, NULL);
+    _print("  SifLoadModule_ret: %d\n", rv);
+    // Give IOP module time to execute and print its results to IOP TTY
+    // ~50M EE cycles at 294MHz ≈ ~170ms
+    for (volatile int z = 0; z < 50000000; z++) {}
+    _print("[/IOP_MODULE]\n");
+
+    _print("[IOPRP_END: %s]\n\n", label);
 }
 
-// IOPRP
-//const char *ioprp_filename = "ioprp14.img";
-//const char *ioprp_filename = "ioprp15.img";
-//const char *ioprp_filename = "ioprp16.img";
-//const char *ioprp_filename = "ioprp165.img";
-//const char *ioprp_filename = "ioprp202.img";
-//const char *ioprp_filename = "ioprp205.img";
-//const char *ioprp_filename = "ioprp210.img";
-//const char *ioprp_filename = "ioprp211.img";
-//const char *ioprp_filename = "ioprp214.img";
-//const char *ioprp_filename = "ioprp224.img";
-//const char *ioprp_filename = "ioprp234.img";
-//const char *ioprp_filename = "ioprp241.img";
-//const char *ioprp_filename = "ioprp242.img";
-//const char *ioprp_filename = "ioprp243.img";
-//const char *ioprp_filename = "ioprp250.img";
-//const char *ioprp_filename = "ioprp253.img";
-//const char *ioprp_filename = "ioprp255.img";
-//const char *ioprp_filename = "ioprp260.img";
-//const char *ioprp_filename = "ioprp271.img";
-//const char *ioprp_filename = "ioprp271_2.img";
-//const char *ioprp_filename = "ioprp280.img";
-//const char *ioprp_filename = "ioprp300.img";
-//const char *ioprp_filename = "ioprp300_2.img";
-const char *ioprp_filename = "ioprp310.img";
-
-// DNAS
-//const char *ioprp_filename = "dnas280.img";
-//const char *ioprp_filename = "dnas300_2.img";
-//const char *ioprp_filename = "dnas300.img";
-
+//--------------------------------------------------------------
 int main()
 {
-    char ioprp_string[80];
-
-    // BIOS reboot string
-    snprintf(ioprp_string, 80, "rom0:UDNL");
-    // IOPRP reboot string
-    //snprintf(ioprp_string, 80, "rom0:UDNL host:ioprp\\%s", ioprp_filename);
-
-    while (!SifIopReset(ioprp_string, 0))
-        ;
-    while (!SifIopSync())
-        ;
-
     SifInitRpc(0);
     SifLoadFileInit();
     SifInitIopHeap();
-    sbv_patch_enable_lmb();
 
-    _print("\n\n\n");
-    _print("\t\tEE side IOPRP tester\n");
-    _print("\t\tpath = %s\n", ioprp_string);
-    list_modules();
+    // Create the EE-side CDVD callback thread ONCE.
+    // It persists across all subsequent IOP resets.
+    sceCdInitEeCB(20, cb_stack, CB_STACK_SIZE);
 
-    // EE side test
-    test_read("afs00.afs");
-    // IOP side test
-    int rv = SifExecModuleBuffer(cdvd_irx, size_cdvd_irx, 0, NULL, NULL);
-    _print("SifExecModuleBuffer = %d\n", rv);
-    // Freeze when done
-    _print("All tests done. Freeze.\n");
-    while(1){}
+    _print("\n\n[TEST_SUITE_BEGIN]\n");
+
+    // Baseline: plain BIOS (no custom IOPRP)
+    run_tests("bios_baseline", NULL);
+
+    // Each IOPRP version — SifIopReset loads directly from disc
+    for (int i = 0; g_ioprp_table[i].name != NULL; i++)
+        run_tests(g_ioprp_table[i].name, g_ioprp_table[i].iop_path);
+
+    _print("[TEST_SUITE_END]\n");
+    _print("All tests done. Frozen.\n");
+    while (1) {}
 
     return 0;
 }

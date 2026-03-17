@@ -6,5 +6,8 @@
 #include "cdvdman.h"
 #include "stdio.h"
 #include "thbase.h"
+#include "intrman.h"
+#include "sysmem.h"
+#include "ioman.h"
 
 #endif
