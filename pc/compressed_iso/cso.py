@@ -18,7 +18,7 @@ class CsoFileWrapper(CompressedFileWrapper):
     
     CSO Header (24 bytes):
         - magic: 4 bytes (0x4F534943 = "CISO")
-        - header_size: 4 bytes (little-endian)
+        - header_size: 4 bytes (little-endian, might be filled with zeroes)
         - uncompressed_size: 8 bytes (little-endian)
         - block_size: 4 bytes (little-endian)
         - version: 1 byte
@@ -59,7 +59,6 @@ class CsoFileWrapper(CompressedFileWrapper):
         if magic != CSO_MAGIC:
             raise ValueError(f"Invalid CSO magic: 0x{magic:08X}, expected 0x{CSO_MAGIC:08X}")
         
-        header_size = struct.unpack('<I', header[4:8])[0]
         self.uncompressed_size = struct.unpack('<Q', header[8:16])[0]
         self.block_size = struct.unpack('<I', header[16:20])[0]
         # version = header[20]
@@ -73,7 +72,7 @@ class CsoFileWrapper(CompressedFileWrapper):
         self._num_blocks = (self.uncompressed_size + self.block_size - 1) // self.block_size
         
         # Read block offset table (CSO has num_blocks + 1 entries)
-        self.file.seek(header_size)
+        self.file.seek(24)
         offset_data = self.file.read((self._num_blocks + 1) * 4)
         
         if len(offset_data) < (self._num_blocks + 1) * 4:
@@ -105,14 +104,17 @@ class CsoFileWrapper(CompressedFileWrapper):
         # Check if block is uncompressed (MSB set)
         is_uncompressed = (raw_offset & 0x80000000) != 0
         
-        # Calculate actual offset (remove MSB, apply alignment)
+        # Calculate actual offset (remove MSB, apply alignment if compressed)
         offset = (raw_offset & 0x7FFFFFFF) << self.align
-        next_offset = (next_raw_offset & 0x7FFFFFFF) << self.align
-        compressed_size = next_offset - offset
-        
+        if is_uncompressed:
+            read_size = self.block_size
+        else:
+            next_offset = (next_raw_offset & 0x7FFFFFFF) << self.align
+            read_size = next_offset - offset
+
         # Read compressed data
         self.file.seek(offset)
-        compressed_data = self.file.read(compressed_size)
+        compressed_data = self.file.read(read_size)
         
         if is_uncompressed:
             decompressed = compressed_data
