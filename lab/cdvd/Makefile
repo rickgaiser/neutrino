@@ -46,6 +46,9 @@ iso: all
 	cp $(IOPRP)/dnas300_2.img  $(MODULES)/DNS3002.IMG
 	# Test data file — 512KB (256+ sectors for read tests)
 	dd if=/dev/urandom of=$(ISO_DIR)/TEST.BIN bs=1024 count=512
+	# Subdirectory test file — for sceCdSearchFile directory-traversal test
+	mkdir -p $(ISO_DIR)/SUBDIR
+	dd if=/dev/urandom of=$(ISO_DIR)/SUBDIR/TEST.BIN bs=1024 count=4
 	mkisofs -o $(ISO) $(ISO_DIR)
 
 install: iso

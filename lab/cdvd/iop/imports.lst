@@ -9,6 +9,10 @@ I_sceCdStatus
 I_sceCdMmode
 I_sceCdCallback
 I_sceCdStop
+I_sceCdStInit
+I_sceCdStStart
+I_sceCdStRead
+I_sceCdStStop
 cdvdman_IMPORTS_end
 
 stdio_IMPORTS_start

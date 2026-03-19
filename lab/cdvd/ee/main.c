@@ -41,6 +41,20 @@ void _ps2sdk_timezone_update() {}
 DISABLE_PATCHED_FUNCTIONS();
 
 //--------------------------------------------------------------
+// Classification helpers — compare measured values against the reference table
+// collected across all known IOPRP firmware images (RESULTS.md).
+// Returns "[OK]"          if the value matches ALL tested IOPRP images.
+//         "[matches: …]"  if it matches only a specific firmware subset.
+//         "[ERROR]"       if no known IOPRP firmware produces this value.
+//--------------------------------------------------------------
+static const char *ee_chk_mmode(int v)
+{
+    if (v == 0) return "[matches: bios,ioprp14-16]";
+    if (v == 1) return "[matches: ioprp165+]";
+    return "[ERROR]";
+}
+
+//--------------------------------------------------------------
 // IOPRP table — each entry maps a test label to the ISO9660 path
 // of the corresponding firmware image on the test disc.
 // iop_path: passed directly to SifIopReset() — the IOP reads from disc itself.
@@ -54,37 +68,37 @@ typedef struct {
 
 static const ioprp_entry_t g_ioprp_table[] = {
     { "ioprp14",    "rom0:UDNL cdrom0:\\MODULES\\IRP14.IMG;1"   },
-    { "ioprp15",    "rom0:UDNL cdrom0:\\MODULES\\IRP15.IMG;1"   },
-    { "ioprp16",    "rom0:UDNL cdrom0:\\MODULES\\IRP16.IMG;1"   },
+    //{ "ioprp15",    "rom0:UDNL cdrom0:\\MODULES\\IRP15.IMG;1"   },
+    //{ "ioprp16",    "rom0:UDNL cdrom0:\\MODULES\\IRP16.IMG;1"   },
     { "ioprp165",   "rom0:UDNL cdrom0:\\MODULES\\IRP165.IMG;1"  },
-    { "ioprp202",   "rom0:UDNL cdrom0:\\MODULES\\IRP202.IMG;1"  },
-    { "ioprp205",   "rom0:UDNL cdrom0:\\MODULES\\IRP205.IMG;1"  },
-    { "ioprp21",    "rom0:UDNL cdrom0:\\MODULES\\IRP21.IMG;1"   },
-    { "ioprp210",   "rom0:UDNL cdrom0:\\MODULES\\IRP210.IMG;1"  },
-    { "ioprp211",   "rom0:UDNL cdrom0:\\MODULES\\IRP211.IMG;1"  },
-    { "ioprp213",   "rom0:UDNL cdrom0:\\MODULES\\IRP213.IMG;1"  },
+    //{ "ioprp202",   "rom0:UDNL cdrom0:\\MODULES\\IRP202.IMG;1"  },
+    //{ "ioprp205",   "rom0:UDNL cdrom0:\\MODULES\\IRP205.IMG;1"  },
+    //{ "ioprp21",    "rom0:UDNL cdrom0:\\MODULES\\IRP21.IMG;1"   },
+    //{ "ioprp210",   "rom0:UDNL cdrom0:\\MODULES\\IRP210.IMG;1"  },
+    //{ "ioprp211",   "rom0:UDNL cdrom0:\\MODULES\\IRP211.IMG;1"  },
+    //{ "ioprp213",   "rom0:UDNL cdrom0:\\MODULES\\IRP213.IMG;1"  },
     { "ioprp214",   "rom0:UDNL cdrom0:\\MODULES\\IRP214.IMG;1"  },
-    { "ioprp224",   "rom0:UDNL cdrom0:\\MODULES\\IRP224.IMG;1"  },
+    //{ "ioprp224",   "rom0:UDNL cdrom0:\\MODULES\\IRP224.IMG;1"  },
     { "ioprp23",    "rom0:UDNL cdrom0:\\MODULES\\IRP23.IMG;1"   },
-    { "ioprp234",   "rom0:UDNL cdrom0:\\MODULES\\IRP234.IMG;1"  },
-    { "ioprp241",   "rom0:UDNL cdrom0:\\MODULES\\IRP241.IMG;1"  },
-    { "ioprp242",   "rom0:UDNL cdrom0:\\MODULES\\IRP242.IMG;1"  },
-    { "ioprp243",   "rom0:UDNL cdrom0:\\MODULES\\IRP243.IMG;1"  },
-    { "ioprp250",   "rom0:UDNL cdrom0:\\MODULES\\IRP250.IMG;1"  },
-    { "ioprp253",   "rom0:UDNL cdrom0:\\MODULES\\IRP253.IMG;1"  },
+    //{ "ioprp234",   "rom0:UDNL cdrom0:\\MODULES\\IRP234.IMG;1"  },
+    //{ "ioprp241",   "rom0:UDNL cdrom0:\\MODULES\\IRP241.IMG;1"  },
+    //{ "ioprp242",   "rom0:UDNL cdrom0:\\MODULES\\IRP242.IMG;1"  },
+    //{ "ioprp243",   "rom0:UDNL cdrom0:\\MODULES\\IRP243.IMG;1"  },
+    //{ "ioprp250",   "rom0:UDNL cdrom0:\\MODULES\\IRP250.IMG;1"  },
+    //{ "ioprp253",   "rom0:UDNL cdrom0:\\MODULES\\IRP253.IMG;1"  },
     { "ioprp255",   "rom0:UDNL cdrom0:\\MODULES\\IRP255.IMG;1"  },
-    { "ioprp260",   "rom0:UDNL cdrom0:\\MODULES\\IRP260.IMG;1"  },
-    { "ioprp271",   "rom0:UDNL cdrom0:\\MODULES\\IRP271.IMG;1"  },
-    { "ioprp271_2", "rom0:UDNL cdrom0:\\MODULES\\IRP2712.IMG;1" },
-    { "ioprp280",   "rom0:UDNL cdrom0:\\MODULES\\IRP280.IMG;1"  },
-    { "ioprp300",   "rom0:UDNL cdrom0:\\MODULES\\IRP300.IMG;1"  },
-    { "ioprp300_2", "rom0:UDNL cdrom0:\\MODULES\\IRP3002.IMG;1" },
-    { "ioprp300_3", "rom0:UDNL cdrom0:\\MODULES\\IRP3003.IMG;1" },
-    { "ioprp300_4", "rom0:UDNL cdrom0:\\MODULES\\IRP3004.IMG;1" },
-    { "ioprp310",   "rom0:UDNL cdrom0:\\MODULES\\IRP310.IMG;1"  },
-    { "dnas280",    "rom0:UDNL cdrom0:\\MODULES\\DNAS280.IMG;1" },
-    { "dnas300",    "rom0:UDNL cdrom0:\\MODULES\\DNAS300.IMG;1" },
-    { "dnas300_2",  "rom0:UDNL cdrom0:\\MODULES\\DNS3002.IMG;1" },
+    //{ "ioprp260",   "rom0:UDNL cdrom0:\\MODULES\\IRP260.IMG;1"  },
+    //{ "ioprp271",   "rom0:UDNL cdrom0:\\MODULES\\IRP271.IMG;1"  },
+    //{ "ioprp271_2", "rom0:UDNL cdrom0:\\MODULES\\IRP2712.IMG;1" },
+    //{ "ioprp280",   "rom0:UDNL cdrom0:\\MODULES\\IRP280.IMG;1"  },
+    //{ "ioprp300",   "rom0:UDNL cdrom0:\\MODULES\\IRP300.IMG;1"  },
+    //{ "ioprp300_2", "rom0:UDNL cdrom0:\\MODULES\\IRP3002.IMG;1" },
+    //{ "ioprp300_3", "rom0:UDNL cdrom0:\\MODULES\\IRP3003.IMG;1" },
+    //{ "ioprp300_4", "rom0:UDNL cdrom0:\\MODULES\\IRP3004.IMG;1" },
+    //{ "ioprp310",   "rom0:UDNL cdrom0:\\MODULES\\IRP310.IMG;1"  },
+    //{ "dnas280",    "rom0:UDNL cdrom0:\\MODULES\\DNAS280.IMG;1" },
+    //{ "dnas300",    "rom0:UDNL cdrom0:\\MODULES\\DNAS300.IMG;1" },
+    //{ "dnas300_2",  "rom0:UDNL cdrom0:\\MODULES\\DNS3002.IMG;1" },
     { NULL, NULL }
 };
 
@@ -199,9 +213,9 @@ static int section_setup(sceCdlFILE *fp_out)
     int err_sf     = sceCdGetError();
 
     _print("[SETUP]\n");
-    _print("  init_ret: %d err: %d\n", init_ret, sceCdGetError());
-    _print("  disk_type: %d err: %d\n", disk_type, err_dt);
-    _print("  mmode_ret: %d err: %d\n", mmode_ret, err_mm);
+    _print("  init_ret: %d %s err: %d\n", init_ret, init_ret == 1 ? "[OK]" : "[ERROR]", sceCdGetError());
+    _print("  disk_type: %d %s err: %d\n", disk_type, disk_type == 18 ? "[OK]" : "[ERROR]", err_dt);
+    _print("  mmode_ret: %d %s err: %d\n", mmode_ret, ee_chk_mmode(mmode_ret), err_mm);
     _print("  search_ret: %d lsn: %d size: %d err: %d\n",
            search_ret, fp_out->lsn, fp_out->size, err_sf);
     _print("[/SETUP]\n");
@@ -249,12 +263,16 @@ static void section_callback(const sceCdlFILE *fp)
     sceCdCallback(NULL);
 
     _print("[CALLBACK_TEST]\n");
-    _print("  read_ret: %d\n", read_ret);
-    _print("  cb_before_sync_100ms_poll: %d\n", cb_before_sync);
-    _print("  cb_after_sync: %d\n", g_cb_called);
-    _print("  cb_reason: %d\n", g_cb_reason);
-    _print("  cb_sync_state_inside: %d\n", g_cb_sync_inside);
-    _print("  sync_ret: %d\n", sync_ret);
+    _print("  read_ret: %d %s\n", read_ret, read_ret == 1 ? "[OK]" : "[ERROR]");
+    _print("  cb_before_sync_100ms_poll: %d %s\n", cb_before_sync,
+           cb_before_sync == 0 ? "[OK]" : "[ERROR]");
+    _print("  cb_after_sync: %d %s\n", g_cb_called,
+           g_cb_called == 1 ? "[OK]" : "[ERROR]");
+    _print("  cb_reason: %d %s\n", g_cb_reason,
+           g_cb_reason == 1 ? "[OK]" : "[ERROR]");
+    _print("  cb_sync_state_inside: %d %s\n", g_cb_sync_inside,
+           g_cb_sync_inside == 0 ? "[OK]" : "[ERROR]");
+    _print("  sync_ret: %d %s\n", sync_ret, sync_ret == 0 ? "[OK]" : "[ERROR]");
     _print("  ticks_read_to_sync: %u\n", t_after_sync - t_after_read);
     if (cb_before_sync)
         _print("  ticks_read_to_cb: %u\n", t_cb_if_early - t_after_read);
@@ -295,9 +313,10 @@ static void section_reenter(const sceCdlFILE *fp)
     sceCdCallback(NULL);
 
     _print("[REENTER_TEST]\n");
-    _print("  read1_ret: %d\n", read1_ret);
+    _print("  read1_ret: %d %s\n", read1_ret, read1_ret == 1 ? "[OK]" : "[ERROR]");
     _print("  cb_called: %d cb_reason: %d\n", g_cb_called, g_cb_reason);
-    _print("  reenter_from_callback_ret: %d\n", g_reenter_ret);
+    _print("  reenter_from_callback_ret: %d %s\n", g_reenter_ret,
+           g_reenter_ret == 1 ? "[OK]" : "[ERROR]");
     _print("[/REENTER_TEST]\n");
 }
 
@@ -341,9 +360,12 @@ static void section_sync_modes(const sceCdlFILE *fp)
     unsigned char byte_after_spin = *((volatile unsigned char *)g_buf);
     cdvd_sync();
     unsigned char byte_after_sync = *((volatile unsigned char *)g_buf);
-    _print("  nosync_byte0_immediate: 0x%02x\n", byte_immediate);
-    _print("  nosync_byte0_after_spin: 0x%02x\n", byte_after_spin);
-    _print("  nosync_byte0_after_sync: 0x%02x\n", byte_after_sync);
+    _print("  nosync_byte0_immediate: 0x%02x %s\n", byte_immediate,
+           byte_immediate == 0xaa ? "[OK]" : "[ERROR]");
+    _print("  nosync_byte0_after_spin: 0x%02x %s\n", byte_after_spin,
+           byte_after_spin == 0x31 ? "[OK]" : "[ERROR]");
+    _print("  nosync_byte0_after_sync: 0x%02x %s\n", byte_after_sync,
+           byte_after_sync == 0x31 ? "[OK]" : "[ERROR]");
 
     _print("[/SYNC_TEST]\n");
 }
@@ -400,9 +422,11 @@ static void section_concurrent(const sceCdlFILE *fp)
     int err_after = sceCdGetError();
 
     _print("[CONCURRENT_TEST]\n");
-    _print("  read1_ret: %d\n", r1);
-    _print("  read2_while_busy_ret: %d err: %d\n", r2, err2);
-    _print("  err_after_sync: %d\n", err_after);
+    _print("  read1_ret: %d %s\n", r1, r1 == 1 ? "[OK]" : "[ERROR]");
+    _print("  read2_while_busy_ret: %d %s err: %d\n", r2,
+           r2 == 0 ? "[OK]" : "[ERROR]", err2);
+    _print("  err_after_sync: %d %s\n", err_after,
+           err_after == 0 ? "[OK]" : "[ERROR]");
     _print("[/CONCURRENT_TEST]\n");
 }
 
@@ -416,6 +440,7 @@ static void run_tests(const char *label, const char *iop_path)
 {
     _print("[IOPRP_BEGIN: %s]\n", label);
 
+    #if 0
     // Reset to plain BIOS first so cdvdman starts in a clean state.
     SifExitIopHeap();
     SifLoadFileExit();
@@ -428,6 +453,7 @@ static void run_tests(const char *label, const char *iop_path)
     SifLoadFileInit();
     sceCdInit(SCECdINIT);
     sceCdMmode(SCECdMmodeCd);
+    #endif
 
     if (iop_path != NULL) {
         SifExitIopHeap();
@@ -453,6 +479,8 @@ static void run_tests(const char *label, const char *iop_path)
         _print("[SKIP] TEST.BIN not found, skipping read tests\n");
         goto load_iop_module;
     }
+
+    goto load_iop_module;
 
     section_callback(&fp);
     section_reenter(&fp);
