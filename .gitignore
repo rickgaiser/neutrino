@@ -7,6 +7,7 @@
 *.pyc
 *.raw
 *.yaml
+*.iso
 pcsx2*
 
 obj/
@@ -17,8 +18,11 @@ ee/loader/version.txt
 iop/patches/
 iop/fileio/
 lab/cdvd/ee/ioprp/
+lab/cdvd/iso
 releases/
 
 .*
 !.clang-format
 !.github
+
+CLAUDE.md
