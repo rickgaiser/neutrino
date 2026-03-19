@@ -14,6 +14,7 @@ static void StStartFillStreamBuffer(void);
 
 static unsigned int StmScheduleCb(void *arg)
 {
+    // Stop or retry after 200ms
     return ((StFillStreamBuffer() >= 0) ? 0 : 0x00704000);
 }
 
@@ -90,7 +91,7 @@ static void StStartFillStreamBuffer(void)
     iop_sys_clock_t StmScheduleClock;
 
     if (StFillStreamBuffer() < 0) {
-        M_DEBUG("StStartFillStreamBuffer: Rescheduling read.\n");
+        M_DEBUG("StStartFillStreamBuffer: Rescheduling read after 200ms.\n");
         StmScheduleClock.lo = 0x00704000;
         StmScheduleClock.hi = 0;
         SetAlarm(&StmScheduleClock, &StmScheduleCb, &cdvdman_stat.StreamingData);
@@ -418,9 +419,6 @@ int sceCdStRead(u32 sectors, u32 *buffer, u32 mode, u32 *error)
     } else {
         result = 0;
     }
-
-    if (cdvdman_settings.flags & CDVDMAN_COMPAT_F1_2001)
-        cdvdman_cb_event(SCECdFuncRead);
 
     return result;
 }

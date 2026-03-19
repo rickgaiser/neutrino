@@ -7,6 +7,7 @@
 #include "internal.h"
 #include "xmodload.h"
 #include "cdvdman_read.h"
+#include "libcdvd-common.h"
 
 IRX_ID(MODNAME, 1, 1);
 
@@ -23,7 +24,8 @@ static unsigned int event_alarm_cb(void *args);
 
 struct cdvdman_cb_data
 {
-    void (*user_cb)(int reason);
+    sceCdCBFunc user_cb;
+    StmCallback_t stm0_cb;
     int reason;
 };
 
@@ -100,24 +102,49 @@ sceCdlLOCCD *sceCdIntToPos(u32 i, sceCdlLOCCD *p)
 }
 
 //-------------------------------------------------------------------------
-sceCdCBFunc sceCdCallback(sceCdCBFunc func)
+StmCallback_t cdvdman_read_set_stm0_callback(StmCallback_t func)
 {
     int oldstate;
-    void *old_cb;
+    StmCallback_t old_func;
 
     M_DEBUG("%s(0x%X)\n", __FUNCTION__, func);
 
-    if (sceCdSync(1))
+    if (sceCdSync(1)) {
+        M_DEBUG("%s(0x%X) cdvd busy, failed to set callback\n", __FUNCTION__, func);
         return NULL;
+    }
 
     CpuSuspendIntr(&oldstate);
 
-    old_cb = cb_data.user_cb;
+    old_func = cb_data.stm0_cb;
+    cb_data.stm0_cb = func;
+
+    CpuResumeIntr(oldstate);
+
+    return old_func;
+}
+
+//-------------------------------------------------------------------------
+sceCdCBFunc sceCdCallback(sceCdCBFunc func)
+{
+    int oldstate;
+    sceCdCBFunc old_func;
+
+    M_DEBUG("%s(0x%X)\n", __FUNCTION__, func);
+
+    if (sceCdSync(1)) {
+        M_DEBUG("%s(0x%X) cdvd busy, failed to set callback\n", __FUNCTION__, func);
+        return NULL;
+    }
+
+    CpuSuspendIntr(&oldstate);
+
+    old_func = cb_data.user_cb;
     cb_data.user_cb = func;
 
     CpuResumeIntr(oldstate);
 
-    return old_cb;
+    return old_func;
 }
 
 //-------------------------------------------------------------------------
@@ -198,35 +225,45 @@ retry:
 //--------------------------------------------------------------
 void cdvdman_cb_event(int reason)
 {
-    //M_DEBUG("    %s(%d) cb=0x%x\n", __FUNCTION__, reason, cb_data.user_cb);
+    M_DEBUG("    %s(%d) cb=0x%x\n", __FUNCTION__, reason, cb_data.user_cb);
 
-    if (cb_data.user_cb != NULL) {
-        cb_data.reason = reason;
+    cb_data.reason = reason;
 
-        if (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_CALLBACK)
-            ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_CB_DONE);
+    ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_CB_DONE);
+    SetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
+    WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
 
-        SetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
-
-        if (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_CALLBACK)
-            WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
-    }
-
-    //M_DEBUG("    %s(%d) done\n", __FUNCTION__, reason);
+    M_DEBUG("    %s(%d) done\n", __FUNCTION__, reason);
 }
 
 //--------------------------------------------------------------
+// Fire callback from interrupt context
 static unsigned int event_alarm_cb(void *args)
 {
     struct cdvdman_cb_data *cb_data = args;
 
     M_DEBUG("      %s reason=%d cb=0x%x\n", __FUNCTION__, cb_data->reason, cb_data->user_cb);
 
-    if (cb_data->user_cb != NULL) // This interrupt does not occur immediately, hence check for the callback again here.
-        cb_data->user_cb(cb_data->reason);
+    // Allow new read to start
+    if (cb_data->reason == SCECdFuncRead) {
+        sync_flag_locked = 0;
+        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED);
+    }
 
-    if (cdvdman_settings.flags & CDVDMAN_COMPAT_SYNC_CALLBACK)
-        iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE);
+    // Callback user
+    // - is likely to start another read
+    if (cb_data->user_cb != NULL) {
+        cb_data->user_cb(cb_data->reason);
+    }
+
+    // Callback streaming (cdvdstm)
+    // - is likely to start another read
+    if (cb_data->stm0_cb != NULL) {
+        cb_data->stm0_cb();
+    }
+
+    // Wakeup threads
+    iSetEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE|CDVDEF_STM_DONE);
 
     M_DEBUG("      %s done\n", __FUNCTION__);
 

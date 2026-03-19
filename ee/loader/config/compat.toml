@@ -13,9 +13,7 @@
 # CDVDMAN: compatibility flags
 # - FAST_READ = MODE0: Fast reads (sceCdRead)
 # - SYNC_READ = MODE2: Sync reads (sceCdRead)
-# - SYNC_CB   =        Sync callbacks (sceCdRead)
 # - DVD_DL    = MODE5: Emulate DVD-DL
-# - F1_2001   = Game specific comp. mode for: F1 2001
 #cdvdman.flags = ["FAST_READ", "SYNC_READ"]
 
 # CDVDMAN: select the number of sectors for the FS buffer
@@ -108,9 +106,9 @@ MODE8 = {name = "Compat MODE8: NOP (user configurable)"}
 MODE9 = {name = "Compat MODE9: NOP"}
 #MODE9 = {name = "!!! TEST-01 !!!", eecore.irm = [3, 4, 0]}
 #MODE9 = {name = "!!! TEST-02 !!!", cdvdman.flags = ["SYNC_READ"]}
-#MODE9 = {name = "!!! TEST-06 !!!", cdvdman.flags = ["SYNC_READ", "SYNC_CB"]}
+#MODE9 = {name = "!!! TEST-06 !!!", cdvdman.flags = ["SYNC_READ"]}
 #MODE9 = {name = "!!! TEST-07 !!!", cdvdman.flags = ["FAST_READ"]}
-#MODE9 = {name = "!!! TEST-03 !!!", cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+#MODE9 = {name = "!!! TEST-03 !!!", cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 #MODE9 = {name = "!!! TEST-04 !!!", depends = ["p-membo"]}
 #MODE9 = {name = "!!! TEST-05 !!!", depends = ["p-freemem"]}
 
@@ -133,11 +131,6 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SCUS_974.65" = {name = "Ratchet - Deadlocked",                  depends = ["p-freemem"]}
 "SCES_532.85" = {name = "Ratchet Gladiator",                     depends = ["p-freemem"]}
 "SCES_524.12" = {name = "Jackie Chan Adventures",                cdvdman.flags = ["SYNC_READ"]}
-"SCUS_971.50" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
-"SCES_500.04" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
-"SCED_502.54" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
-"SCED_503.13" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
-"SCPS_150.19" = {name = "Formula One 2001",                      cdvdman.flags = ["F1_2001"]}
 "SCUS_971.24" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
 "SCES_503.61" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
 "SCES_506.14" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
@@ -165,12 +158,12 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SLES_503.26" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 
 # Workarounds, need to find a better solution
-"SLPM_622.48" = {name = "Love - Mahjong!",                       cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLPM_624.29" = {name = "Love - Ping Pong!",                     cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLES_525.19" = {name = "Pink Pong",                             cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLPM_666.98" = {name = "Ragnarok Hachikengou",                  cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLPM_660.57" = {name = "Taito Memories - Joukan",               cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLUS_202.13" = {name = "Test Drive",                            cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLUS_206.97" = {name = "Cy Girls (Disc 1)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLUS_208.54" = {name = "Cy Girls (Disc 2)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
-"SLES_544.56" = {name = "Beverly Hills Cop",                     cdvdman.flags = ["FAST_READ", "SYNC_READ", "SYNC_CB"]}
+"SLPM_622.48" = {name = "Love - Mahjong!",                       cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLPM_624.29" = {name = "Love - Ping Pong!",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLES_525.19" = {name = "Pink Pong",                             cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLPM_666.98" = {name = "Ragnarok Hachikengou",                  cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLPM_660.57" = {name = "Taito Memories - Joukan",               cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLUS_202.13" = {name = "Test Drive",                            cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLUS_206.97" = {name = "Cy Girls (Disc 1)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLUS_208.54" = {name = "Cy Girls (Disc 2)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLES_544.56" = {name = "Beverly Hills Cop",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}

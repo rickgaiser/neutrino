@@ -8,7 +8,6 @@
 
 
 static int cdrom_rthread_sema;
-static StmCallback_t Stm0Callback = NULL;
 static unsigned int ReadPos = 0; /* Current buffer offset in 2048-byte sectors. */
 static int cdvdman_ReadingThreadID;
 #define BOUNCE_BUF_SECTORS 1
@@ -323,37 +322,12 @@ static void cdvdman_read_thread(void *args)
         ReadPos = 0; /* Reset the buffer offset indicator. */
         cdvdman_stat.status = SCECdStatPause;
 
-        M_DEBUG("  %s() read done, unlock and callback...\n", __FUNCTION__);
+        M_DEBUG("  %s() read done, callback and unlock...\n", __FUNCTION__);
 
-        sync_flag_locked = 0;
-        SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED);
-
-        switch (req.source) {
-            case ECS_EXTERNAL:
-                // Call from external irx (via sceCdRead)
-
-                // Notify external irx that sceCdRead has finished
-                cdvdman_cb_event(SCECdFuncRead);
-                break;
-            case ECS_SEARCHFILE:
-            case ECS_IOOPS:
-                // Call from searchfile and ioops
-                break;
-            case ECS_STREAMING:
-                // Call from streaming
-
-                // The event will trigger the transmission of data to EE
-                SetEventFlag(cdvdman_stat.intr_ef, CDVDEF_STM_DONE);
-
-                // The callback will trigger a new read (if needed)
-                if (Stm0Callback != NULL)
-                    Stm0Callback();
-
-                if (cdvdman_settings.flags & CDVDMAN_COMPAT_F1_2001)
-                    cdvdman_cb_event(SCECdFuncRead);
-
-                break;
-        }
+        // As tested on official IOPRP images from original BIOS to IOPRP300
+        // All sceCdRead reads perform a callback
+        // After (and during) this callback from interrupt, new reads can be issued
+        cdvdman_cb_event(SCECdFuncRead);
 
         M_DEBUG("  %s() done\n", __FUNCTION__);
     }
@@ -444,12 +418,6 @@ void cdvdman_read_init()
     thread_param.option = 0xABCD0000;
     cdvdman_ReadingThreadID = CreateThread(&thread_param);
     StartThread(cdvdman_ReadingThreadID, NULL);
-}
-
-//-------------------------------------------------------------------------
-void cdvdman_read_set_stm0_callback(StmCallback_t callback)
-{
-    Stm0Callback = callback;
 }
 
 //-------------------------------------------------------------------------
