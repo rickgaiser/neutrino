@@ -145,6 +145,7 @@ release: all copy
 	mkdir -p                     $(RELEASE_DIR)
 	cp    README.md              $(RELEASE_DIR)
 	cp -R ee/loader/config       $(RELEASE_DIR)
+	rm -f $(RELEASE_DIR)/config/pcsx2*
 	cp -R ee/loader/modules      $(RELEASE_DIR)
 	cp    ee/loader/neutrino.elf $(RELEASE_DIR)
 	cp    ee/loader/version.txt  $(RELEASE_DIR)
