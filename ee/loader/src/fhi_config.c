@@ -156,12 +156,11 @@ static int backend_fileid_add_file_fd(int fhi_fid, int fd, const char *path)
 {
     int iop_fd = ps2sdk_get_iop_fd(fd);
 
-    // Extract devNr from the last digit in the path (e.g. "udpfs1:..." -> devNr=1)
+    // Extract devNr from the digit immediately before ':' (e.g. "udpfs1:/..." -> devNr=1)
     if (path) {
-        const char *s;
-        for (s = path; *s; s++)
-            if (*s >= '0' && *s <= '9')
-                g_fileid->devNr = *s - '0';
+        const char *colon = strchr(path, ':');
+        if (colon != NULL && colon > path && *(colon - 1) >= '0' && *(colon - 1) <= '9')
+            g_fileid->devNr = *(colon - 1) - '0';
     }
 
     g_fileid->file[fhi_fid].id   = fileXioIoctl2(iop_fd, 0x80, NULL, 0, NULL, 0);
