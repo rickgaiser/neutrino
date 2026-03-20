@@ -34,8 +34,6 @@ static struct cdvdman_cb_data cb_data;
 
 static int cdvdman_scmdsema;
 
-static iop_sys_clock_t gCallbackSysClock;
-
 volatile unsigned char cdvdman_cdinited = 0;
 
 //-------------------------------------------------------------------------
@@ -225,12 +223,14 @@ retry:
 //--------------------------------------------------------------
 void cdvdman_cb_event(int reason)
 {
+    iop_sys_clock_t callback_delay = {0,0};
+
     M_DEBUG("    %s(%d) cb=0x%x\n", __FUNCTION__, reason, cb_data.user_cb);
 
     cb_data.reason = reason;
 
     ClearEventFlag(cdvdman_stat.intr_ef, ~CDVDEF_CB_DONE);
-    SetAlarm(&gCallbackSysClock, &event_alarm_cb, &cb_data);
+    SetAlarm(&callback_delay, &event_alarm_cb, &cb_data);
     WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_CB_DONE, WEF_AND, NULL);
 
     M_DEBUG("    %s(%d) done\n", __FUNCTION__, reason);
@@ -293,9 +293,6 @@ int _start(int argc, char **argv)
     // Register exports
     RegisterLibraryEntries(&_exp_cdvdman);
     RegisterLibraryEntries(&_exp_cdvdstm);
-
-    // Setup the callback timer.
-    USec2SysClock((cdvdman_settings.flags & CDVDMAN_COMPAT_FAST_READ) ? 0 : 5000, &gCallbackSysClock);
 
     // Create SCMD semaphores
     smp.initial = 1;
