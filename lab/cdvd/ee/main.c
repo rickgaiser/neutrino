@@ -29,6 +29,7 @@
 #include <sbv_patches.h>
 #include <libcdvd-common.h>
 #include <timer.h>
+#include <ps2sdkapi.h>
 
 // libc
 #include <stdio.h>
@@ -39,6 +40,18 @@
 void _ps2sdk_timezone_update() {}
 
 DISABLE_PATCHED_FUNCTIONS();
+
+//--------------------------------------------------------------
+// Test selection — set to 0 to skip a section
+//--------------------------------------------------------------
+#define RUN_MODULES    0  // module list + IOP free memory
+#define RUN_CALLBACK   0  // sceCdRead callback timing
+#define RUN_REENTER    0  // sceCdRead re-entry from callback
+#define RUN_SYNC       0  // sceCdSync(0) vs poll, no-sync byte test
+#define RUN_FIO        0  // cdrom0: fioRead, callback interaction
+#define RUN_CONCURRENT 0  // second sceCdRead while busy
+#define RUN_SPEED      1  // read throughput: sceCdRead / fioRead / sceCdStRead
+#define RUN_IOP_MODULE 1  // load and run CDVD.IRX
 
 //--------------------------------------------------------------
 // Classification helpers — compare measured values against the reference table
@@ -68,37 +81,37 @@ typedef struct {
 
 static const ioprp_entry_t g_ioprp_table[] = {
     { "ioprp14",    "rom0:UDNL cdrom0:\\MODULES\\IRP14.IMG;1"   },
-    //{ "ioprp15",    "rom0:UDNL cdrom0:\\MODULES\\IRP15.IMG;1"   },
-    //{ "ioprp16",    "rom0:UDNL cdrom0:\\MODULES\\IRP16.IMG;1"   },
+    { "ioprp15",    "rom0:UDNL cdrom0:\\MODULES\\IRP15.IMG;1"   },
+    { "ioprp16",    "rom0:UDNL cdrom0:\\MODULES\\IRP16.IMG;1"   },
     { "ioprp165",   "rom0:UDNL cdrom0:\\MODULES\\IRP165.IMG;1"  },
-    //{ "ioprp202",   "rom0:UDNL cdrom0:\\MODULES\\IRP202.IMG;1"  },
-    //{ "ioprp205",   "rom0:UDNL cdrom0:\\MODULES\\IRP205.IMG;1"  },
-    //{ "ioprp21",    "rom0:UDNL cdrom0:\\MODULES\\IRP21.IMG;1"   },
-    //{ "ioprp210",   "rom0:UDNL cdrom0:\\MODULES\\IRP210.IMG;1"  },
-    //{ "ioprp211",   "rom0:UDNL cdrom0:\\MODULES\\IRP211.IMG;1"  },
-    //{ "ioprp213",   "rom0:UDNL cdrom0:\\MODULES\\IRP213.IMG;1"  },
+    { "ioprp202",   "rom0:UDNL cdrom0:\\MODULES\\IRP202.IMG;1"  },
+    { "ioprp205",   "rom0:UDNL cdrom0:\\MODULES\\IRP205.IMG;1"  },
+    { "ioprp21",    "rom0:UDNL cdrom0:\\MODULES\\IRP21.IMG;1"   },
+    { "ioprp210",   "rom0:UDNL cdrom0:\\MODULES\\IRP210.IMG;1"  },
+    { "ioprp211",   "rom0:UDNL cdrom0:\\MODULES\\IRP211.IMG;1"  },
+    { "ioprp213",   "rom0:UDNL cdrom0:\\MODULES\\IRP213.IMG;1"  },
     { "ioprp214",   "rom0:UDNL cdrom0:\\MODULES\\IRP214.IMG;1"  },
-    //{ "ioprp224",   "rom0:UDNL cdrom0:\\MODULES\\IRP224.IMG;1"  },
+    { "ioprp224",   "rom0:UDNL cdrom0:\\MODULES\\IRP224.IMG;1"  },
     { "ioprp23",    "rom0:UDNL cdrom0:\\MODULES\\IRP23.IMG;1"   },
-    //{ "ioprp234",   "rom0:UDNL cdrom0:\\MODULES\\IRP234.IMG;1"  },
-    //{ "ioprp241",   "rom0:UDNL cdrom0:\\MODULES\\IRP241.IMG;1"  },
-    //{ "ioprp242",   "rom0:UDNL cdrom0:\\MODULES\\IRP242.IMG;1"  },
-    //{ "ioprp243",   "rom0:UDNL cdrom0:\\MODULES\\IRP243.IMG;1"  },
-    //{ "ioprp250",   "rom0:UDNL cdrom0:\\MODULES\\IRP250.IMG;1"  },
-    //{ "ioprp253",   "rom0:UDNL cdrom0:\\MODULES\\IRP253.IMG;1"  },
+    { "ioprp234",   "rom0:UDNL cdrom0:\\MODULES\\IRP234.IMG;1"  },
+    { "ioprp241",   "rom0:UDNL cdrom0:\\MODULES\\IRP241.IMG;1"  },
+    { "ioprp242",   "rom0:UDNL cdrom0:\\MODULES\\IRP242.IMG;1"  },
+    { "ioprp243",   "rom0:UDNL cdrom0:\\MODULES\\IRP243.IMG;1"  },
+    { "ioprp250",   "rom0:UDNL cdrom0:\\MODULES\\IRP250.IMG;1"  },
+    { "ioprp253",   "rom0:UDNL cdrom0:\\MODULES\\IRP253.IMG;1"  },
     { "ioprp255",   "rom0:UDNL cdrom0:\\MODULES\\IRP255.IMG;1"  },
-    //{ "ioprp260",   "rom0:UDNL cdrom0:\\MODULES\\IRP260.IMG;1"  },
-    //{ "ioprp271",   "rom0:UDNL cdrom0:\\MODULES\\IRP271.IMG;1"  },
-    //{ "ioprp271_2", "rom0:UDNL cdrom0:\\MODULES\\IRP2712.IMG;1" },
-    //{ "ioprp280",   "rom0:UDNL cdrom0:\\MODULES\\IRP280.IMG;1"  },
-    //{ "ioprp300",   "rom0:UDNL cdrom0:\\MODULES\\IRP300.IMG;1"  },
-    //{ "ioprp300_2", "rom0:UDNL cdrom0:\\MODULES\\IRP3002.IMG;1" },
-    //{ "ioprp300_3", "rom0:UDNL cdrom0:\\MODULES\\IRP3003.IMG;1" },
-    //{ "ioprp300_4", "rom0:UDNL cdrom0:\\MODULES\\IRP3004.IMG;1" },
-    //{ "ioprp310",   "rom0:UDNL cdrom0:\\MODULES\\IRP310.IMG;1"  },
-    //{ "dnas280",    "rom0:UDNL cdrom0:\\MODULES\\DNAS280.IMG;1" },
-    //{ "dnas300",    "rom0:UDNL cdrom0:\\MODULES\\DNAS300.IMG;1" },
-    //{ "dnas300_2",  "rom0:UDNL cdrom0:\\MODULES\\DNS3002.IMG;1" },
+    { "ioprp260",   "rom0:UDNL cdrom0:\\MODULES\\IRP260.IMG;1"  },
+    { "ioprp271",   "rom0:UDNL cdrom0:\\MODULES\\IRP271.IMG;1"  },
+    { "ioprp271_2", "rom0:UDNL cdrom0:\\MODULES\\IRP2712.IMG;1" },
+    { "ioprp280",   "rom0:UDNL cdrom0:\\MODULES\\IRP280.IMG;1"  },
+    { "ioprp300",   "rom0:UDNL cdrom0:\\MODULES\\IRP300.IMG;1"  },
+    { "ioprp300_2", "rom0:UDNL cdrom0:\\MODULES\\IRP3002.IMG;1" },
+    { "ioprp300_3", "rom0:UDNL cdrom0:\\MODULES\\IRP3003.IMG;1" },
+    { "ioprp300_4", "rom0:UDNL cdrom0:\\MODULES\\IRP3004.IMG;1" },
+    { "ioprp310",   "rom0:UDNL cdrom0:\\MODULES\\IRP310.IMG;1"  },
+    { "dnas280",    "rom0:UDNL cdrom0:\\MODULES\\DNAS280.IMG;1" },
+    { "dnas300",    "rom0:UDNL cdrom0:\\MODULES\\DNAS300.IMG;1" },
+    { "dnas300_2",  "rom0:UDNL cdrom0:\\MODULES\\DNS3002.IMG;1" },
     { NULL, NULL }
 };
 
@@ -106,18 +119,18 @@ static const ioprp_entry_t g_ioprp_table[] = {
 // sceCdSync with a 5-second timeout. Returns 0 on completion, -1 on timeout.
 // Use this everywhere instead of sceCdSync(0) so the test never hangs.
 //--------------------------------------------------------------
-#define SYNC_TIMEOUT_TICKS (147456000UL * 5)  // 5s at 147.456 MHz EE bus
+#define SYNC_TIMEOUT_TICKS (PS2_CLOCKS_PER_SEC * 5)  // 5s
 
 static int cdvd_sync(void)
 {
     struct timespec tv = {0};
-    tv.tv_sec = 1;
-    tv.tv_nsec = 0;
+    tv.tv_sec = 0;
+    tv.tv_nsec = 1000000; // 1ms — short enough not to skew speed measurements
 
-    u32 end = cpu_ticks() + SYNC_TIMEOUT_TICKS;
+    ps2_clock_t end = ps2_clock() + SYNC_TIMEOUT_TICKS;
     while (sceCdSync(1)) {
         nanosleep(&tv, NULL);
-        if ((u32)(cpu_ticks() - end) < 0x80000000U) {
+        if (ps2_clock() > end) {
             _print("  [SYNC_TIMEOUT]\n");
             // Abort the pending operation so cdvdman is ready for next call
             sceCdStop();
@@ -137,6 +150,8 @@ static int cdvd_sync(void)
 static unsigned char g_buf[BUF_SIZE]  __attribute__((aligned(64)));
 static unsigned char g_buf2[BUF_SIZE] __attribute__((aligned(64)));
 
+#define SPEED_RUNS 3
+
 // Callback thread stack — created once, persists across IOP resets
 #define CB_STACK_SIZE (16 * 1024)
 static unsigned char cb_stack[CB_STACK_SIZE] __attribute__((aligned(16)));
@@ -144,7 +159,7 @@ static unsigned char cb_stack[CB_STACK_SIZE] __attribute__((aligned(16)));
 // Per-section callback state
 static volatile int g_cb_called;
 static volatile int g_cb_reason;
-static volatile u32 g_cb_tick;
+static volatile ps2_clock_t g_cb_tick;
 static volatile int g_cb_sync_inside; // sceCdSync(1) return value inside callback
 static volatile int g_reenter_ret;    // sceCdRead() return value inside callback
 static u32          g_fp_lsn;        // target LSN, readable from callback
@@ -152,7 +167,7 @@ static u32          g_fp_lsn;        // target LSN, readable from callback
 //--------------------------------------------------------------
 // Section 1+2: Module list + IOP free memory estimate
 //--------------------------------------------------------------
-static void section_modules(void)
+static void __attribute__((unused)) section_modules(void)
 {
     smod_mod_info_t info;
     smod_mod_info_t *curr = NULL;
@@ -230,11 +245,11 @@ static void cb_timing(int reason)
 {
     g_cb_called     = 1;
     g_cb_reason     = reason;
-    g_cb_tick       = cpu_ticks();
+    g_cb_tick       = ps2_clock();
     g_cb_sync_inside = sceCdSync(1); // 0=done, 1=still busy
 }
 
-static void section_callback(const sceCdlFILE *fp)
+static void __attribute__((unused)) section_callback(const sceCdlFILE *fp)
 {
     sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
                         .datapattern=SCECdSecS2048, .pad=0 };
@@ -244,21 +259,20 @@ static void section_callback(const sceCdlFILE *fp)
     g_cb_sync_inside = -1;
     sceCdCallback(cb_timing);
 
-    u32 t_before_read = cpu_ticks();
+    ps2_clock_t t_before_read = ps2_clock();
     int read_ret = sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
-    u32 t_after_read = cpu_ticks();
+    ps2_clock_t t_after_read = ps2_clock();
 
     // Poll ~100ms to see if callback fires before we call sceCdSync
-    // EE bus clock = 147.456 MHz; 100ms = ~14,745,600 ticks
     int cb_before_sync = 0;
-    u32 poll_end = cpu_ticks() + 14745600U;
-    while ((u32)cpu_ticks() < poll_end) {
+    ps2_clock_t poll_end = ps2_clock() + PS2_CLOCKS_PER_MSEC * 100;
+    while (ps2_clock() < poll_end) {
         if (g_cb_called) { cb_before_sync = 1; break; }
     }
-    u32 t_cb_if_early = g_cb_tick;
+    ps2_clock_t t_cb_if_early = g_cb_tick;
 
     int sync_ret = cdvd_sync();
-    u32 t_after_sync = cpu_ticks();
+    ps2_clock_t t_after_sync = ps2_clock();
 
     sceCdCallback(NULL);
 
@@ -273,11 +287,11 @@ static void section_callback(const sceCdlFILE *fp)
     _print("  cb_sync_state_inside: %d %s\n", g_cb_sync_inside,
            g_cb_sync_inside == 0 ? "[OK]" : "[ERROR]");
     _print("  sync_ret: %d %s\n", sync_ret, sync_ret == 0 ? "[OK]" : "[ERROR]");
-    _print("  ticks_read_to_sync: %u\n", t_after_sync - t_after_read);
+    _print("  ticks_read_to_sync: %llu\n", t_after_sync - t_after_read);
     if (cb_before_sync)
-        _print("  ticks_read_to_cb: %u\n", t_cb_if_early - t_after_read);
+        _print("  ticks_read_to_cb: %llu\n", t_cb_if_early - t_after_read);
     else if (g_cb_called)
-        _print("  ticks_read_to_cb: %u\n", g_cb_tick - t_after_read);
+        _print("  ticks_read_to_cb: %llu\n", g_cb_tick - t_after_read);
     (void)t_before_read;
     _print("[/CALLBACK_TEST]\n");
 }
@@ -294,7 +308,7 @@ static void cb_reenter(int reason)
     g_reenter_ret = sceCdRead(g_fp_lsn, 1, g_buf2, &mode);
 }
 
-static void section_reenter(const sceCdlFILE *fp)
+static void __attribute__((unused)) section_reenter(const sceCdlFILE *fp)
 {
     sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
                         .datapattern=SCECdSecS2048, .pad=0 };
@@ -323,7 +337,7 @@ static void section_reenter(const sceCdlFILE *fp)
 //--------------------------------------------------------------
 // Section 5: Sync mode timing — sceCdSync(0) vs sceCdSync(1) poll
 //--------------------------------------------------------------
-static void section_sync_modes(const sceCdlFILE *fp)
+static void __attribute__((unused)) section_sync_modes(const sceCdlFILE *fp)
 {
     sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
                         .datapattern=SCECdSecS2048, .pad=0 };
@@ -333,22 +347,22 @@ static void section_sync_modes(const sceCdlFILE *fp)
 
     // 5a: sceCdSync via cdvd_sync() (polls with timeout)
     sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
-    u32 t0 = cpu_ticks();
+    ps2_clock_t t0 = ps2_clock();
     int sync0_ret = cdvd_sync();
-    u32 t1 = cpu_ticks();
-    _print("  sync0_ret: %d ticks: %u\n", sync0_ret, t1 - t0);
+    ps2_clock_t t1 = ps2_clock();
+    _print("  sync0_ret: %d ticks: %llu\n", sync0_ret, t1 - t0);
 
     // 5b: sceCdSync(1) polling (raw, counts iterations)
     sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode);
-    t0 = cpu_ticks();
+    t0 = ps2_clock();
     u32 poll_count = 0;
-    u32 sync1_end = cpu_ticks() + SYNC_TIMEOUT_TICKS;
+    ps2_clock_t sync1_end = ps2_clock() + SYNC_TIMEOUT_TICKS;
     while (sceCdSync(1)) {
         poll_count++;
-        if ((u32)(cpu_ticks() - sync1_end) < 0x80000000U) { poll_count = 0; break; }
+        if (ps2_clock() > sync1_end) { poll_count = 0; break; }
     }
-    t1 = cpu_ticks();
-    _print("  sync1_poll_count: %u ticks: %u\n", poll_count, t1 - t0);
+    t1 = ps2_clock();
+    _print("  sync1_poll_count: %u ticks: %llu\n", poll_count, t1 - t0);
 
     // 5c: No sync — check if buffer has data before sync
     memset(g_buf, 0xAA, 2048);
@@ -379,7 +393,7 @@ static void cb_fio(int reason)
     g_cb_reason = reason;
 }
 
-static void section_fio(void)
+static void __attribute__((unused)) section_fio(void)
 {
     g_cb_called = 0;
     g_cb_reason = -1;
@@ -408,7 +422,7 @@ static void section_fio(void)
 //--------------------------------------------------------------
 // Section 7: Concurrent reads — what happens when 2nd read issued while busy?
 //--------------------------------------------------------------
-static void section_concurrent(const sceCdlFILE *fp)
+static void __attribute__((unused)) section_concurrent(const sceCdlFILE *fp)
 {
     sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
                         .datapattern=SCECdSecS2048, .pad=0 };
@@ -428,6 +442,117 @@ static void section_concurrent(const sceCdlFILE *fp)
     _print("  err_after_sync: %d %s\n", err_after,
            err_after == 0 ? "[OK]" : "[ERROR]");
     _print("[/CONCURRENT_TEST]\n");
+}
+
+//--------------------------------------------------------------
+// Section: Read speed — throughput via sceCdRead, fioRead, sceCdStRead
+//--------------------------------------------------------------
+static void __attribute__((unused)) section_read_speed(const sceCdlFILE *fp)
+{
+    sceCdRMode mode = { .trycount=0, .spindlctrl=SCECdSpinNom,
+                        .datapattern=SCECdSecS2048, .pad=0 };
+    sceCdCallback(NULL);
+
+    _print("[READ_SPEED]\n");
+
+    // --- sceCdRead: SPEED_RUNS bulk reads of BUF_SECTORS sectors ---
+    {
+        ps2_clock_t t0 = ps2_clock();
+        int ok = 1;
+        for (int i = 0; i < SPEED_RUNS && ok; i++) {
+            if (sceCdRead(fp->lsn, BUF_SECTORS, g_buf, &mode) != 1) { ok = 0; break; }
+            if (cdvd_sync() != 0) { ok = 0; break; }
+        }
+        ps2_clock_t elapsed = ps2_clock() - t0;
+        u32 total_bytes = (u32)BUF_SECTORS * 2048 * SPEED_RUNS;
+        u32 kibps = elapsed > 0 ? (u32)((ps2_clock_t)(total_bytes / 1024) * PS2_CLOCKS_PER_SEC / elapsed) : 0;
+        _print("  [sceCdRead]     ok=%d sectors=%d runs=%d kb=%u ticks=%llu kibps=%u\n",
+               ok, BUF_SECTORS, SPEED_RUNS, total_bytes / 1024, elapsed, kibps);
+    }
+
+    // --- fioRead large: one read() call of BUF_SECTORS sectors per run ---
+    {
+        ps2_clock_t t0 = ps2_clock();
+        u32 total_bytes = 0;
+        for (int i = 0; i < SPEED_RUNS; i++) {
+            int fd = open("cdrom0:\\TEST.BIN;1", O_RDONLY);
+            if (fd >= 0) {
+                int n = (int)read(fd, g_buf, BUF_SECTORS * 2048);
+                if (n > 0) total_bytes += (u32)n;
+                close(fd);
+            }
+        }
+        ps2_clock_t elapsed = ps2_clock() - t0;
+        u32 kibps = elapsed > 0 ? (u32)((ps2_clock_t)(total_bytes / 1024) * PS2_CLOCKS_PER_SEC / elapsed) : 0;
+        _print("  [fioRead_large] runs=%d kb=%u ticks=%llu kibps=%u\n",
+               SPEED_RUNS, total_bytes / 1024, elapsed, kibps);
+    }
+
+    // --- fioRead small: 2048-byte reads, BUF_SECTORS iterations in one open ---
+    {
+        ps2_clock_t t0 = ps2_clock();
+        u32 total_bytes = 0;
+        int fd = open("cdrom0:\\TEST.BIN;1", O_RDONLY);
+        if (fd >= 0) {
+            for (int i = 0; i < BUF_SECTORS; i++) {
+                int n = (int)read(fd, g_buf, 2048);
+                if (n <= 0) break;
+                total_bytes += (u32)n;
+            }
+            close(fd);
+        }
+        ps2_clock_t elapsed = ps2_clock() - t0;
+        u32 kibps = elapsed > 0 ? (u32)((ps2_clock_t)(total_bytes / 1024) * PS2_CLOCKS_PER_SEC / elapsed) : 0;
+        _print("  [fioRead_small] sector_reads=%d kb=%u ticks=%llu kibps=%u\n",
+               BUF_SECTORS, total_bytes / 1024, elapsed, kibps);
+    }
+
+    // --- sceCdStRead: streaming (ring buffer on IOP heap) ---
+    // 4 banks x 16 sectors = 64 sector ring; one bank per STMBLK read; stream BUF_SECTORS total
+    {
+        int stbufmax      = 64;          // 4 banks x 16 sectors
+        int bankmax       = 4;
+        int nsec          = 16;          // one bank per read
+        int total_sectors = BUF_SECTORS; // 256KiB
+        void *iop_buf = SifAllocIopHeap((u32)stbufmax * 2048);
+        if (!iop_buf) {
+            _print("  [sceCdStRead]   iop_alloc_failed\n");
+        } else {
+            int init_ret  = sceCdStInit((u32)stbufmax, (u32)bankmax, iop_buf);
+            int start_ret = sceCdStStart(fp->lsn, &mode);
+            _print("  [sceCdStRead]   init_ret=%d start_ret=%d\n", init_ret, start_ret);
+            if (init_ret != 1 || start_ret != 1) {
+                sceCdStStop();
+                SifFreeIopHeap(iop_buf);
+                _print("  [sceCdStRead]   init/start failed, skipping\n");
+            } else {
+                // Pre-fill ring buffer (~200ms)
+                struct timespec tv200 = { .tv_sec = 0, .tv_nsec = 200000000 };
+                nanosleep(&tv200, NULL);
+
+                u32 target_bytes = (u32)total_sectors * 2048;
+                ps2_clock_t t0 = ps2_clock();
+                u32 total_bytes = 0;
+                int ok = 1;
+                while (total_bytes < target_bytes && ok) {
+                    u32 st_err = 0;
+                    // STMBLK (1): blocks until nsec sectors are read or error
+                    int rd = sceCdStRead(nsec, (u32 *)g_buf2, 1, &st_err);
+                    if (rd <= 0) { ok = 0; break; }
+                    total_bytes += (u32)rd * 2048;
+                }
+                ps2_clock_t elapsed = ps2_clock() - t0;
+                sceCdStStop();
+                SifFreeIopHeap(iop_buf);
+
+                u32 kibps = elapsed > 0 ? (u32)((ps2_clock_t)(total_bytes / 1024) * PS2_CLOCKS_PER_SEC / elapsed) : 0;
+                _print("  [sceCdStRead]   ok=%d stbufmax=%d bankmax=%d nsec=%d kb=%u ticks=%llu kibps=%u\n",
+                       ok, stbufmax, bankmax, nsec, total_bytes / 1024, elapsed, kibps);
+            } // else init/start succeeded
+        } // else iop_buf allocated
+    }
+
+    _print("[/READ_SPEED]\n");
 }
 
 //--------------------------------------------------------------
@@ -471,7 +596,9 @@ static void run_tests(const char *label, const char *iop_path)
         //       and persists across all IOP resets.
     }
 
+#if RUN_MODULES
     section_modules();
+#endif
 
     sceCdlFILE fp;
     memset(&fp, 0, sizeof(fp));
@@ -480,15 +607,27 @@ static void run_tests(const char *label, const char *iop_path)
         goto load_iop_module;
     }
 
-    goto load_iop_module;
-
+#if RUN_CALLBACK
     section_callback(&fp);
+#endif
+#if RUN_REENTER
     section_reenter(&fp);
+#endif
+#if RUN_SYNC
     section_sync_modes(&fp);
+#endif
+#if RUN_FIO
     section_fio();
+#endif
+#if RUN_CONCURRENT
     section_concurrent(&fp);
+#endif
+#if RUN_SPEED
+    section_read_speed(&fp);
+#endif
 
 load_iop_module:
+#if RUN_IOP_MODULE
     // Load IOP test module from disc — no bin2c needed, disc is always available
     _print("[IOP_MODULE]\n");
     int rv = SifLoadModule("cdrom0:\\CDVD.IRX;1", 0, NULL);
@@ -497,6 +636,7 @@ load_iop_module:
     // ~50M EE cycles at 294MHz ≈ ~170ms
     for (volatile int z = 0; z < 50000000; z++) {}
     _print("[/IOP_MODULE]\n");
+#endif
 
     _print("[IOPRP_END: %s]\n\n", label);
 }

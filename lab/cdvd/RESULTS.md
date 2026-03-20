@@ -12,6 +12,7 @@
 | Run 6 | 2026-03-18 | PCSX2 v2.5.336 | Custom test ISO (CD, 512 KB TEST.BIN) | IOP only — streaming callback test (sceCdSt* API) added |
 | Run 7 | 2026-03-19 | PCSX2 v2.5.336 | Custom test ISO (CD, 512 KB TEST.BIN) | IOP only — streaming test with full reason array (bankmax=4) |
 | Run 8 | 2026-03-19 | PCSX2 v2.5.336 | Custom test ISO (CD, 512 KB TEST.BIN) | IOP only — parameterized streaming sweep: bufmax {16,32,64,128} × bankmax {2,3,4} × sectors {1..64} on 6 representative firmwares |
+| Run 9 | 2026-03-20 | PCSX2 v2.5.336 | Custom test ISO (CD, 512 KB TEST.BIN) | EE + IOP — read speed tests: sceCdRead (3×128 sectors), fioRead_large (3×128 sectors), fioRead_small (128×1 sector), sceCdStRead (STMBLK, 4 banks×16 sectors, 256 KiB); all 33 versions |
 
 BIOS: Europe v02.00 (14/06/2004)
 
@@ -604,6 +605,81 @@ For Era 4 (lib 2.7+ firmware): games that load `cdvdstm.irx` expect the streamin
 to be exported by a separate `cdvdstm` library, not `cdvdman`. Neutrino already has a
 `cdvdstm` export table stub (`exports.tab:209`) — it needs to be populated with the actual
 streaming implementation to support these games.
+
+---
+
+## Read Speed Table (Run 9 — PCSX2, all IOPRP versions)
+
+Tests: `sceCdRead` (3×128 sectors = 768 KiB), `fioRead_large` (3×128-sector reads, 1 `read()` call each),
+`fioRead_small` (128×1-sector `read()` calls), `sceCdStRead` (STMBLK mode, 4 banks×16 sectors, 256 KiB total, 200 ms pre-fill).
+All IOP values in KiB/s from IOP system clock. EE values from ps2_clock (576 kHz).
+
+CD 1× speed = 150 KiB/s (raw), ~1230 KiB/s ≈ 8.2× for data sectors (2048-byte logical read).
+
+### Interface summary
+
+| Interface | Typical KiB/s | Notes |
+|---|:---:|---|
+| IOP `sceCdRead` | 1306–1341 | Very stable; ~8.5–8.9× single-speed |
+| IOP `fioRead_large` | 1223–1237 | −6% vs sceCdRead; ioman overhead |
+| IOP `fioRead_small` | 1219–1241 | ≈ fioRead_large; per-call overhead negligible |
+| IOP `sceCdStRead` era 0–2 (bios–ioprp23) | 1611–2262 | Variable PCSX2 emulation |
+| IOP `sceCdStRead` era 3 (ioprp234–255) | 3312–3419 | **~2.7× sceCdRead**; consistent jump |
+| EE `sceCdRead` | 1220–1234 | ps2_clock measurement; aligns with IOP |
+| EE `sceCdStRead` era 0–2 | 2227–2294 | Slightly higher than IOP |
+| EE `sceCdStRead` era 3 | 3373–3495 | Same jump as IOP |
+
+### Per-version read speed
+
+`—` = test skipped or failed. EE fioRead broken from ioprp21+ (cdrom0: path mangled by newer firmware). EE READ_SPEED not run for ioprp224/ioprp23 (search_ret=0). sceCdStRead fails from ioprp260+ (init_ret=0; functions moved to cdvdstm.irx).
+
+| Version | EE sceCdRead | EE fioRead | EE sceCdStRead | IOP sceCdRead | IOP fioRead_lg | IOP fioRead_sm | IOP sceCdStRead |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| bios_baseline | 1227 | 1228 | 2243 | 1313 | 1230 | 1240 | — (start=0) |
+| ioprp14 | 1229 | 1229 | 2246 | 1313 | 1232 | 1236 | 733 † |
+| ioprp15 | 1229 | 1226 | 2294 | 1308 | 1233 | 1230 | 2247 |
+| ioprp16 | 1232 | 1227 | 2271 | 1311 | 1230 | 1223 | 1614 |
+| ioprp165 | 1230 | 1226 | 2280 | 1315 | 1235 | 1233 | 2217 |
+| ioprp202 | 1227 | 1227 | 2281 | 1315 | 1230 | 1239 | 2219 |
+| ioprp205 | 1229 | 1225 | 2257 | 1306 | 1237 | 1231 | 1614 |
+| ioprp21  | 1232 | — ‡ | 2277 | 1313 | 1233 | 1233 | 2177 |
+| ioprp210 | 1227 | — ‡ | 2227 | 1313 | 1234 | 1238 | 1860 |
+| ioprp211 | 1232 | — ‡ | 2255 | 1332 | 1229 | 1236 | 2178 |
+| ioprp213 | 1231 | — ‡ | 2268 | 1335 | 1236 | 1227 | 1611 |
+| ioprp214 | 1226 | — ‡ | 2268 | 1337 | 1233 | 1232 | 2164 |
+| ioprp224 | — § | — § | — § | 1337 | 1227 | 1222 | 2248 |
+| ioprp23  | — § | — § | — § | 1330 | 1229 | 1237 | 2262 |
+| **← Era 3: sceCdStRead speed jump at ioprp234 →** | | | | | | | |
+| ioprp234 | 1232 | — ‡ | **3385** | 1328 | 1234 | 1221 | **3393** |
+| ioprp241 | 1230 | — ‡ | **3446** | 1339 | 1232 | 1232 | **3388** |
+| ioprp242 | 1230 | — ‡ | **3400** | 1338 | 1231 | 1231 | **3312** |
+| ioprp243 | 1232 | — ‡ | **3373** | 1339 | 1232 | 1229 | **3334** |
+| ioprp250 | 1230 | — ‡ | **3398** | 1335 | 1230 | 1233 | **3351** |
+| ioprp253 | 1226 | — ‡ | **3495** | 1334 | 1227 | 1230 | **3397** |
+| ioprp255 | 1220 | — ‡ | **3459** | 1330 | 1230 | 1230 | **3419** |
+| **← Era 4: sceCdSt* in cdvdstm.irx →** | | | | | | | |
+| ioprp260   | 1226 | — ‡ | — (init=0) | 1338 | 1232 | 1226 | — (init=0) |
+| ioprp271   | 1230 | — ‡ | — (init=0) | 1341 | 1231 | 1226 | — (init=0) |
+| ioprp271_2 | 1234 | — ‡ | — (init=0) | 1333 | 1231 | 1225 | — (init=0) |
+| ioprp280   | 1234 | — ‡ | — (init=0) | 1330 | 1231 | 1233 | — (init=0) |
+| ioprp300   | 1232 | — ‡ | — (init=0) | 1336 | 1231 | 1228 | — (init=0) |
+| ioprp300_2 | 1228 | — ‡ | — (init=0) | 1337 | 1230 | 1231 | — (init=0) |
+| ioprp300_3 | 1228 | — ‡ | — (init=0) | 1328 | 1231 | 1219 | — (init=0) |
+| ioprp300_4 | 1232 | — ‡ | — (init=0) | 1334 | 1223 | 1230 | — (init=0) |
+| ioprp310   | 1226 | — ‡ | — (init=0) | 1334 | 1228 | 1229 | — (init=0) |
+| dnas280    | 1232 | — ‡ | — (init=0) | 1337 | 1234 | 1232 | — (init=0) |
+| dnas300    | 1230 | — ‡ | — (init=0) | 1341 | 1225 | 1232 | — (init=0) |
+| dnas300_2  | 1228 | — ‡ | — (init=0) | 1335 | 1228 | 1232 | — (init=0) |
+
+† ioprp14 sceCdStRead IOP=733 KiB/s: seek anomaly — first streaming session of the run; disc head starting
+from LSN 0. All subsequent versions unaffected (pre-fill covers seek time).
+
+‡ EE fioRead broken from ioprp21 onwards: `open("cdrom0:\\TEST.BIN;1")` returns error immediately (kb=0,
+ticks<1000). Newer firmware truncates/mangles the cdrom0: path. `sceCdRead` (LSN-based) and IOP fioRead
+(different cdrom0 path handling) are unaffected.
+
+§ EE READ_SPEED not run for ioprp224/ioprp23: `sceCdSearchFile` returns 0 for these versions in PCSX2
+(no file handle to pass to the speed test).
 
 ---
 

@@ -10,6 +10,14 @@
 #define MODNAME "cdvdtest"
 IRX_ID(MODNAME, 1, 1);
 
+//--------------------------------------------------------------
+// Test selection — set to 0 to skip a section
+//--------------------------------------------------------------
+#define IOP_RUN_MEM      0  // QueryTotalFreeMemSize / QueryMaxFreeMemSize
+#define IOP_RUN_CALLBACK 0  // sceCdRead / sceCdSearchFile / ioman callback tests
+#define IOP_RUN_SPEED    1  // read throughput: sceCdRead / fioRead / sceCdStRead
+#define IOP_RUN_STREAM   0  // parameterized sceCdSt* sweep
+
 // 5-second timeout for sceCdSync(1) polling (IOP sysclock ~36.864 MHz)
 #define IOP_SYNC_TIMEOUT_USEC (5 * 1000 * 1000)
 
@@ -27,7 +35,7 @@ static const char *iop_chk_mmode(int v)
     return "[ERROR]";
 }
 
-static const char *iop_chk_open(int fd)
+static __attribute__((unused)) const char *iop_chk_open(int fd)
 {
     if (fd >= 0)   return "[matches: most versions]";
     if (fd == -16) return "[matches: ioprp250,ioprp253,dnas280]";
@@ -35,7 +43,7 @@ static const char *iop_chk_open(int fd)
     return "[ERROR]";
 }
 
-static const char *iop_chk_fio_bytes(int fd, int bytes)
+static __attribute__((unused)) const char *iop_chk_fio_bytes(int fd, int bytes)
 {
     if (fd < 0)        return "[N/A: open failed]";
     if (bytes == 2048) return "[OK]";
@@ -58,6 +66,18 @@ static int iop_cdvd_sync(void)
         DelayThread(1000); // 1ms poll
     }
     return 0;
+}
+
+// Returns microseconds elapsed since *start (uses lo field; wraps after ~116s)
+static u32 iop_elapsed_usec(const iop_sys_clock_t *start)
+{
+    iop_sys_clock_t now, diff;
+    GetSystemTime(&now);
+    diff.lo = now.lo - start->lo;
+    diff.hi = now.hi - start->hi - (now.lo < start->lo ? 1 : 0);
+    u32 sec = 0, usec = 0;
+    SysClock2USec(&diff, &sec, &usec);
+    return sec * 1000000 + usec;
 }
 
 // Read buffers (max bufmax=128 sectors for streaming test)
@@ -83,17 +103,19 @@ static volatile int g_stream_cb_count;
 static volatile int g_stream_reasons[STREAM_CB_MAX];
 
 // Streaming parameter sweep: bufmax x bankmax x sectors-per-read
-static const int k_bufmax[]  = {16, 32, 64, 128};
-static const int k_bankmax[] = {2, 3, 4};
-static const int k_sectors[] = {1, 2, 4, 8, 16, 32, 64};
+static const int __attribute__((unused)) k_bufmax[]  = {16, 32, 64, 128};
+static const int __attribute__((unused)) k_bankmax[] = {2, 3, 4};
+static const int __attribute__((unused)) k_sectors[] = {1, 2, 4, 8, 16, 32, 64};
 #define N_BUFMAX  4
 #define N_BANKMAX 3
 #define N_SECTORS 7
 // 1.5 MiB/s pacing: µs to wait after reading one sector (2048 B @ 1572864 B/s ≈ 1302 µs)
 #define USEC_PER_SECTOR 1302
 
+#define SPEED_RUNS 3
+
 //--------------------------------------------------------------
-static void iop_stream_callback(int reason)
+static void __attribute__((unused)) iop_stream_callback(int reason)
 {
     int i = g_stream_cb_count++;
     if (i < STREAM_CB_MAX)
@@ -101,7 +123,7 @@ static void iop_stream_callback(int reason)
 }
 
 //--------------------------------------------------------------
-static void iop_test_callback(int reason)
+static void __attribute__((unused)) iop_test_callback(int reason)
 {
     int read_again = g_cb_called == 0; // First time callback is called during a read
 
@@ -129,11 +151,12 @@ int _start()
 {
     printf("[IOP_TESTS]\n");
 
-    // --- Memory ---
+#if IOP_RUN_MEM
     printf("[IOP_MEM]\n");
     printf("  total_free: %u\n", QueryTotalFreeMemSize());
     printf("  max_free: %u\n", QueryMaxFreeMemSize());
     printf("[/IOP_MEM]\n");
+#endif
 
     // --- Setup ---
     sceCdRMode mode = {
@@ -155,6 +178,7 @@ int _start()
     printf("  search_ret: %d lsn: %d err: %d\n", search_ret, fp.lsn, sceCdGetError());
     printf("[/IOP_SETUP]\n");
 
+#if IOP_RUN_CALLBACK
     // --- Callback test: sceCdRead (ECS_EXTERNAL) ---
     g_cb_called = 0;
     g_cb_reenter_ret = -99;
@@ -231,7 +255,104 @@ int _start()
     printf("  [ioman_fio] fd: %d %s read_bytes: %d %s cb_called: %d\n",
            fd, iop_chk_open(fd), fio_bytes, iop_chk_fio_bytes(fd, fio_bytes), g_cb_called);
     printf("[/IOP_CALLBACK_TEST]\n");
+#endif // IOP_RUN_CALLBACK
 
+#if IOP_RUN_SPEED
+    // --- Read speed test: sceCdRead, fioRead (large/small), sceCdStRead ---
+    printf("[IOP_READ_SPEED]\n");
+
+    // sceCdRead: SPEED_RUNS bulk reads of BUF_SECTORS sectors
+    {
+        iop_sys_clock_t t0; GetSystemTime(&t0);
+        int ok = 1;
+        for (int i = 0; i < SPEED_RUNS && ok; i++) {
+            if (sceCdRead(fp.lsn, BUF_SECTORS, g_buf, &mode) != 1) { ok = 0; break; }
+            if (iop_cdvd_sync() != 0) { ok = 0; break; }
+        }
+        u32 elapsed = iop_elapsed_usec(&t0);
+        u32 total_bytes = (u32)BUF_SECTORS * 2048 * SPEED_RUNS;
+        u32 kibps = elapsed > 0 ? (total_bytes / 1024) * 1000000 / elapsed : 0;
+        printf("  [sceCdRead]     ok=%d sectors=%d runs=%d kb=%u usec=%u kibps=%u\n",
+               ok, BUF_SECTORS, SPEED_RUNS, total_bytes / 1024, elapsed, kibps);
+    }
+
+    // fioRead large: one read() call of BUF_SECTORS sectors per run
+    {
+        iop_sys_clock_t t0; GetSystemTime(&t0);
+        u32 total_bytes = 0;
+        for (int i = 0; i < SPEED_RUNS; i++) {
+            int rfd = open("cdrom0:\\TEST.BIN;1", 1 /* O_RDONLY */);
+            if (rfd >= 0) {
+                int n = read(rfd, g_buf, BUF_SECTORS * 2048);
+                if (n > 0) total_bytes += (u32)n;
+                close(rfd);
+            }
+        }
+        u32 elapsed = iop_elapsed_usec(&t0);
+        u32 kibps = elapsed > 0 ? (total_bytes / 1024) * 1000000 / elapsed : 0;
+        printf("  [fioRead_large] runs=%d kb=%u usec=%u kibps=%u\n",
+               SPEED_RUNS, total_bytes / 1024, elapsed, kibps);
+    }
+
+    // fioRead small: 2048-byte reads, BUF_SECTORS iterations in one open
+    {
+        iop_sys_clock_t t0; GetSystemTime(&t0);
+        u32 total_bytes = 0;
+        int rfd = open("cdrom0:\\TEST.BIN;1", 1 /* O_RDONLY */);
+        if (rfd >= 0) {
+            for (int i = 0; i < BUF_SECTORS; i++) {
+                int n = read(rfd, g_buf, 2048);
+                if (n <= 0) break;
+                total_bytes += (u32)n;
+            }
+            close(rfd);
+        }
+        u32 elapsed = iop_elapsed_usec(&t0);
+        u32 kibps = elapsed > 0 ? (total_bytes / 1024) * 1000000 / elapsed : 0;
+        printf("  [fioRead_small] sector_reads=%d kb=%u usec=%u kibps=%u\n",
+               BUF_SECTORS, total_bytes / 1024, elapsed, kibps);
+    }
+
+    // sceCdStRead: streaming (g_buf as ring buffer, g_buf2 as read dest)
+    // 4 banks x 16 sectors = 64 sector ring; one bank per STMBLK read; stream BUF_SECTORS total
+    {
+        int stbufmax      = 64;          // 4 banks x 16 sectors
+        int bankmax       = 4;
+        int nsec          = 16;          // one bank per read
+        int total_sectors = BUF_SECTORS; // 256KiB
+        int init_ret  = sceCdStInit(stbufmax, bankmax, g_buf);
+        int start_ret = sceCdStStart(fp.lsn, &mode);
+        printf("  [sceCdStRead]   init_ret=%d start_ret=%d\n", init_ret, start_ret);
+        if (init_ret != 1 || start_ret != 1) {
+            sceCdStStop();
+            printf("  [sceCdStRead]   init/start failed, skipping\n");
+        } else {
+            DelayThread(200 * 1000); // 200ms pre-fill
+
+            u32 target_bytes = (u32)total_sectors * 2048;
+            iop_sys_clock_t t0; GetSystemTime(&t0);
+            u32 total_bytes = 0;
+            int ok = 1;
+            while (total_bytes < target_bytes && ok) {
+                u32 st_err = 0;
+                // STMBLK (1): blocks until nsec sectors are read or error
+                int rd = sceCdStRead(nsec, (u32 *)g_buf2, 1, &st_err);
+                if (rd <= 0) { ok = 0; break; }
+                total_bytes += (u32)rd * 2048;
+            }
+            u32 elapsed = iop_elapsed_usec(&t0);
+            sceCdStStop();
+
+            u32 kibps = elapsed > 0 ? (total_bytes / 1024) * 1000000 / elapsed : 0;
+            printf("  [sceCdStRead]   ok=%d stbufmax=%d bankmax=%d nsec=%d kb=%u usec=%u kibps=%u\n",
+                   ok, stbufmax, bankmax, nsec, total_bytes / 1024, elapsed, kibps);
+        } // else init/start succeeded
+    }
+
+    printf("[/IOP_READ_SPEED]\n");
+#endif // IOP_RUN_SPEED
+
+#if IOP_RUN_STREAM
     // --- Parameterized streaming test (sceCdSt* API) ---
     // Sweeps bufmax {16,32,64,128} x bankmax {2,3,4} x sectors-per-read {1..64, <=bufmax}
     // paced at ~1.5 MiB/s between reads (STREAM_READS reads per combination).
@@ -256,7 +377,7 @@ int _start()
                 u32 st_err = 0;
                 for (int r = 0; r < STREAM_READS; r++) {
                     int rd = sceCdStRead(nsec, (u32 *)g_buf2, 0, &st_err);
-                    if (rd != 1) { stream_ok = 0; break; }
+                    if (rd <= 0) { stream_ok = 0; break; }
                     DelayThread(nsec * USEC_PER_SECTOR); // pace at ~1.5 MiB/s
                 }
 
@@ -275,6 +396,7 @@ int _start()
 
     sceCdCallback(NULL);
     printf("[/IOP_STREAM_PARAM_TEST]\n");
+#endif // IOP_RUN_STREAM
 
     // --- Concurrent reads test ---
     //printf("[IOP_CONCURRENT_TEST]\n");
