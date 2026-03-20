@@ -482,6 +482,14 @@ int main(int argc, char *argv[])
     }
 
     /*
+     * Debugging / testing
+     * Becouse PSX2 does not support command line arguments, create a file
+     * `config/pcsx2.toml` and put all arguments there. See `config/system.toml`
+     * for a list of supported arguments.
+     */
+    //sys.sCFGFile = "pcsx2";
+
+    /*
      * Parse command-line arguments
      */
     if (parse_cmdline_args(argc, argv, &iELFArgcStart) < 0)
