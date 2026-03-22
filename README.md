@@ -238,5 +238,6 @@ Loader | Author
 [RETROLauncher](https://github.com/Spaghetticode-Boon-Tobias/RETROLauncher) | Boon Tobias
 [OSD-XMB](https://github.com/HiroTex/OSD-XMB) | Hiro Tex
 [PSBBN](https://github.com/CosmicScale/PSBBN-Definitive-English-Patch) + [BBNL](https://github.com/pcm720/bbnl) | CosmicScale + pcm720
+[FreeBBN](https://github.com/jegesmedve09/Free-BBN) | jegesmedve09
 
 Add your project here? Send me a PR.
