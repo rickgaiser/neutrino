@@ -5,6 +5,7 @@
 
 // IOP module configs
 #include "../../../common/include/cdvdman_config.h"
+#include "../../ee_core/include/cheat_engine.h"
 
 #include "config.h"
 
@@ -264,6 +265,24 @@ int load_config_eecore(toml_datum_t t)
             if (v.type == TOML_STRING) {
                 if (!strcmp(v.u.s, "UNHOOK")) sys.eecore.flags |= EECORE_FLAG_UNHOOK;
             }
+        }
+    }
+
+    arr = toml_get(t, "cheats");
+    if (arr.type == TOML_ARRAY && arr.u.arr.size > 0 && (arr.u.arr.size % 2) == 0) {
+        int i;
+        int old = sys.cheats_count;
+        int add = arr.u.arr.size;
+        if (old + add <= MAX_CHEATLIST) {
+            sys.cheats = realloc(sys.cheats, (old + add) * sizeof(int));
+            for (i = 0; i < add; i++) {
+                v = arr.u.arr.elem[i];
+                if (v.type == TOML_INT64)
+                    sys.cheats[old + i] = (int)v.u.int64;
+            }
+            sys.cheats_count = old + add;
+        } else {
+            printf("WARNING: too many cheats, ignoring (max %d entries)\n", MAX_CHEATLIST);
         }
     }
 

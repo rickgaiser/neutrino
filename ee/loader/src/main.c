@@ -1051,6 +1051,16 @@ int main(int argc, char *argv[])
     sys.eecore.CheatList     = NULL;
     sys.eecore.ModStorageEnd = irxptr_end;
 
+    // Append cheat data after IRX table and point CheatList to it
+    if (sys.cheats != NULL && sys.cheats_count > 0) {
+        uint32_t *cheatptr = (uint32_t *)irxptr_end;
+        memcpy(cheatptr, sys.cheats, sys.cheats_count * sizeof(uint32_t));
+        cheatptr[sys.cheats_count]     = 0;
+        cheatptr[sys.cheats_count + 1] = 0;
+        sys.eecore.CheatList = (int *)irxptr_end;
+        irxptr_end = (uint8_t *)(cheatptr + sys.cheats_count + 2);
+    }
+
     // Add simple checksum over the module data
     uint32_t *pms = (uint32_t *)irxtable;
 #ifdef DEBUG

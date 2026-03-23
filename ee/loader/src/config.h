@@ -50,6 +50,9 @@ struct SSystemSettings {
 
     char *eecore_elf;
     struct ee_core_data eecore;
+
+    int *cheats;       // flat array of (addr, val) uint32 pairs
+    int cheats_count;  // number of entries (always even)
 };
 
 extern struct SSystemSettings sys;

@@ -37,6 +37,11 @@ cdvdman.fs_sectors = 8
 # - sceCdReadDiskID
 #cdvdman.disk_id = [0x00, 0x00, 0x00, 0x00, 0x00]
 
+# EECORE: cheat codes (PS2RD format)
+# Flat array of (address, value) uint32 pairs.
+# Max entries: 510 (5 hooks + 250 codes, 2 uint32s each)
+#eecore.cheats = [0x2012AB00, 0x00000009]
+
 # EECORE: compatibility flags
 # - UNHOOK = MODE3: Unhook syscalls
 #eecore.flags = ["UNHOOK"]
