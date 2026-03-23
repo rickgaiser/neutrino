@@ -429,7 +429,8 @@ int main(int argc, char *argv[])
     int i, j;
     char sGameID[12];
     int fd_system_cnf;
-    char system_cnf_data[128];
+    char system_cnf_data[128] = {0};
+    char romver[16];
     off_t iso_size = 0;
     uint32_t layer1_lba_start = 0;
     int iELFArgcStart;
@@ -439,6 +440,41 @@ int main(int argc, char *argv[])
     printf("- Version: %s\n", GIT_TAG);
     printf("- By Maximus32\n");
     printf("--------------------------------\n");
+
+    /*
+     * Read ROMVER early for region/version checks
+     */
+    {
+        int fd_ROMVER;
+        if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) < 0) {
+            printf("ERROR: failed to open rom0:ROMVER\n");
+            return -1;
+        }
+        int bytes_read = read(fd_ROMVER, romver, sizeof(romver));
+        close(fd_ROMVER);
+        if (bytes_read < 15) {
+            printf("ERROR: failed to read rom0:ROMVER\n");
+            return -1;
+        }
+    }
+    // ROMVER format: VVVVTCYYYYMMDD\n
+    // [0..3]=version, [4]=region, [5]=console type, [6..13]=date YYYYMMDD
+    {
+        const char *region = "Unknown";
+        switch (romver[4]) {
+            case 'J': region = "Japan";    break;
+            case 'A': region = "America";  break;
+            case 'E': region = "Europe";   break;
+            case 'C': region = "China";    break;
+            case 'H': region = "Asia";     break;
+        }
+        printf("ROMVER: %.14s (v%.2s.%.2s, %s, %.4s-%.2s-%.2s, type %c)\n",
+               romver,
+               romver + 0, romver + 2,           // version VV.VV
+               region,
+               romver + 6, romver + 10, romver + 12,  // date YYYY-MM-DD
+               romver[5]);                        // console type
+    }
 
     /*
      * Initialize structures before filling them from config files
@@ -606,20 +642,12 @@ int main(int argc, char *argv[])
      * GSM: check for 576p capability
      */
     if (sys.eecore.GsmVideoMode == EECORE_GSM_VMODE_FP2) {
-        int fd_ROMVER;
-        if ((fd_ROMVER = open("rom0:ROMVER", O_RDONLY)) >= 0) {
-            char romver[16], romverNum[5];
-
-            read(fd_ROMVER, romver, sizeof(romver));
-            close(fd_ROMVER);
-
-            strncpy(romverNum, romver, 4);
-            romverNum[4] = '\0';
-
-            if (strtoul(romverNum, NULL, 10) < 210) {
-                printf("WARNING: disabling GSM 576p mode on incompatible ps2 model\n");
-                sys.eecore.flags |= EECORE_FLAG_GSM_NO_576P;
-            }
+        char romverNum[5];
+        strncpy(romverNum, romver, 4);
+        romverNum[4] = '\0';
+        if (strtoul(romverNum, NULL, 10) < 210) {
+            printf("WARNING: disabling GSM 576p mode on incompatible ps2 model\n");
+            sys.eecore.flags |= EECORE_FLAG_GSM_NO_576P;
         }
     }
 
@@ -904,6 +932,54 @@ int main(int argc, char *argv[])
     if (sys.sMC1File != NULL) {
         if (fhi_add_file(FHI_FID_MC1, sys.sMC1File, O_RDWR) < 0)
             return -1;
+    }
+
+    /*
+     * PS2 Logo: determine region and whether a patch is needed.
+     * Must be done before copying settings so flags are included in *set_ee_core.
+     */
+    if (sys.bLogo) {
+        int consoleKnown = (romver[4] == 'E' || romver[4] == 'J' || romver[4] == 'A' ||
+                            romver[4] == 'C' || romver[4] == 'H');
+        int consolePAL   = (romver[4] == 'E');
+
+        // Determine game region from VMODE in already-loaded SYSTEM.CNF
+        int gameKnown = 0, gamePAL = 0;
+        char *vmode = strstr(system_cnf_data, "VMODE");
+        if (vmode) {
+            gamePAL   = (strstr(vmode, "PAL") != NULL);
+            gameKnown = 1;
+        }
+        // Fall back to GameID prefix
+        if (!gameKnown && sGameID[0]) {
+            if (!strncmp(sGameID, "SLES", 4) || !strncmp(sGameID, "SCES", 4) ||
+                !strncmp(sGameID, "SLED", 4) || !strncmp(sGameID, "SCED", 4)) {
+                gamePAL = 1; gameKnown = 1;
+            } else if (!strncmp(sGameID, "SLUS", 4) || !strncmp(sGameID, "SCUS", 4) ||
+                       !strncmp(sGameID, "SLPS", 4) || !strncmp(sGameID, "SCPS", 4) ||
+                       !strncmp(sGameID, "SCAJ", 4)) {
+                gamePAL = 0; gameKnown = 1;
+            }
+        }
+
+        printf("Logo: console=%s game=%s\n",
+               consoleKnown ? (consolePAL ? "PAL" : "NTSC") : "unknown",
+               gameKnown    ? (gamePAL    ? "PAL" : "NTSC") : "unknown");
+
+        // Enable logo if regions match (no patch needed),
+        // or if both are known and differ (patch handles mismatch).
+        // Skip logo if region cannot be determined to avoid showing the wrong one.
+        if (consolePAL == gamePAL || (consoleKnown && gameKnown)) {
+            int patch = (consolePAL != gamePAL);
+            if (patch)
+                sys.eecore.flags |= EECORE_FLAG_LOGO_PATCH;
+            if (gamePAL)
+                sys.eecore.flags |= EECORE_FLAG_LOGO_PAL;
+            printf("Logo: enabled, %s, patch=%d\n", gamePAL ? "PAL" : "NTSC", patch);
+        } else {
+            printf("Logo: skipped (region unknown)\n");
+            sys.bLogo = 0;
+        }
     }
 
     /*

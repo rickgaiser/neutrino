@@ -16,6 +16,7 @@
 #include "ee_debug.h"
 #include "iopmgr.h"
 #include "patches.h"
+#include "ps2logo.h"
 #include "util.h"
 #include "asm.h"
 #include "cheat_api.h"
@@ -51,6 +52,18 @@ int main(int argc, char **argv)
         // Enable debug messages
         // DINIT(); // In PCSX2 I see double messages after this call, why?
     //}
+
+    // Example debug messages:
+    //
+    // EE_CORE main called (argc=2, callcount=1):
+    // - argv[0]=rom0:PS2LOGO
+    // - argv[1]=cdrom0:\SLUS_202.30;1
+    //
+    // EE_CORE main called (argc=3, callcount=2):
+    // - argv[0]=EELOAD
+    // - argv[1]=rom0:PS2LOGO
+    // - argv[2]=cdrom0:\SLUS_202.30;1
+
 
     DPRINTF("EE_CORE main called (argc=%d, callcount=%d):\n", argc, callcount);
     for (i = 0; i < argc; i++) {
@@ -104,6 +117,10 @@ int main(int argc, char **argv)
         int r = SifLoadElf(argv[0], &elf);
         if (!r) {
             apply_patches(argv[0]);
+
+            // Patch PS2LOGO if needed
+            if (!_strcmp(argv[0], "rom0:PS2LOGO") && (eec.flags & EECORE_FLAG_LOGO_PATCH))
+                patchPS2LOGO(elf.epc, !!(eec.flags & EECORE_FLAG_LOGO_PAL));
 
             FlushCache(WRITEBACK_DCACHE);
             FlushCache(INVALIDATE_ICACHE);

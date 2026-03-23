@@ -27,6 +27,8 @@ typedef struct
 #define EECORE_FLAG_UNHOOK      (1<<0) // Unhook syscalls, keep value the same as in asm.S!
 #define EECORE_FLAG_DBC         (1<<1) // Debug colors
 #define EECORE_FLAG_GSM_NO_576P (1<<2) // GSM: Disable GSM 576p mode
+#define EECORE_FLAG_LOGO_PATCH  (1<<3) // PS2LOGO: apply region patch (console region ≠ game region)
+#define EECORE_FLAG_LOGO_PAL    (1<<4) // PS2LOGO: force PAL mode (only meaningful if LOGO_PATCH set)
 
 enum EECORE_GSM_VMODE
 {
