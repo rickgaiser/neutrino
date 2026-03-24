@@ -156,13 +156,13 @@ static int cdvdman_findfile(sceCdlFILE *pcdfile, const char *name, int layer)
     struct dirTocEntry *tocEntryPointer;
     layer_info_t *pLayerInfo;
 
+    M_DEBUG("%s %s layer%d\n", __FUNCTION__, name, layer);
+
     cdvdman_init();
 
     if (cdvdman_settings.flags & CDVDMAN_COMPAT_DVD_DL)
         layer = 0;
     pLayerInfo = (layer != 0) ? &layer_info[1] : &layer_info[0]; // SCE CDVDMAN simply treats a non-zero value as a signal for the 2nd layer.
-
-    M_DEBUG("%s %s layer%d\n", __FUNCTION__, name, layer);
 
     strncpy(cdvdman_filepath, name, sizeof(cdvdman_filepath));
     cdvdman_filepath[sizeof(cdvdman_filepath) - 1] = '\0';

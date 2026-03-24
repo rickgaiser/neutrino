@@ -39,9 +39,10 @@ volatile unsigned char cdvdman_cdinited = 0;
 //-------------------------------------------------------------------------
 void cdvdman_init(void)
 {
-    M_DEBUG("%s\n", __FUNCTION__);
+    //M_DEBUG("%s\n", __FUNCTION__);
 
     if (!cdvdman_cdinited) {
+        M_DEBUG("%s - initializing\n", __FUNCTION__);
         cdvdman_stat.err = SCECdErNO;
         cdvdman_cdinited = 1;
     }

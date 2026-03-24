@@ -105,6 +105,8 @@ static int cdvdman_open(iop_file_t *f, const char *filename, int mode)
     FHANDLE *fh;
     sceCdlFILE cdfile;
 
+    M_DEBUG("%s(..., %s, ...)\n", __FUNCTION__, filename);
+
     cdvdman_init();
 
     if (f->unit < 2) {
