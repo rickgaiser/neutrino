@@ -646,7 +646,7 @@ int main(int argc, char *argv[])
         strncpy(romverNum, romver, 4);
         romverNum[4] = '\0';
         if (strtoul(romverNum, NULL, 10) < 210) {
-            printf("WARNING: disabling GSM 576p mode on incompatible ps2 model\n");
+            printf("INFO: manually fixing GSM 576p mode on incompatible ps2 model\n");
             sys.eecore.flags |= EECORE_FLAG_GSM_NO_576P;
         }
     }

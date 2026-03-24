@@ -605,10 +605,6 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
             pstate->gsm.ffmd      = 1; // FRAME mode
         }
     } else if (pstate->GsmVideoMode == EECORE_GSM_VMODE_FP2) {
-        // 576p not supported on pre-DECKARD consoles
-        if (pstate->game.mode == 3 && (pstate->flags & EECORE_FLAG_GSM_NO_576P))
-            return;
-
         // 240p/288p non-interlaced FRAME mode -> 480p/576p (line-double)
         // 480i/576i     interlaced FRAME mode -> 480p/576p (line-double, can look ugly if it was true interlaced)
         // 480i/576i     interlaced FIELD mode -> 480p/576p (show all lines! output quality x2!)
@@ -634,7 +630,18 @@ static void hook_SetGsCrt(short int interlace, short int mode, short int ffmd)
 
     // Set GSM video mode (without triggering a breakpoint)
     _ee_disable_bpc();
-    pstate->org_SetGsCrt(pstate->gsm.interlace, pstate->gsm.mode, pstate->gsm.ffmd);
+    if (pstate->gsm.mode == 0x53 && (pstate->flags & EECORE_FLAG_GSM_NO_576P)) {
+        // Pre-DECKARD: BIOS doesn't support 576p (mode 0x53)
+        // Set mode to 480p to configure DVE and most CRTC register correctly
+        // Then manually set the minimum needed register to 576p mode
+        pstate->org_SetGsCrt(pstate->gsm.interlace, 0x50, pstate->gsm.ffmd);
+        *GS_REG_SYNCH1 = 0x000402E02003C827ULL;
+        *GS_REG_SYNCH2 = 0x000000000019CA67ULL;
+        *GS_REG_SYNCHV = 0x00A9000002700005ULL;
+    } else {
+        // All other cases: let the BIOS set the mode, then fix up CRTC where needed.
+        pstate->org_SetGsCrt(pstate->gsm.interlace, pstate->gsm.mode, pstate->gsm.ffmd);
+    }
 
     // Enable breakpoints
     if (pstate->GsmCompMode != EECORE_GSM_COMP_NONE) {
