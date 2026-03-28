@@ -111,7 +111,7 @@ MODE8 = {name = "Compat MODE8: NOP (user configurable)"}
 MODE9 = {name = "Compat MODE9: NOP"}
 #MODE9 = {name = "!!! TEST-01 !!!", eecore.irm = [3, 4, 0]}
 #MODE9 = {name = "!!! TEST-02 !!!", cdvdman.flags = ["SYNC_READ"]}
-#MODE9 = {name = "!!! TEST-06 !!!", cdvdman.flags = ["SYNC_READ"]}
+#MODE9 = {name = "!!! TEST-06 !!!"}
 #MODE9 = {name = "!!! TEST-07 !!!", cdvdman.flags = ["FAST_READ"]}
 #MODE9 = {name = "!!! TEST-03 !!!", cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 #MODE9 = {name = "!!! TEST-04 !!!", depends = ["p-membo"]}
@@ -154,14 +154,17 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SLPM_656.32" = {name = "Virtua Fighter Cyber Generation: JSNY", eecore.mod_base = 0x01fc7000}
 "SCES_503.60" = {name = "Twisted Metal Black Online", 			 eecore.mod_base = 0xA7000}
 "SCUS_971.96" = {name = "Twisted Metal Black Online",            eecore.mod_base = 0xA7000}
-"SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4, 0]}
-"SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4, 0]}
-"SLES_503.55" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
-"SLUS_202.26" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
 "SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.fs_sectors = 64} # Optimization
 "SLUS_202.30" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 "SLES_503.25" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 "SLES_503.26" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
+
+# Workarounds, need to find a better solution
+"SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4, 0]}
+"SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4, 0]}
+"SLES_503.55" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
+"SLUS_202.26" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
+"SLUS_205.05" = {name = "Mace Griffin - Bounty Hunter",          eecore.irm = [2, 4, 0]} # Needed by MMCE (MCP2), but not by UDPFS ?
 
 # Workarounds, need to find a better solution
 "SLPM_622.48" = {name = "Love - Mahjong!",                       cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
