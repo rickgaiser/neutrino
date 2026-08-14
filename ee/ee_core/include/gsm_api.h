@@ -3,6 +3,7 @@
 
 
 void EnableGSM(void);
+void DisableGSM(void);
 
 
 #endif

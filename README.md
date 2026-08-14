@@ -158,6 +158,9 @@ Options:
 
   -cfg=<file>       Load extra user/game specific config file (without .toml extension)
 
+  -igr-path=<file>  In-game-reset destination (empty returns to PS2 Browser)
+  -igr-power=<0|1>  Route a short power-button press through in-game reset
+
   -dbc              Enable debug colors
   -logo             Enable logo (adds rom0:PS2LOGO to arguments)
   -qb               Quick-Boot directly into load environment
@@ -175,6 +178,26 @@ Usage examples:
   neutrino.elf -bsd=ata -bsdfs=hdl -dvd=hdl:filename.iso
   neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 ```
+
+## In-game reset
+
+The resident EE core supports **L1+L2+R1+R2+Start+Select** to leave a running
+game. `-igr-path=<file>` selects the destination ELF; when it is omitted,
+Neutrino follows Open PS2 Loader's convention and returns to the PS2 Browser.
+`-igr-power=1` additionally routes a short front-panel power-button press
+through the same reset path. It is disabled by default so normal power-off
+behavior is preserved for standalone installations.
+
+This implementation is adapted from Open PS2 Loader's EE-core in-game-reset
+and pad-open hooking code. The original copyright notices and Academic Free
+License 3.0 attribution are retained in `ee/ee_core/src/padhook.c` and
+`ee/ee_core/include/padhook.h`.
+
+The dual-controller and Q-Ball compatibility changes are still a
+hardware-testing feature, not a general release guarantee. Games that cannot
+safely tolerate the resident pad hook can select compatibility Mode 6 to
+disable IGR. See [`docs/igr-hardware-testing.md`](docs/igr-hardware-testing.md)
+for the current validation boundary.
 
 ## UDPFS / UDPBD PC Server
 

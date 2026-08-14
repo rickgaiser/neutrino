@@ -22,10 +22,12 @@ static void cdvdfsv_startrpcthreads(void);
 static void cdvdfsv_rpc0_th(void *args);
 static void cdvdfsv_rpc1_th(void *args);
 static void cdvdfsv_rpc2_th(void *args);
+static void cdvdfsv_rpc_sd_th(void *args);
 static void *cbrpc_cdinit(int fno, void *buf, int size);
 static void *cbrpc_cddiskready(int fno, void *buf, int size);
 static void *cbrpc_cddiskready2(int fno, void *buf, int size);
 static void *cbrpc_S596(int fno, void *buf, int size);
+static void *cbrpc_shutdown(int fno, void *buf, int size);
 
 u8 *cdvdfsv_buf;
 int cdvdfsv_size;
@@ -34,13 +36,16 @@ int cdvdfsv_sectors;
 static SifRpcDataQueue_t rpc0_DQ;
 static SifRpcDataQueue_t rpc1_DQ;
 static SifRpcDataQueue_t rpc2_DQ;
+static SifRpcDataQueue_t rpc_sd_DQ;
 static SifRpcServerData_t cdinit_rpcSD, cddiskready_rpcSD, cddiskready2_rpcSD;
 static SifRpcServerData_t S596_rpcSD;
+static SifRpcServerData_t sd_rpcSD;
 
 static u8 cdinit_rpcbuf[16];
 static u8 cddiskready_rpcbuf[16];
 static u8 cddiskready2_rpcbuf[16];
 static u8 S596_rpcbuf[16];
+static u8 shutdown_rpcbuf[16];
 
 static int rpc0_thread_id, rpc1_thread_id, rpc2_thread_id, rpc_sd_thread_id;
 
@@ -185,6 +190,20 @@ static void cdvdfsv_startrpcthreads(void)
 
     rpc0_thread_id = CreateThread(&thread_param);
     StartThread(rpc0_thread_id, NULL);
+
+    // Private OPL-compatible shutdown endpoint used by ee_core IGR. Keep it
+    // on its own queue so it can run even when a game has another CDVD RPC
+    // request in flight. Match OPL's priority and stack: this thread has to
+    // preempt a title that is continuously issuing CDVD/network requests and
+    // has enough stack to drain the backend and stop DEV9 safely.
+    thread_param.attr = TH_C;
+    thread_param.option = 0xABCD8003;
+    thread_param.thread = (void *)cdvdfsv_rpc_sd_th;
+    thread_param.stacksize = 0x1000;
+    thread_param.priority = 0x01;
+
+    rpc_sd_thread_id = CreateThread(&thread_param);
+    StartThread(rpc_sd_thread_id, NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -232,6 +251,15 @@ static void cdvdfsv_rpc2_th(void *args)
     cdvdfsv_register_searchfile_rpc(&rpc2_DQ);
 
     sceSifRpcLoop(&rpc2_DQ);
+}
+
+//-------------------------------------------------------------------------
+static void cdvdfsv_rpc_sd_th(void *args)
+{
+    sceSifSetRpcQueue(&rpc_sd_DQ, GetThreadId());
+    sceSifRegisterRpc(&sd_rpcSD, 0x80000598, &cbrpc_shutdown,
+                      shutdown_rpcbuf, NULL, NULL, &rpc_sd_DQ);
+    sceSifRpcLoop(&rpc_sd_DQ);
 }
 
 //-------------------------------------------------------------------------
@@ -285,6 +313,18 @@ static void *cbrpc_S596(int fno, void *buf, int size)
         cdvdman_intr_ef = sceCdSC(CDSC_GET_INTRFLAG, &dummy);
         ClearEventFlag(cdvdman_intr_ef, ~CDVDEF_FSV_S596);
         WaitEventFlag(cdvdman_intr_ef, CDVDEF_FSV_S596, WEF_AND, NULL);
+    }
+
+    *(int *)buf = 1;
+    return buf;
+}
+
+//--------------------------------------------------------------
+static void *cbrpc_shutdown(int fno, void *buf, int size)
+{
+    if (fno == 1) {
+        int value = *(int *)buf;
+        sceCdSC(CDSC_NEUTRINO_SHUTDOWN, &value);
     }
 
     *(int *)buf = 1;

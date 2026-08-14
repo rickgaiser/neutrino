@@ -17,6 +17,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include <sifrpc.h>
 #include <iopheap.h>
 #include <sbv_patches.h>
+#include <debug.h>
 
 // Neutrino EE_CORE
 #include "../../../common/include/eecore_config.h"
@@ -50,6 +51,16 @@ void _libcglue_timezone_update() {}; // Disable timezone update
 void _libcglue_rtc_update() {}; // Disable rtc update
 
 struct SModule mod_ee_core;
+
+static __attribute__((noreturn)) void diag_halt(const char *message)
+{
+    init_scr();
+    scr_clear();
+    scr_printf("Neutrino launch failed\n\n%s\n", message);
+    scr_printf("\nRestart the console to return to your launcher.\n");
+    for (;;)
+        SleepThread();
+}
 
 void print_usage()
 {
@@ -130,6 +141,8 @@ void print_usage()
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
+    printf("  -igr-path=<file>  In-game-reset destination (empty returns to PS2 Browser)\n");
+    printf("  -igr-power=<0|1>  Route a short power-button press through in-game reset\n");
     printf("\n");
     printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
@@ -186,6 +199,10 @@ static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
             sys.sGSM = &argv[i][5];
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
+        else if (!strncmp(argv[i], "-igr-path=", 10))
+            sys.sIGRPath = &argv[i][10];
+        else if (!strncmp(argv[i], "-igr-power=", 11))
+            sys.bIGRPowerReset = (argv[i][11] != '0');
         else if (!strncmp(argv[i], "-cwd=", 5))
             continue; // already handled before config loading
         else if (!strncmp(argv[i], "-dbc", 4))
@@ -702,7 +719,7 @@ int main(int argc, char *argv[])
     }
     if (modlist_load(&drv.mod, (sys.bQuickBoot == 0) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0) {
         printf("ERROR: failed to load drv.mod\n");
-        return -1;
+        diag_halt("Could not stage driver modules from memory card");
     }
 
     /*
@@ -738,16 +755,26 @@ int main(int argc, char *argv[])
         for (i = 0; i < drv.mod.count; i++) {
             struct SModule *pm = &drv.mod.mod[i];
             if (pm->env & MOD_ENV_LE) {
-                if (module_start(pm) < 0)
-                    return -1;
+                if (module_start(pm) < 0) {
+                    diag_halt("Load-environment module failed");
+                }
             }
         }
-        if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
-            fileXioInit();
+        if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL) {
+            int fileXioResult = fileXioInit();
+            if (fileXioResult < 0)
+                diag_halt("fileXio RPC initialization failed");
+        }
     }
 
     // Load EE_CORE settings
     struct ee_core_data *set_ee_core = module_get_settings(&mod_ee_core);
+    if ((set_ee_core == NULL) ||
+        ((uint8_t *)set_ee_core + sizeof(*set_ee_core) >
+         (uint8_t *)mod_ee_core.pData + mod_ee_core.iSize) ||
+        (set_ee_core->IGRABIMagic != EECORE_IGR_ABI_MAGIC)) {
+        diag_halt("ee_core is incompatible with this Neutrino loader");
+    }
 
     // Detect active FHI backing store and zero its settings struct
     int fhi_active = (fhi_config_init(&drv.mod) == 0);
@@ -786,7 +813,7 @@ int main(int argc, char *argv[])
         }
 
         if (setup_dvd_iso(sDVDFile, &iso_size, &layer1_lba_start) < 0)
-            return -1;
+            diag_halt("Could not open the game image through UDPFS");
     }
 
     /*
@@ -798,7 +825,7 @@ int main(int argc, char *argv[])
             fd_system_cnf = read_system_cnf(sDVDFile, system_cnf_data, 128);
             if (fd_system_cnf < 0) {
                 printf("ERROR: Unable to read SYSTEM.CNF from ISO\n");
-                return -1;
+                diag_halt("Could not read SYSTEM.CNF from the game image");
             }
         } else {
             // Read SYSTEM.CNF from CD/DVD
@@ -1035,7 +1062,7 @@ int main(int argc, char *argv[])
      */
     uint8_t *irxptr_end = build_irx_table(sDVDFile != NULL);
     if (irxptr_end == NULL)
-        return -1;
+        diag_halt("Could not build the emulation module table");
 
     //
     // Set EE_CORE settings before loading into place
@@ -1044,6 +1071,12 @@ int main(int argc, char *argv[])
     strncpy(sys.eecore.GameID, sGameID, 12);
     sys.eecore.CheatList     = NULL;
     sys.eecore.ModStorageEnd = irxptr_end;
+    sys.eecore.IGRABIMagic = EECORE_IGR_ABI_MAGIC;
+    sys.eecore.IGRFlags = sys.bIGRPowerReset ? EECORE_IGR_FLAG_POWER_BUTTON_RESET : 0;
+    memset(sys.eecore.IGRExitPath, 0, sizeof(sys.eecore.IGRExitPath));
+    if (sys.sIGRPath != NULL)
+        strncpy(sys.eecore.IGRExitPath, sys.sIGRPath,
+                sizeof(sys.eecore.IGRExitPath) - 1);
 
     // Append cheat data after IRX table and point CheatList to it
     if (sys.cheats != NULL && sys.cheats_count > 0) {
@@ -1190,5 +1223,5 @@ int main(int argc, char *argv[])
 
     ExecPS2((void *)eh->entry, NULL, ee_core_argc, ee_core_argv);
 
-    return 0;
+    diag_halt("ExecPS2 returned unexpectedly");
 }

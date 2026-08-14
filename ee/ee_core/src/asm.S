@@ -12,6 +12,7 @@
 
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
+#define PADOPEN_HOOK 0
 
 .set push
 .set noreorder
@@ -32,8 +33,18 @@
 
 /* iopmgr.c */
 .extern New_SifSetDma
+.extern Old_ExecPS2
+.extern Old_CreateThread
+.extern padOpen_hooked
+.extern disable_padOpen_hook
+
+/* padhook.c */
+.extern Install_PadOpen_Hook
+.extern Reset_Padhook
 
 .globl  Hook_SifSetDma
+.globl  Hook_ExecPS2
+.globl  Hook_CreateThread
 .globl  CleanExecPS2
 
 /*
@@ -106,6 +117,101 @@ Hook_SifSetDma:
     nop
 
 .end    Hook_SifSetDma
+
+/*
+ * Retry the pad-open scan at every user ELF transition. The target program
+ * has already been loaded when _ExecPS2 is called, but has not started yet.
+ */
+.ent Hook_ExecPS2
+Hook_ExecPS2:
+    /* Do not scan resident/BIOS executables below normal user memory. */
+    lui     $v0, 0x0010
+    sltu    $v0, $a0, $v0
+    bne     $v0, $zero, 1f
+    daddu   $s0, $a0, $zero
+    daddu   $s1, $a1, $zero
+    daddu   $s2, $a2, $zero
+    daddu   $s3, $a3, $zero
+
+    /* Syscall hooks cannot use the game's stack for resident C code. */
+    la      $sp, _stack_end
+
+    jal     Reset_Padhook
+    nop
+
+    /* Compatibility Mode 6 keeps the game's libpad completely untouched. */
+    la      $v1, disable_padOpen_hook
+    lw      $v0, 0x0000($v1)
+    bne     $v0, $zero, 2f
+    nop
+
+    lui     $a0, 0x0010
+    lui     $a1, 0x01ff
+    jal     Install_PadOpen_Hook
+    addiu   $a2, $zero, PADOPEN_HOOK
+    la      $v1, padOpen_hooked
+    sw      $v0, 0x0000($v1)
+
+2:
+    daddu   $a0, $s0, $zero
+    daddu   $a1, $s1, $zero
+    daddu   $a2, $s2, $zero
+    jal     InitRegsExecPS2
+    daddu   $a3, $s3, $zero
+1:
+    lw      $v0, Old_ExecPS2
+    jr      $v0
+    nop
+.end Hook_ExecPS2
+
+/*
+ * Some titles load libpad after their main ELF starts. OPL retries the scan
+ * while early game threads are being created; once patched, this becomes a
+ * straight tail-call to the original syscall.
+ */
+.ent Hook_CreateThread
+Hook_CreateThread:
+    la      $v1, disable_padOpen_hook
+    lw      $v0, 0x0000($v1)
+    bne     $v0, $zero, 2f
+    nop
+    la      $v1, padOpen_hooked
+    lw      $v0, 0x0000($v1)
+    bne     $v0, $zero, 2f
+
+    /* Match OPL's early/high-priority thread filter. */
+    lw      $v0, 0x0014($a0)
+    beq     $v0, $zero, 1f
+    nop
+    slti    $v0, $v0, 5
+    beq     $v0, $zero, 2f
+    nop
+    lw      $v0, 0x0018($a0)
+    bne     $v0, $zero, 2f
+    nop
+1:
+    /* Use the resident stack while scanning game memory from syscall context. */
+    daddu   $a1, $sp, $zero
+    la      $sp, _stack_end
+    addiu   $sp, $sp, -0x20
+    sd      $ra, 0x0000($sp)
+    sd      $a1, 0x0008($sp)
+    sd      $a0, 0x0010($sp)
+
+    lui     $a0, 0x0010
+    lui     $a1, 0x01ff
+    jal     Install_PadOpen_Hook
+    addiu   $a2, $zero, PADOPEN_HOOK
+    la      $v1, padOpen_hooked
+    sw      $v0, 0x0000($v1)
+    ld      $a0, 0x0010($sp)
+    ld      $ra, 0x0000($sp)
+    ld      $sp, 0x0008($sp)
+2:
+    lw      $v0, Old_CreateThread
+    jr      $v0
+    nop
+.end Hook_CreateThread
 
 .ent CleanExecPS2
 CleanExecPS2:

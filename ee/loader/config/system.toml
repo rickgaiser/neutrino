@@ -17,9 +17,15 @@ default_elf = "auto"
 #default_cfg = ""
 default_dbc = false
 default_logo = false
+# Optional in-game-reset destination. Empty returns to the PS2 Browser.
+# NHDDL supplies its actual launch path on the command line.
+#default_igr_path = "mc0:/path/to/launcher.elf"
+# A short power-button press normally powers off. Enable only when a launcher
+# deliberately wants it routed through the same restart path as the pad combo.
+default_igr_power = false
 
 # EE_CORE configuration
-eecore.elf = "ee_core.elf"
+eecore.elf = "ee_core96.elf"
 
 # Modules to load in emulation environment
 [[module]]
