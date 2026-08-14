@@ -10,6 +10,7 @@ Build from source: https://github.com/rtissera/libchdr
 
 import ctypes
 import ctypes.util
+import os
 import struct
 
 from .base import CompressedFileWrapper
@@ -22,7 +23,10 @@ from .base import CompressedFileWrapper
 def _load_libchdr():
     """Attempt to load libchdr. Returns loaded ctypes.CDLL or raises ImportError."""
     name = ctypes.util.find_library("chdr")
-    candidates = ["libchdr.so.0", "libchdr.so"]
+    # Windows: prefer a libchdr.dll placed next to this module, then PATH
+    module_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [os.path.join(module_dir, "libchdr.dll"), "libchdr.dll",
+                  "chdr.dll", "libchdr.so.0", "libchdr.so"]
     if name:
         candidates.insert(0, name)
     for candidate in candidates:
