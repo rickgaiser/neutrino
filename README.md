@@ -211,7 +211,7 @@ python pc/udpfs_server.py -d /path/to/ps2games
 # Share both a block device and a directory
 python pc/udpfs_server.py -b /dev/sdX -d /path/to/ps2games
 
-# With transparent decompression (.zso/.cso/.chd files appear as .iso)
+# With transparent decompression (.iso is appended to .zso/.cso/.chd names)
 python pc/udpfs_server.py -d /games --enable-compression
 
 # Read-only mode
@@ -221,6 +221,10 @@ python pc/udpfs_server.py -b /dev/sdX --read-only
 ### Compression support
 
 When `--enable-compression` is passed, the server transparently decompresses compressed ISO images:
+
+The original extension is retained and `.iso` is appended to the virtual name exposed to clients.
+For example, `game.chd`, `game.cso`, and `game.zso` are listed as `game.chd.iso`,
+`game.cso.iso`, and `game.zso.iso`. This keeps formats with the same basename distinct.
 
 Format | Extension | Compression          | Extra dependency
 -------|-----------|----------------------|----------------
