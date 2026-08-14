@@ -211,7 +211,7 @@ python pc/udpfs_server.py -d /path/to/ps2games
 # Share both a block device and a directory
 python pc/udpfs_server.py -b /dev/sdX -d /path/to/ps2games
 
-# With transparent decompression (.zso/.cso/.chd files appear as .iso)
+# With transparent decompression (.iso is appended to .zso/.cso/.chd names)
 python pc/udpfs_server.py -d /games --enable-compression
 
 # Read-only mode
