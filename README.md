@@ -222,10 +222,6 @@ python pc/udpfs_server.py -b /dev/sdX --read-only
 
 When `--enable-compression` is passed, the server transparently decompresses compressed ISO images:
 
-The original extension is retained and `.iso` is appended to the virtual name exposed to clients.
-For example, `game.chd`, `game.cso`, and `game.zso` are listed as `game.chd.iso`,
-`game.cso.iso`, and `game.zso.iso`. This keeps formats with the same basename distinct.
-
 Format | Extension | Compression          | Extra dependency
 -------|-----------|----------------------|----------------
 ZSO    | `.zso`    | LZ4                  | `pip install lz4`
