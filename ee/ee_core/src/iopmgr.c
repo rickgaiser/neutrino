@@ -6,6 +6,7 @@
 #include <loadfile.h>
 #include <sifrpc.h>
 #include <iopheap.h>
+#include <kernel.h>
 #include <sbv_patches.h>
 #include <syscallnr.h>
 
@@ -15,6 +16,7 @@
 #include "asm.h"
 #include "util.h"
 #include "eecore_config.h"
+#include "padhook.h"
 
 extern int _iop_reboot_count; // defined in libkernel (iopcontrol.c)
 
@@ -22,11 +24,28 @@ static int set_reg_hook = 0;
 static int get_reg_hook = 0;
 static int imgdrv_offset = 0;
 static void (*Direct_SetSyscall)(s32 syscall_num, void *handler);
-static int (*Old_SifSetReg)(u32 register_num, int register_value);
-static int (*Old_SifGetReg)(u32 register_num);
+// Kept visible to padhook.c so IGR can submit its raw reset packet directly
+// from the already-running resident thread. Some titles leave the standalone
+// Reset_Iop() call target unusable even though the IGR thread itself survives.
+int (*Old_SifSetReg)(u32 register_num, int register_value);
+int (*Old_SifGetReg)(u32 register_num);
 
 // Used by Hook_SifSetDma in asm.S
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
+int (*Old_ExecPS2)(void *entry, void *gp, int argc, char **argv);
+int (*Old_CreateThread)(ee_thread_t *thread_param);
+
+// Some titles terminate/delete or suspend every thread they did not create,
+// then reuse the released ID. Keep the one resident reset worker alive while
+// a game is running; all other thread-management calls remain untouched.
+static int (*Old_DeleteThread)(int thread_id);
+static int (*Old_TerminateThread)(int thread_id);
+static int (*Old_iTerminateThread)(int thread_id);
+static int (*Old_SuspendThread)(int thread_id);
+static int (*Old_iSuspendThread)(int thread_id);
+
+int padOpen_hooked = 0;
+int disable_padOpen_hook = 1;
 
 int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
 
@@ -106,16 +125,20 @@ static void print_iop_args(int arg_len, const char *args)
 #endif
 
 //---------------------------------------------------------------------------
-// Reset IOP. This function replaces SifIopReset from the PS2SDK
-static int Reset_Iop(const char *arg, int mode)
+// Reset IOP. This function replaces SifIopReset from the PS2SDK.
+// Do not call SifStopDma here: some games continue sending across SIF0 while
+// IGR runs. Current OPL deliberately leaves SIF DMA enabled because stopping
+// it in that state can leave SIF permanently non-functional after the reset.
+int Reset_Iop(const char *arg, int mode)
 {
     static SifCmdResetData_t reset_pkt __attribute__((aligned(64)));
     struct t_SifDmaTransfer dmat;
     int arglen;
 
-    _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
+    if (eec.flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_LBLUE;
 
-    SifStopDma();
+    _iop_reboot_count++; // increment reboot counter to allow RPC clients to detect unbinding!
 
     for (arglen = 0; arg[arglen] != '\0'; arglen++)
         reset_pkt.arg[arglen] = arg[arglen];
@@ -131,13 +154,22 @@ static int Reset_Iop(const char *arg, int mode)
     dmat.attr = SIF_DMA_ERT | SIF_DMA_INT_O;
     SifWriteBackDCache(&reset_pkt, sizeof(reset_pkt));
 
+    if (eec.flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_WHITE;
+
     DIntr();
     ee_kmode_enter();
     Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
 
+    if (eec.flags & EECORE_FLAG_DBC)
+        *GS_REG_BGCOLOR = COLOR_OLIVE;
+
     if (!Old_SifSetDma(&dmat, 1)) {
+        if (eec.flags & EECORE_FLAG_DBC)
+            *GS_REG_BGCOLOR = COLOR_RED;
         ee_kmode_exit();
         EIntr();
+        delay(1);
         return 0;
     }
 
@@ -393,7 +425,17 @@ u32 New_SifSetDma(SifDmaTransfer_t *sdd, s32 len)
 {
     struct _iop_reset_pkt *reset_pkt = (struct _iop_reset_pkt *)sdd->src;
 
+    // Games often reboot the IOP only after loading more EE code. Retry here
+    // just as OPL does; Install_IGR also enables the physical-button fallback
+    // when no supported libpad pattern has appeared yet.
+    if (!disable_padOpen_hook && !padOpen_hooked) {
+        Install_IGR();
+        padOpen_hooked = Install_PadOpen_Hook(0x00100000, 0x01ff0000, PADOPEN_HOOK);
+    }
+
+    disable_padOpen_hook = 1;
     New_Reset_Iop2(reset_pkt->arg, reset_pkt->arglen, 0);
+    disable_padOpen_hook = 0;
 
     // Ignore EE still trying to complete the IOP reset
     set_reg_hook = 4;
@@ -452,6 +494,48 @@ static int Hook_SifGetReg(u32 register_num)
     return Old_SifGetReg(register_num);
 }
 
+// These handlers run in kernel mode. Keep them deliberately leaf-like: no
+// logging, allocation, RPC, or calls back through the public syscall stubs.
+static int Hook_DeleteThread(int thread_id)
+{
+    if ((IGR_Thread_ID > 0) && (thread_id == IGR_Thread_ID))
+        return 0;
+
+    return Old_DeleteThread(thread_id);
+}
+
+static int Hook_TerminateThread(int thread_id)
+{
+    if ((IGR_Thread_ID > 0) && (thread_id == IGR_Thread_ID))
+        return 0;
+
+    return Old_TerminateThread(thread_id);
+}
+
+static int Hook_iTerminateThread(int thread_id)
+{
+    if ((IGR_Thread_ID > 0) && (thread_id == IGR_Thread_ID))
+        return 0;
+
+    return Old_iTerminateThread(thread_id);
+}
+
+static int Hook_SuspendThread(int thread_id)
+{
+    if ((IGR_Thread_ID > 0) && (thread_id == IGR_Thread_ID))
+        return 0;
+
+    return Old_SuspendThread(thread_id);
+}
+
+static int Hook_iSuspendThread(int thread_id)
+{
+    if ((IGR_Thread_ID > 0) && (thread_id == IGR_Thread_ID))
+        return 0;
+
+    return Old_iSuspendThread(thread_id);
+}
+
 //---------------------------------------------------------------------------
 // Replace SifSetDma, SifSetReg and SifGetReg syscalls in kernel
 void Install_Kernel_Hooks(void)
@@ -466,4 +550,60 @@ void Install_Kernel_Hooks(void)
 
     Old_SifGetReg = GetSyscallHandler(__NR_SifGetReg);
     SetSyscall(__NR_SifGetReg, &Hook_SifGetReg);
+
+    // Keep retrying the IGR pad hook across user ELF transitions and delayed
+    // libpad loads, using the same syscall lifecycle as OPL.
+    Old_CreateThread = GetSyscallHandler(__NR_CreateThread);
+    SetSyscall(__NR_CreateThread, &Hook_CreateThread);
+
+    Old_ExecPS2 = GetSyscallHandler(__NR__ExecPS2);
+    SetSyscall(__NR__ExecPS2, &Hook_ExecPS2);
+
+    Old_DeleteThread = GetSyscallHandler(__NR_DeleteThread);
+    SetSyscall(__NR_DeleteThread, &Hook_DeleteThread);
+
+    Old_TerminateThread = GetSyscallHandler(__NR_TerminateThread);
+    SetSyscall(__NR_TerminateThread, &Hook_TerminateThread);
+
+    Old_iTerminateThread = GetSyscallHandler(-__NR_iTerminateThread);
+    SetSyscall(-__NR_iTerminateThread, &Hook_iTerminateThread);
+
+    Old_SuspendThread = GetSyscallHandler(__NR_SuspendThread);
+    SetSyscall(__NR_SuspendThread, &Hook_SuspendThread);
+
+    Old_iSuspendThread = GetSyscallHandler(-__NR__iSuspendThread);
+    SetSyscall(-__NR__iSuspendThread, &Hook_iSuspendThread);
+}
+
+// Restore the ROM SIF syscalls before leaving the emulation environment.
+// A normal game-side IOP reset must keep these hooks, but IGR is intentionally
+// returning to a clean application and must not have its reset intercepted.
+void Remove_Kernel_Hooks(void)
+{
+    if (Old_SifSetDma != NULL)
+        SetSyscall(__NR_SifSetDma, Old_SifSetDma);
+    if (Old_SifSetReg != NULL)
+        SetSyscall(__NR_SifSetReg, Old_SifSetReg);
+    if (Old_SifGetReg != NULL)
+        SetSyscall(__NR_SifGetReg, Old_SifGetReg);
+    if (Old_CreateThread != NULL)
+        SetSyscall(__NR_CreateThread, Old_CreateThread);
+    if (Old_ExecPS2 != NULL)
+        SetSyscall(__NR__ExecPS2, Old_ExecPS2);
+    if (Old_DeleteThread != NULL)
+        SetSyscall(__NR_DeleteThread, Old_DeleteThread);
+    if (Old_TerminateThread != NULL)
+        SetSyscall(__NR_TerminateThread, Old_TerminateThread);
+    if (Old_iTerminateThread != NULL)
+        SetSyscall(-__NR_iTerminateThread, Old_iTerminateThread);
+    if (Old_SuspendThread != NULL)
+        SetSyscall(__NR_SuspendThread, Old_SuspendThread);
+    if (Old_iSuspendThread != NULL)
+        SetSyscall(-__NR__iSuspendThread, Old_iSuspendThread);
+
+    set_reg_hook = 0;
+    get_reg_hook = 0;
+    disable_padOpen_hook = 1;
+    FlushCache(0);
+    FlushCache(2);
 }

@@ -25,6 +25,26 @@ void _strcpy(char *dst, const char *src)
     strncpy(dst, src, strlen(src) + 1);
 }
 
+/*
+  strlcpy() for ee_core.
+
+  The ee_core links a minimal lib set (-lpatches -lkernel -lgcc, no libc).
+  Newer ps2sdk builds reference strlcpy from libkernel's LoadExecPS2, which
+  is otherwise undefined here (stock ee_core fails to link the same way
+  against the current toolchain). Provide it locally.
+*/
+unsigned int strlcpy(char *dst, const char *src, unsigned int size)
+{
+    unsigned int srclen = strlen(src);
+    if (size != 0) {
+        unsigned int copylen = (srclen < size - 1) ? srclen : size - 1;
+        for (unsigned int i = 0; i < copylen; i++)
+            dst[i] = src[i];
+        dst[copylen] = '\0';
+    }
+    return srclen;
+}
+
 /* Do not link to strcat() from libc */
 void _strcat(char *dst, const char *src)
 {

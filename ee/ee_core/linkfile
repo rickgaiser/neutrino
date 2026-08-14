@@ -40,8 +40,15 @@ MEMORY {
 	modules96  : ORIGIN = 0x000A7000, LENGTH = 356K
 }
 
-REGION_ALIAS("MAIN_REGION", ee_core84);
-REGION_ALIAS("STACK_REGION", stack84);
+/*
+ * Keep the reset/IGR resident core above the low BIOS-RAM range that some
+ * games overwrite after startup. The default 0x84000 build could leave the
+ * VBLANK handler and IGR thread intact while corrupting Reset_Iop() earlier
+ * in the image, matching a repeatable blue-stage freeze when either reset
+ * input called that function. Neutrino already defines this alternate layout.
+ */
+REGION_ALIAS("MAIN_REGION", ee_core96);
+REGION_ALIAS("STACK_REGION", stack96);
 
 PHDRS {
   text PT_LOAD;

@@ -10,6 +10,10 @@ typedef void (*StmCallback_t)(void);
 
 extern volatile unsigned char sync_flag_locked;
 
+// Prevent new reads and wait for the current backend request to complete.
+// The lock intentionally remains held until the imminent IOP reset.
+void cdvdman_shutdown_io(void);
+
 
 void cdvdman_read_init();
 

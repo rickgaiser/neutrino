@@ -22,6 +22,7 @@
 #include "cheat_api.h"
 #include "gsm_api.h"
 #include "eecore_config.h"
+#include "padhook.h"
 
 extern void *_stack_end;
 
@@ -30,7 +31,10 @@ static int callcount = 0;
 
 // Global data
 u32 g_ee_core_flags = 0; // easy to use copy for asm.S
-struct ee_core_data eec = {MODULE_SETTINGS_MAGIC};
+struct ee_core_data eec = {
+    .magic = MODULE_SETTINGS_MAGIC,
+    .IGRABIMagic = EECORE_IGR_ABI_MAGIC,
+};
 
 // This function is defined as weak in ps2sdkc, so how
 // we are not using time zone, so we can safe some KB
@@ -92,6 +96,9 @@ int main(int argc, char **argv)
         DPRINTF("Install kernel hooks\n");
         Install_Kernel_Hooks();
 
+        // Initialize in-game reset (IGR) state before the game loads
+        Reset_Padhook();
+
         // Start selected elf file (should be something like "cdrom0:\ABCD_123.45;1")
         LoadExecPS2(argv[0], argc - 1, &argv[1]);
     } else {
@@ -126,6 +133,16 @@ int main(int argc, char **argv)
             FlushCache(INVALIDATE_ICACHE);
 
             services_exit();
+
+            // The target ELF is now in memory. Let the resident ExecPS2 and
+            // CreateThread hooks scan it (and any code it loads later) for
+            // libpad. Installing the IGR thread before ExecPS2 is too early:
+            // the kernel tears those game resources down during the exec.
+            // OPL compatibility Mode 6: leave libpad completely untouched for
+            // titles whose controller initialization is incompatible with IGR.
+            disable_padOpen_hook =
+                !!(eec.flags & EECORE_FLAG_DISABLE_IGR) ||
+                !_strcmp(eec.GameID, "SLUS_202.62");
             CleanExecPS2((void *)elf.epc, (void *)elf.gp, argc, argv);
         }
 

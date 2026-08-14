@@ -13,6 +13,31 @@ static int cdvdman_ReadingThreadID;
 #define BOUNCE_BUF_SECTORS 1
 static u8 bounce_buf[BOUNCE_BUF_SECTORS * 2048];
 volatile unsigned char sync_flag_locked;
+static volatile unsigned char shutdown_locked;
+
+
+//-------------------------------------------------------------------------
+void cdvdman_shutdown_io(void)
+{
+    int oldState;
+
+    // Block all reads that arrive after shutdown begins, then drain the one
+    // request (if any) already owned by the read thread. The IGR handler has
+    // suspended the game's EE threads, but IOP streaming callbacks can still
+    // attempt another read unless this permanent gate is set first.
+    CpuSuspendIntr(&oldState);
+    shutdown_locked = 1;
+    CpuResumeIntr(oldState);
+
+    while (sync_flag_locked)
+        WaitEventFlag(cdvdman_stat.intr_ef, CDVDEF_MAN_UNLOCKED, WEF_AND, NULL);
+
+    // Do not power DEV9 off here. OPL deliberately keeps DEV9 alive for IGR
+    // and reserves DeviceStop/Dev9CardStop for a real power-off request. On
+    // hardware, calling dev9Shutdown() here made the following reset-packet
+    // submission stall at the blue diagnostic stage. Locking new reads and
+    // draining the active read is sufficient for the IOP reboot to take over.
+}
 
 
 //-------------------------------------------------------------------------
@@ -339,6 +364,9 @@ int sceCdRead_internal(u32 lsn, u32 sectors, void *buf, sceCdRMode *mode, enum E
     int OldState;
     u16 sector_size = 2048;
     int intct = QueryIntrContext();
+
+    if (shutdown_locked)
+        return 0;
 
 #ifdef DEBUG
     if (mode != NULL)

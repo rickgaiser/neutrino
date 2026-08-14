@@ -79,4 +79,8 @@ void *sceGetFsvRbuf2(int *size);
 #define CDSC_GET_VERSION      0xFFFFFFF7 // Get CDVDMAN version.
 #define CDSC_SET_ERROR        0xFFFFFFFE // Used by CDVDFSV and CDVDSTM to set the error code (Typically READCF*).
 
+// Private shutdown command shared with the OPL-compatible IGR RPC. It locks
+// the emulated device and drains the current FHI request before an IOP reset.
+#define CDSC_NEUTRINO_SHUTDOWN 0x00000001
+
 #endif

@@ -43,7 +43,8 @@ cdvdman.fs_sectors = 8
 #eecore.cheats = [0x2012AB00, 0x00000009]
 
 # EECORE: compatibility flags
-# - UNHOOK = MODE3: Unhook syscalls
+# - UNHOOK      = MODE3: Unhook syscalls
+# - DISABLE_IGR = MODE6: Do not hook the game's controller library
 #eecore.flags = ["UNHOOK"]
 
 # EECORE: iop reboot mode:
@@ -90,8 +91,9 @@ eecore.irm = [2, 2, 0] # Normal mode (2 IOP reboots)
 
 # EECORE: module base address
 # This is where all IOP modules are stored
-eecore.mod_base = 0x95000
-#eecore.mod_base = 0xA7000
+# Match the alternate ee_core96 linker layout: core 0x96000-0xA6000,
+# stack 0xA6000-0xA7000, then the IOP module table.
+eecore.mod_base = 0xA7000
 
 # ---------------------------------------------------------------------------
 # Compatibility modes from the command line
@@ -102,7 +104,7 @@ MODE2 = {name = "Compat MODE2: Sync reads (sceCdRead)",        cdvdman.flags = [
 MODE3 = {name = "Compat MODE3: Unhook syscalls",               eecore.flags  = ["UNHOOK"]}
 MODE4 = {name = "Compat MODE4: NOP (user configurable)"}
 MODE5 = {name = "Compat MODE5: Emulate DVD-DL",                cdvdman.flags = ["DVD_DL"]}
-MODE6 = {name = "Compat MODE6: NOP (user configurable)"}
+MODE6 = {name = "Compat MODE6: Disable in-game reset",        eecore.flags  = ["DISABLE_IGR"]}
 MODE7 = {name = "Compat MODE7: Fix game buffer overrun",       depends = ["p-membo"]}
 MODE8 = {name = "Compat MODE8: NOP (user configurable)"}
 
@@ -128,6 +130,7 @@ MODE9 = {name = "Compat MODE9: NOP"}
 #"SCES_524.24" = {name = "Ace Combat Squadron Leader",            depends = ["p-membo"]}
 #"SLUS_208.51" = {name = "Ace Combat 5 The Unsung War",           depends = ["p-membo"]}
 "SLES_504.86" = {name = "Splashdown",                            depends = ["p-membo2k"]}
+"SLUS_202.62" = {name = "EA Sports Rugby",                       eecore.flags = ["DISABLE_IGR"]}
 "SLUS_202.67" = {name = "Dot Hack Part 1 - Infection",           depends = ["p-membo2k"]}
 "SLES_504.46" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLUS_204.13" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}

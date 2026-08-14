@@ -267,6 +267,7 @@ int load_config_eecore(toml_datum_t t)
             v = arr.u.arr.elem[i];
             if (v.type == TOML_STRING) {
                 if (!strcmp(v.u.s, "UNHOOK")) sys.eecore.flags |= EECORE_FLAG_UNHOOK;
+                else if (!strcmp(v.u.s, "DISABLE_IGR")) sys.eecore.flags |= EECORE_FLAG_DISABLE_IGR;
             }
         }
     }
@@ -375,8 +376,10 @@ int load_config(toml_datum_t t)
     toml_string_in_overwrite(t, "default_gc",     &sys.sGC);
     toml_string_in_overwrite(t, "default_gsm",    &sys.sGSM);
     toml_string_in_overwrite(t, "default_cfg",    &sys.sCFGFile);
+    toml_string_in_overwrite(t, "default_igr_path", &sys.sIGRPath);
     toml_bool_in_overwrite  (t, "default_dbc",    &sys.bDebug);
     toml_bool_in_overwrite  (t, "default_logo",   &sys.bLogo);
+    toml_bool_in_overwrite  (t, "default_igr_power", &sys.bIGRPowerReset);
 
     load_config_eecore (toml_get(t, "eecore"));
     load_config_cdvdman(toml_get(t, "cdvdman"));

@@ -29,6 +29,11 @@ typedef struct
 #define EECORE_FLAG_GSM_NO_576P (1<<2) // GSM: BIOS < 2.10 = no 576p support
 #define EECORE_FLAG_LOGO_PATCH  (1<<3) // PS2LOGO: apply region patch (console region ≠ game region)
 #define EECORE_FLAG_LOGO_PAL    (1<<4) // PS2LOGO: force PAL mode (only meaningful if LOGO_PATCH set)
+#define EECORE_FLAG_DISABLE_IGR (1<<5) // Do not hook libpad or install in-game reset
+
+#define EECORE_IGR_EXIT_PATH_MAX 256
+#define EECORE_IGR_ABI_MAGIC 0x49475231u /* "IGR1" */
+#define EECORE_IGR_FLAG_POWER_BUTTON_RESET (1u << 0)
 
 enum EECORE_GSM_VMODE
 {
@@ -68,6 +73,17 @@ struct ee_core_data
     void *ModStorageEnd;
     // Checksums for modules at: 0x95000 - 0xb5000 = 128KiB
     uint32_t mod_checksum_4k[EEC_MOD_CHECKSUM_COUNT];
+
+    // Optional in-game-reset destination. Empty follows OPL and returns to the
+    // PS2 Browser. The physical power button is intercepted only when enabled;
+    // the controller combo remains available regardless of this flag.
+    uint32_t IGRFlags;
+    char IGRExitPath[EECORE_IGR_EXIT_PATH_MAX];
+
+    // Keep this marker at the very end. That preserves the reset-field offsets
+    // used by the first IGR-capable loader while allowing a newer loader to
+    // reject an older, smaller ee_core before copying past its settings.
+    uint32_t IGRABIMagic;
 } __attribute__((packed, aligned(4)));
 
 extern struct ee_core_data eec;

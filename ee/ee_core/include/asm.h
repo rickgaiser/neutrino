@@ -14,6 +14,8 @@
 #include <sifdma.h>
 
 u32 Hook_SifSetDma(SifDmaTransfer_t *sdd, s32 len);
+int Hook_CreateThread(void *thread_param);
+int Hook_ExecPS2(void *entry, void *gp, int argc, char **argv);
 void CleanExecPS2(void *epc, void *gp, int argc, char **argv);
 
 #endif /* ASM */

@@ -586,6 +586,10 @@ int sceCdSC(int code, int *param)
     M_DEBUG("%s(0x%X, 0x%X)\n", __FUNCTION__, code, *param);
 
     switch (code) {
+        case CDSC_NEUTRINO_SHUTDOWN:
+            cdvdman_shutdown_io();
+            result = 1;
+            break;
         case CDSC_GET_INTRFLAG:
             result = cdvdman_stat.intr_ef;
             break;
