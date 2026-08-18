@@ -1269,6 +1269,19 @@ static int expbay_init(int sema_attr)
     _sw(0xe01a3043, SSBUS_R_1418);
     _sw(0xef1a3043, SSBUS_R_141c);
 
+    if (DEV9_REG(DEV9_R_POWER) & 0x04) {
+        // Warm start (e.g. in-game IOP reboot with the device left powered):
+        // on some consoles (seen on a slim) the SPEED/SMAP block is wedged at
+        // this point and only recovers after a full power cycle. Mirror the
+        // expbay branch of dev9Shutdown(), then run the normal cold init.
+        DEV9_REG(DEV9_R_1466)  = 1;
+        DEV9_REG(DEV9_R_1464)  = 0;
+        DEV9_REG(DEV9_R_1460)  = DEV9_REG(DEV9_R_1464);
+        DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & ~4;
+        DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & ~1;
+        DelayThread(1000000);
+    }
+
     if ((DEV9_REG(DEV9_R_POWER) & 0x04) == 0) { // if not already powered
         DEV9_REG(DEV9_R_1466) = 1;
         DEV9_REG(DEV9_R_1464) = 0;
