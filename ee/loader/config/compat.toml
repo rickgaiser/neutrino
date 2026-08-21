@@ -160,6 +160,7 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SLES_503.26" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 
 # Workarounds, need to find a better solution
+"SLUS_200.75" = {name = "The Jungle Book Rhythm n' Groove",      eecore.irm = [2, 4, 0]}
 "SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4, 0]}
 "SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4, 0]}
 "SLES_503.55" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
