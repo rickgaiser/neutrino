@@ -122,13 +122,20 @@ MODE9 = {name = "Compat MODE9: NOP"}
 # These override the default modes AND the command line
 "SLUS_973.53" = {name = "Ratchet & Clank Up Your Arsenal",       depends = ["p-uya"]}
 "SCES_524.56" = {name = "Ratchet & Clank 3",                     depends = ["p-uya"]}
+"SCPS_150.84" = {name = "Ratchet & Clank 3 Galactic Rangers",    depends = ["p-uya"]} # added by 1052
 "SCES_511.76" = {name = "Disney's Treasure Planet",              depends = ["p-membo"]}
+"SCUS_971.46" = {name = "Disney's Treasure Planet",              depends = ["p-membo"]} # added by 1052
+"SCES_511.77" = {name = "Disney's Treasure Planet",              depends = ["p-membo"]} # added by 1052
 "SLES_548.38" = {name = "Donkey Xote",                           depends = ["p-membo"]}
 #"SLUS_211.93" = {name = "Inuyasha - Feudal Combat",              depends = ["p-membo"]}
 #"SCES_524.24" = {name = "Ace Combat Squadron Leader",            depends = ["p-membo"]}
 #"SLUS_208.51" = {name = "Ace Combat 5 The Unsung War",           depends = ["p-membo"]}
 "SLES_504.86" = {name = "Splashdown",                            depends = ["p-membo2k"]}
-"SLUS_202.67" = {name = "Dot Hack Part 1 - Infection",           depends = ["p-membo2k"]}
+"SLUS_202.23" = {name = "Splashdown",                            depends = ["p-membo2k"]} # added by 1052
+"SLPM_651.13" = {name = "Splashdown",                            depends = ["p-membo2k"]} # added by 1052
+"SLUS_202.67" = {name = "Dot Hack Part 1 Infection",             depends = ["p-membo2k"]}
+"SLES_522.37" = {name = "Dot Hack Part 1 Infection",             depends = ["p-membo2k"]} # added by 1052
+"SLKA_250.80" = {name = "Dot Hack Part 1 Infection",             depends = ["p-membo2k"]} # added by 1052
 "SLES_504.46" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLUS_204.13" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
 "SLES_506.08" = {name = "Shadow Man: 2econd Coming",             depends = ["p-membo2k"]}
@@ -136,12 +143,16 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SCUS_974.65" = {name = "Ratchet - Deadlocked",                  depends = ["p-freemem"]}
 "SCES_532.85" = {name = "Ratchet Gladiator",                     depends = ["p-freemem"]}
 "SCES_524.12" = {name = "Jackie Chan Adventures",                cdvdman.flags = ["SYNC_READ"]}
-"SCUS_971.24" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
-"SCES_503.61" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
-"SCES_506.14" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
-"SCPS_150.21" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
-"SCPS_550.04" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
-"SCPS_560.03" = {name = "Jak and Daxter - The Precursor Legacy", eecore.flags = ["UNHOOK"]}
+"SLUS_218.00" = {name = "Rock Band 2",                           cdvdman.flags = ["DVD_DL"]} # added by 1052
+"SLES_554.51" = {name = "Rock Band 2",                           cdvdman.flags = ["DVD_DL"]} # added by 1052
+"SLUS_200.05" = {name = "World Destruction League Thunder Tanks",cdvdman.flags = ["DVD_DL"]} # added by 1052
+"SLES_501.70" = {name = "World Destruction League Thunder Tanks",cdvdman.flags = ["DVD_DL"]} # added by 1052
+"SCUS_971.24" = {name = "Jak and Daxter The Precursor Legacy",   eecore.flags = ["UNHOOK"]}
+"SCES_503.61" = {name = "Jak and Daxter The Precursor Legacy",   eecore.flags = ["UNHOOK"]}
+"SCES_506.14" = {name = "Jak and Daxter The Precursor Legacy",   eecore.flags = ["UNHOOK"]}
+"SCPS_150.21" = {name = "Jak and Daxter The Precursor Legacy",   eecore.flags = ["UNHOOK"]}
+"SCPS_550.04" = {name = "Jak and Daxter The Precursor Legacy",   eecore.flags = ["UNHOOK"]}
+"SCPS_560.03" = {name = "Jak and Daxter The Precursor Legacy",   eecore.flags = ["UNHOOK"]}
 "SCUS_972.65" = {name = "Jak II",                                eecore.flags = ["UNHOOK"]}
 "SCES_516.08" = {name = "Jak II",                                eecore.flags = ["UNHOOK"]}
 "SCKA_200.10" = {name = "Jak II",                                eecore.flags = ["UNHOOK"]}
@@ -150,22 +161,48 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SCUS_973.30" = {name = "Jak 3",                                 eecore.flags = ["UNHOOK"]}
 "SCES_524.60" = {name = "Jak 3",                                 eecore.flags = ["UNHOOK"]}
 "SCKA_200.40" = {name = "Jak 3",                                 eecore.flags = ["UNHOOK"]}
+"SLUS_203.63" = {name = "Sled Storm",                            eecore.flags = ["UNHOOK"]} # added by 1052
+"SLES_506.83" = {name = "Sled Storm",                            eecore.flags = ["UNHOOK"]} # added by 1052
+"SLUS_202.50" = {name = "Stuntman",                              eecore.flags = ["UNHOOK"]} # added by 1052
+"SLES_502.88" = {name = "Stuntman",                              eecore.flags = ["UNHOOK"]} # added by 1052
+"SLPM_660.19" = {name = "Stuntman",                              eecore.flags = ["UNHOOK"]} # added by 1052
 "SLUS_209.77" = {name = "Virtua Quest",                          eecore.mod_base = 0x01fc7000}
 "SLPM_656.32" = {name = "Virtua Fighter Cyber Generation: JSNY", eecore.mod_base = 0x01fc7000}
 "SCES_503.60" = {name = "Twisted Metal Black Online", 			 eecore.mod_base = 0xA7000}
 "SCUS_971.96" = {name = "Twisted Metal Black Online",            eecore.mod_base = 0xA7000}
 "SLES_549.45" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.fs_sectors = 64} # Optimization
+"SLUS_216.78" = {name = "DragonBall Z Budokai Tenkaichi 3",      cdvdman.fs_sectors = 64} # Optimization # added by 1052
 "SLUS_202.30" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 "SLES_503.25" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
 "SLES_503.26" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]}
+"SLPS_252.44" = {name = "Max Payne",                             eecore.irm = [2, 2, 1]} # added by 1052
+
+# USB only: remove # to enable fix
+#"SLUS_215.41" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.33" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.35" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.47" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.45" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.36" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.34" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.37" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.46" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_547.44" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SCKA_200.93" = {name = "Ratatouille",                           cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLUS_203.15" = {name = "Spyro: Enter the Dragonfly",            cdvdman.flags = ["FAST_READ"]} # added by 1052
+#"SLES_510.43" = {name = "Spyro: Enter the Dragonfly",            cdvdman.flags = ["FAST_READ"]} # added by 1052
 
 # Workarounds, need to find a better solution
-"SLUS_200.75" = {name = "The Jungle Book Rhythm n' Groove",      eecore.irm = [2, 4, 0]}
+"SLUS_200.75" = {name = "The Jungle Book: Rhythm n' Groove",     eecore.irm = [2, 4, 0]} # added by 1052 and jolek
+"SLES_500.45" = {name = "The Jungle Book: Groove Party",         eecore.irm = [2, 4, 0]} # added by 1052
 "SLUS_200.77" = {name = "Donald Duck - Goin' Quackers",          eecore.irm = [2, 4, 0]}
 "SLES_500.48" = {name = "Donald Duck - Quack Attack",            eecore.irm = [2, 4, 0]}
+"SLPS_200.70" = {name = "Donald Duck: Rescue Daisakusen",        eecore.irm = [2, 4, 0]} # added by 1052
 "SLES_503.55" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
 "SLUS_202.26" = {name = "Batman - Vengeance",                    eecore.irm = [2, 4, 0]}
-"SLUS_205.05" = {name = "Mace Griffin - Bounty Hunter",          eecore.irm = [2, 4, 0]} # Needed by MMCE (MCP2), but not by UDPFS ?
+"SLUS_205.05" = {name = "Mace Griffin Bounty Hunter",            eecore.irm = [2, 4, 0]} # Needed by MMCE (MCP2), but not by UDPFS ?
+"SLES_516.53" = {name = "Mace Griffin Bounty Hunter",            eecore.irm = [2, 4, 0]} # Needed by MMCE (MCP2), but not by UDPFS ? # added by 1052
+"SLES_516.54" = {name = "Mace Griffin Bounty Hunter",            eecore.irm = [2, 4, 0]} # Needed by MMCE (MCP2), but not by UDPFS ? # added by 1052
 
 # Workarounds, need to find a better solution
 "SLPM_622.48" = {name = "Love - Mahjong!",                       cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
@@ -174,6 +211,11 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SLPM_666.98" = {name = "Ragnarok Hachikengou",                  cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 "SLPM_660.57" = {name = "Taito Memories - Joukan",               cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 "SLUS_202.13" = {name = "Test Drive",                            cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLES_507.78" = {name = "TD Overdrive The Brotherhood of Speed", cdvdman.flags = ["FAST_READ", "SYNC_READ"]} # added by 1052
 "SLUS_206.97" = {name = "Cy Girls (Disc 1)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 "SLUS_208.54" = {name = "Cy Girls (Disc 2)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 "SLES_544.56" = {name = "Beverly Hills Cop",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+
+# Workarounds, need to find a better solution
+"SLPM_551.19" = {name = "Galaxy Angel II: Eigou Kaiki no Toki",  eecore.cheats = [0x202FADFC, 0x0013BB80]} # added by 1052
+"SLPM_667.80" = {name = "Galaxy Angel II: Mugen Kairou no Kagi", eecore.cheats = [0x202DEE3C, 0x0013AAF0]} # added by 1052
