@@ -215,7 +215,15 @@ MODE9 = {name = "Compat MODE9: NOP"}
 "SLUS_206.97" = {name = "Cy Girls (Disc 1)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 "SLUS_208.54" = {name = "Cy Girls (Disc 2)",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 "SLES_544.56" = {name = "Beverly Hills Cop",                     cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
+"SLUS_203.15" = {name = "Spyro: Enter the Dragonfly", cdvdman.flags = ["FAST_READ", "SYNC_READ"], eecore.flags  = ["UNHOOK"]} # added by 1052
+"SLES_510.43" = {name = "Spyro: Enter the Dragonfly", cdvdman.flags = ["FAST_READ", "SYNC_READ"], eecore.flags  = ["UNHOOK"]} # added by 1052
 
 # Workarounds, need to find a better solution
 "SLPM_551.19" = {name = "Galaxy Angel II: Eigou Kaiki no Toki",  eecore.cheats = [0x202FADFC, 0x0013BB80]} # added by 1052
 "SLPM_667.80" = {name = "Galaxy Angel II: Mugen Kairou no Kagi", eecore.cheats = [0x202DEE3C, 0x0013AAF0]} # added by 1052
+"SLUS_200.66" = {name = "Half-Life",                  arguments = ["rom0:PS2LOGO"]} # added by 1052
+"SLES_505.04" = {name = "Half-Life",                  arguments = ["rom0:PS2LOGO"]} # added by 1052
+"SLES_505.07" = {name = "Half-Life",                  arguments = ["rom0:PS2LOGO"]} # added by 1052
+"SLES_505.05" = {name = "Half-Life",                  arguments = ["rom0:PS2LOGO"]} # added by 1052
+"SLES_505.08" = {name = "Half-Life",                  arguments = ["rom0:PS2LOGO"]} # added by 1052
+"SLES_505.09" = {name = "Half-Life",                  arguments = ["rom0:PS2LOGO"]} # added by 1052
