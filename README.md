@@ -238,8 +238,8 @@ Loader | Author
 [RETROLauncher](https://github.com/Spaghetticode-Boon-Tobias/RETROLauncher) | Boon Tobias
 [OSD-XMB](https://github.com/HiroTex/OSD-XMB) | Hiro Tex
 [PSBBN](https://github.com/CosmicScale/PSBBN-Definitive-English-Patch) + [BBNL](https://github.com/pcm720/bbnl) | CosmicScale + pcm720
-[RiptOPL](https://github.com/NathanNeurotic/Open-PS2-Loader). | NathanNeurotic
-[wOPL](https://github.com/ps2homebrew/wOPL). | KrahJohlito
-[Modulo](https://github.com/AdityaKumar7209/Modulo-R1-Beta-Preview---PS2). | AdityaKumar7209
+[RiptOPL](https://github.com/NathanNeurotic/Open-PS2-Loader) | NathanNeurotic
+[wOPL](https://github.com/ps2homebrew/wOPL) | KrahJohlito
+[Modulo](https://github.com/AdityaKumar7209/Modulo-R1-Beta-Preview---PS2) | AdityaKumar7209
 
 Add your project here? Send me a PR.
