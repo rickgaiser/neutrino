@@ -100,7 +100,7 @@ copy:
 	cp $(PS2SDK)/iop/irx/iLinkman.irx          ee/loader/modules
 	cp $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx  ee/loader/modules
 	cp $(PS2SDK)/iop/irx/mmceman.irx           ee/loader/modules
-	cp $(PS2SDK)/iop/irx/mmcefhi.irx           ee/loader/modules
+#	cp $(PS2SDK)/iop/irx/mmcefhi.irx           ee/loader/modules
 
 copy_extra:
 	cp iop/gapfill/irx/gapfill.irx             ee/loader/modules

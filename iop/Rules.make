@@ -13,6 +13,8 @@ clean::
 include $(PS2SDK)/Defs.make
 include $(PS2SDK)/samples/Makefile.iopglobal
 
+IOP_SRXFIXUP_FLAGS += --allow-zero-text
+
 # include neutrino headers first. Some headers have the same name as ps2sdk ones.
 IOP_CFLAGS := -Iinclude -I../common -I../../common/include $(IOP_CFLAGS)
 
